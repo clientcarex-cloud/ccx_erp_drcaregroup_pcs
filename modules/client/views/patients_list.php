@@ -79,7 +79,6 @@ if($master_data){
 									_l('branch') . '*', // label
 									isset($current_branch_id) ? $current_branch_id : ($patient['groupid'] ?? ''), // selected
 									[
-										'id' => 'branch_id', // 👈 Add your ID here
 										'data-none-selected-text' => _l('dropdown_non_selected_tex'),
 										'required' => 'required'
 									]
@@ -89,14 +88,14 @@ if($master_data){
 							  <?php
 								}
 								?>
-							  <div class="col-md-3">
-								<label><?= _l('from_date'); ?></label>
-								<input type="date" class="form-control" name="from_date" id="from_date" value="2011-01-01">
-							  </div>
-							  <div class="col-md-3">
-								<label><?= _l('to_date'); ?></label>
-								<input type="date" class="form-control" name="to_date" id="to_date" value="<?= date('Y-m-d'); ?>">
-							  </div>
+                              <div class="col-md-3">
+                                <label for="from_date"><?= _l('from_date'); ?></label>
+                                <input type="date" class="form-control" name="from_date" id="from_date" value="2011-01-01">
+                              </div>
+                              <div class="col-md-3">
+                                <label for="to_date"><?= _l('to_date'); ?></label>
+                                <input type="date" class="form-control" name="to_date" id="to_date" value="<?= date('Y-m-d'); ?>">
+                              </div>
 							  <div class="col-md-2" style="margin-top: 24px">
 								<button id="filterBtn" class="btn btn-success w-100"><?= _l('Search'); ?></button>
 							  </div>
@@ -104,7 +103,7 @@ if($master_data){
 							<br>
                                 <div class="clearfix"></div>
 								
-                               <?= render_datatable([
+                              <?= render_datatable([
 								_l('S.No'),           // Name
 								_l('patient_name'),           // Name
 								_l('age'),                    // Age
@@ -193,7 +192,7 @@ if($master_data){
 
     <?php if(count($final_doctor_list) > 0 && count($final_doctor_list) != 1): ?>
         <div class="col-md-4">
-            <?= render_select(
+                <?= render_select(
                 'appointment_branch_id',
                 $branch,
                 ['id', 'name'],
@@ -236,11 +235,11 @@ if($master_data){
 
 <div class="row">
     <div class="col-md-3">
-        <label><?= _l('from_date'); ?></label>
+        <label for="consulted_date"><?= _l('from_date'); ?></label>
         <input type="date" class="form-control" name="consulted_date" id="consulted_date" value="<?= date('Y-m-d'); ?>">
     </div>
     <div class="col-md-3">
-        <label><?= _l('to_date'); ?></label>
+        <label for="consulted_to_date"><?= _l('to_date'); ?></label>
         <input type="date" class="form-control" id="consulted_to_date" value="<?= date('Y-m-d'); ?>">
     </div>
 	<div class="col-md-3">
