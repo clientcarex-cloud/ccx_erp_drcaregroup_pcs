@@ -1795,7 +1795,56 @@ class Client_model extends App_Model
     }
 
     public function save_client(){
-		
+        $this->db->trans_begin();
+
+        $shouldGenerateMr = false;
+        $client_id        = null;
+
+        $rawContactNumber       = trim((string) $this->input->post('contact_number'));
+        $normalizedContactNumber = preg_replace('/\D+/', '', $rawContactNumber);
+
+        $phoneCandidates = [];
+        foreach ([$rawContactNumber, $normalizedContactNumber] as $candidate) {
+            $candidate = trim((string) $candidate);
+            if ($candidate !== '' && !in_array($candidate, $phoneCandidates, true)) {
+                $phoneCandidates[] = $candidate;
+            }
+        }
+
+        $normalizedCompany = mb_strtolower(trim((string) $this->input->post('company')));
+
+        $lockKey      = null;
+        $lockAcquired = false;
+        if (!empty($phoneCandidates)) {
+            $lockKey = 'client_' . md5($normalizedCompany . '|' . implode('|', $phoneCandidates));
+            $lockRow = $this->db->query('SELECT GET_LOCK(?, 5) AS lck', [$lockKey])->row();
+            if ($lockRow && (int) $lockRow->lck === 1) {
+                $lockAcquired = true;
+            }
+        }
+
+        $this->load->model('leads_model');
+        $statuses = $this->leads_model->get_status();
+        $status_name = '';
+        $status_id   = '';
+        if (!empty($this->input->post('paying_amount')) && $this->input->post('paying_amount') > 0) {
+            foreach ($statuses as $status) {
+                if (strcasecmp(trim($status['name']), 'Paid Appointment') === 0) {
+                    $status_name = $status['name'];
+                    $status_id   = $status['id'];
+                    break;
+                }
+            }
+        } elseif (!empty($this->input->post('appointment_date'))) {
+            foreach ($statuses as $status) {
+                if (strcasecmp(trim($status['name']), 'On appointment') === 0) {
+                    $status_name = $status['name'];
+                    $status_id   = $status['id'];
+                    break;
+                }
+            }
+        }
+
         //Get Visit id
         $this->db->from(db_prefix() . 'appointment');
         $this->db->like('DATE(appointment_date)', date('Y-m-d'));
@@ -1839,7 +1888,7 @@ class Client_model extends App_Model
         
         $data = array(
             "company" => $this->input->post('company'),
-            "phonenumber" => $this->input->post('contact_number'),
+            "phonenumber" => !empty($normalizedContactNumber) ? $normalizedContactNumber : $rawContactNumber,
             "address" => $this->input->post('area'),
             "default_language" => $default_language_string,
             "city" => $this->input->post('city'),
@@ -1851,66 +1900,67 @@ class Client_model extends App_Model
         $table_suffix = "clients";
 
         //Check User
-        $company = $this->input->post('company');
-        $check_user = $this->db->get_where(db_prefix() . $table_suffix, array("phonenumber"=>$this->input->post('contact_number'), "company"=>"$company"))->row();
+        $check_user = null;
+        if (!empty($phoneCandidates)) {
+            $placeholders = implode(', ', array_fill(0, count($phoneCandidates), '?'));
+            $params       = $phoneCandidates;
+
+            $sql = 'SELECT * FROM ' . db_prefix() . $table_suffix . ' WHERE phonenumber IN (' . $placeholders . ')';
+            if ($normalizedCompany !== '') {
+                $sql    .= ' AND LOWER(TRIM(company)) = ?';
+                $params[] = $normalizedCompany;
+            }
+            $sql .= ' ORDER BY userid ASC LIMIT 1 FOR UPDATE';
+
+            $check_user = $this->db->query($sql, $params)->row();
+
+            if (!$check_user && $normalizedCompany !== '') {
+                $sql = 'SELECT * FROM ' . db_prefix() . $table_suffix . ' WHERE phonenumber IN (' . $placeholders . ') ORDER BY userid ASC LIMIT 1 FOR UPDATE';
+                $check_user = $this->db->query($sql, $phoneCandidates)->row();
+            }
+        }
+
         $return = 0;
         if($check_user){
-            $client_id = $check_user->userid;
+            $client_id = (int) $check_user->userid;
+
+            $this->db->where('userid', $client_id);
+            $this->db->update(db_prefix() . $table_suffix, $data);
+
+            // Prepare patient profile data
+            $clients_new_fields_data = array(
+                'marital_status'  => $this->input->post('marital_status'),
+                'email_id'        => $this->input->post('email_id'),
+                'pincode'         => $this->input->post('pincode'),
+                'area'            => $this->input->post('area'),
+                'salutation'      => $this->input->post('salutation'),
+                'age'             => $this->input->post('age'),
+                'gender'          => $this->input->post('gender'),
+                'whatsapp_number' => !empty($normalizedContactNumber) ? $normalizedContactNumber : $rawContactNumber,
+                'alt_number1'     => $this->input->post('alt_number1'),
+                'alt_number2'     => $this->input->post('alt_number2'),
+                'patient_source_id' => $this->input->post('patient_source_id'),
+                'current_status'  => $status_name
+            );
+
+            $clients_new_fields_insert = $clients_new_fields_data;
+            $clients_new_fields_insert['userid'] = $client_id;
+            $clients_new_fields_insert['patient_status'] = 'Active';
 
             //Get MR NO
             $get_mr_no = $this->db->get_where(db_prefix() . 'clients_new_fields', array("userid"=>$client_id))->row();
             if($get_mr_no){
                 $mr_no = $get_mr_no->mr_no;
+                if (empty($mr_no)) {
+                    $shouldGenerateMr = true;
+                }
+                $this->db->where('userid', $client_id);
+                $this->db->update(db_prefix() . 'clients_new_fields', $clients_new_fields_data);
 				
             }else{
-				$this->db->where(array("userid"=>$client_id));
-				$this->db->update(db_prefix() . $table_suffix, $data);
-				
-				$this->load->model('leads_model');
-				$statuses = $this->leads_model->get_status();
-				$status_name = '';
-				$status_id = '';
-				// Step 1: Paid Appointment
-				if (!empty($this->input->post('amount_paid')) && $this->input->post('amount_paid') > 0) {
-					foreach ($statuses as $status) {
-						if (strcasecmp(trim($status['name']), 'Paid Appointment') === 0) {
-							$status_name = $status['name'];
-							$status_id = $status['id'];
-							break;
-						}
-					}
-				} else {
-						// Step 2: On appointment
-						if (!empty($this->input->post('appointment_date'))) {
-							foreach ($statuses as $status) {
-								if (strcasecmp(trim($status['name']), 'On appointment') === 0) {
-									$status_name = $status['name'];
-									$status_id = $status['id'];
-									break;
-								}
-							}
-						}
-					}
-				
                 //Inserting patient other fields
-                $clients_new_fields_data = array(
-                    'userid'      => $client_id,
-                    'marital_status'  => $this->input->post('marital_status'),
-                    'email_id'  	=> $this->input->post('email_id'),
-                    'pincode'   	=> $this->input->post('pincode'),
-                    'area'  		=> $this->input->post('area'),
-                    'salutation'  	=> $this->input->post('salutation'),
-                    'age'         	=> $this->input->post('age'),
-                    'gender'        => $this->input->post('gender'),
-                    'patient_status'=> 'Active',
-                    'whatsapp_number'=> $this->input->post('contact_number'),
-                    'alt_number1'=> $this->input->post('alt_number1'),
-                    'alt_number2'=> $this->input->post('alt_number2'),
-                    'patient_source_id'=> $this->input->post('patient_source_id'),
-					'current_status' => $status_name
-                );
-            
-                $this->db->insert(db_prefix() . 'clients_new_fields', $clients_new_fields_data);
+                $this->db->insert(db_prefix() . 'clients_new_fields', $clients_new_fields_insert);
+                $shouldGenerateMr = true;
             }
 			
         }else{
@@ -1931,38 +1981,31 @@ class Client_model extends App_Model
             $return = 1;
             $description = "new_patient_added";
             $this->log_patient_activity($client_id, $description);
-			
-			$this->load->model('leads_model');
-			$statuses = $this->leads_model->get_status();
-			$status_name = '';
-			$status_id = '';
-			
-			if (!empty($this->input->post('paying_amount')) && $this->input->post('paying_amount') > 0) {
-				foreach ($statuses as $status) {
-					if (strcasecmp(trim($status['name']), 'Paid Appointment') === 0) {
-						$status_name = $status['name'];
-						$status_id = $status['id'];
-						break;
-					}
-				}
-			} else {
-					// Step 2: On appointment
-					if (!empty($this->input->post('appointment_date'))) {
-						foreach ($statuses as $status) {
-							if (strcasecmp(trim($status['name']), 'On appointment') === 0) {
-								$status_name = $status['name'];
-								$status_id = $status['id'];
-								break;
-							}
-						}
-					}
-				}
 				
             
             //Get MR NO
             $get_mr_no = $this->db->get_where(db_prefix() . 'clients_new_fields', array("userid"=>$client_id))->row();
             if($get_mr_no){
                 $mr_no = $get_mr_no->mr_no;
+                if (empty($mr_no)) {
+                    $shouldGenerateMr = true;
+                }
+                $clients_new_fields_data = array(
+					'marital_status'  => $this->input->post('marital_status'),
+                    'email_id'  	=> $this->input->post('email_id'),
+                    'pincode'   	=> $this->input->post('pincode'),
+                    'area'  		=> $this->input->post('area'),
+                    'salutation'  	=> $this->input->post('salutation'),
+                    'age'         	=> $this->input->post('age'),
+                    'gender'        => $this->input->post('gender'),
+                    'whatsapp_number'=> !empty($normalizedContactNumber) ? $normalizedContactNumber : $rawContactNumber,
+                    'alt_number1'=> $this->input->post('alt_number1'),
+                    'alt_number2'=> $this->input->post('alt_number2'),
+                    'patient_source_id'=> $this->input->post('patient_source_id'),
+					'current_status' => $status_name
+                );
+                $this->db->where('userid', $client_id);
+                $this->db->update(db_prefix() . 'clients_new_fields', $clients_new_fields_data);
             }else{
                 //Inserting patient other fields
                 $clients_new_fields_data = array(
@@ -1975,24 +2018,33 @@ class Client_model extends App_Model
                     'age'         	=> $this->input->post('age'),
                     'gender'        => $this->input->post('gender'),
                     'patient_status'=> 'Active',
-                    'whatsapp_number'=> $this->input->post('contact_number'),
+                    'whatsapp_number'=> !empty($normalizedContactNumber) ? $normalizedContactNumber : $rawContactNumber,
                     'alt_number1'=> $this->input->post('alt_number1'),
                     'alt_number2'=> $this->input->post('alt_number2'),
                     'patient_source_id'=> $this->input->post('patient_source_id'),
 					'current_status' => $status_name
                 );
                 $this->db->insert(db_prefix() . 'clients_new_fields', $clients_new_fields_data);
+                $shouldGenerateMr = true;
             }
 			
            //$this->patient_journey_log_event($client_id, 'patient_created', 'New Patient Created');
         }
         if($client_id AND $this->input->post('groupid')){
-            $group_data = array(
-                "groupid" => $this->input->post('groupid'),
-                "customer_id"=> $client_id
-            );
-            $table_suffix = "customer_groups";
-            $this->db->insert(db_prefix() . $table_suffix, $group_data);
+            $group_id = $this->input->post('groupid');
+            $existing_group = $this->db->get_where(db_prefix() . 'customer_groups', [
+                'groupid'     => $group_id,
+                'customer_id' => $client_id,
+            ])->row();
+
+            if (!$existing_group) {
+                $group_data = array(
+                    "groupid"      => $group_id,
+                    "customer_id"  => $client_id
+                );
+                $table_suffix = "customer_groups";
+                $this->db->insert(db_prefix() . $table_suffix, $group_data);
+            }
         }
 		
 		$attachment_path = null;
@@ -2029,6 +2081,7 @@ class Client_model extends App_Model
         //if ($client_id) {
             //$client_id = $this->input->post('client_id');
 			$appointment_date = $this->input->post('appointment_date');
+            $appointment_date_formatted = $appointment_date ? date('Y-m-d H:i:s', strtotime($appointment_date)) : null;
 			$branch_id = $this->input->post('groupid');
 			
 			$appointment_data = array(
@@ -2047,28 +2100,32 @@ class Client_model extends App_Model
 				'unit_doctor_id'        => $this->input->post('assign_doctor_id'),
 				'remarks'               => $this->input->post('remarks'),
 				'next_calling_date'     => date('Y-m-d', strtotime($this->input->post('next_calling_date'))),
-				'appointment_date'      => date('Y-m-d H:i:s', strtotime($appointment_date)),
+				'appointment_date'      => $appointment_date_formatted,
 				'created_by'            => get_staff_user_id(),
 				'created_at'            => date('Y-m-d H:i:s')
 			);
 
 			// --- Duplicate Restriction ---
-			if (staff_can('multiple_appointments_restriction', 'customers')) {
-				$appointment_date_only = date('Y-m-d', strtotime($appointment_date));
+            $duplicate = null;
 
-				$this->db->where('userid', $client_id);
-				$this->db->where('branch_id', $branch_id);
-				$this->db->where('DATE(appointment_date) =', $appointment_date_only);
+            if ($client_id && $appointment_date_formatted) {
+                if ($branch_id) {
+                    $sql    = 'SELECT appointment_id FROM ' . db_prefix() . 'appointment WHERE userid = ? AND branch_id = ? AND appointment_date = ? LIMIT 1 FOR UPDATE';
+                    $params = [$client_id, $branch_id, $appointment_date_formatted];
+                } else {
+                    $sql    = 'SELECT appointment_id FROM ' . db_prefix() . 'appointment WHERE userid = ? AND appointment_date = ? LIMIT 1 FOR UPDATE';
+                    $params = [$client_id, $appointment_date_formatted];
+                }
+                $duplicate = $this->db->query($sql, $params)->row();
+            }
 
-				$duplicate = $this->db->get(db_prefix() . 'appointment')->row();
-
-				if ($duplicate) {
-					// Duplicate found → do not insert
-					$appointment_id = 0;
-					return 3;
-					exit();
-				}
-			}
+            if ($duplicate) {
+                $this->db->trans_rollback();
+                if ($lockAcquired) {
+                    $this->db->query('SELECT RELEASE_LOCK(?)', [$lockKey]);
+                }
+                return 3;
+            }
 
 			// --- Insert New Appointment ---
 			$this->db->insert(db_prefix() . 'appointment', $appointment_data);
@@ -2286,6 +2343,24 @@ class Client_model extends App_Model
 			
         //}
         
+        if ($this->db->trans_status() === false) {
+            $this->db->trans_rollback();
+            if ($lockAcquired) {
+                $this->db->query('SELECT RELEASE_LOCK(?)', [$lockKey]);
+            }
+            return 0;
+        }
+
+        $this->db->trans_commit();
+
+        if ($shouldGenerateMr && $client_id) {
+            $this->generate_mr_no($client_id);
+        }
+
+        if ($lockAcquired) {
+            $this->db->query('SELECT RELEASE_LOCK(?)', [$lockKey]);
+        }
+
         return $return;
     }
 
@@ -4612,55 +4687,118 @@ class Client_model extends App_Model
 
     public function generate_mr_no($userid)
     {
-		
-		
-		$branch_id = $this->current_branch_id; // or fetch from session/context if not already available
-		
-		$this->db->from(db_prefix() . 'clients_new_fields as new');
-		$this->db->join(db_prefix() . 'customer_groups as cg', 'cg.customer_id = new.userid', 'inner');
-		$this->db->where('new.mr_no IS NOT NULL', null, false); // proper NULL check
-		$this->db->where(array("groupid"=>$branch_id));
-		$count = $this->db->count_all_results();
+        $userid = (int) $userid;
+        if ($userid <= 0) {
+            return false;
+        }
 
-		$get_branch_code = $this->db->get_where(db_prefix() . 'master_settings', [
-			'title'     => 'branch_code',
-			'branch_id' => $branch_id
-		])->row();
-		$branch_code = $get_branch_code ? $get_branch_code->options : '';
+        $currentRecord = $this->db->get_where(db_prefix() . 'clients_new_fields', ['userid' => $userid])->row();
+        if (!$currentRecord) {
+            return false;
+        }
 
-		$get_branch_short_code = $this->db->get_where(db_prefix() . 'master_settings', [
-			'title'     => 'branch_short_code',
-			'branch_id' => $branch_id
-		])->row();
-		$branch_short_code = $get_branch_short_code ? $get_branch_short_code->options : '';
-		
-		if($count){
-			$number = $branch_short_code . ($count + 1);
+        if (!empty($currentRecord->mr_no)) {
+            return $currentRecord->mr_no;
+        }
 
-		}else{
-			$number = $branch_short_code.'1';
-		}
-		//$formatted_number = str_pad($number, 4, '0', STR_PAD_LEFT);
-		//$visit_id = "V-".$formatted_number;
-		
-		$mr_no = $number;
-		
-		$this->db->where('userid', $userid);
-		$this->db->group_start();
-		$this->db->where('mr_no', '');
-		$this->db->or_where('mr_no IS NULL', null, false); // raw condition
-		$this->db->group_end();
-		$check = $this->db->get(db_prefix() . 'clients_new_fields')->row();
+        $branch_id = $this->current_branch_id;
+        if (!$branch_id) {
+            $branchRow = $this->db->select('groupid')
+                ->from(db_prefix() . 'customer_groups')
+                ->where('customer_id', $userid)
+                ->order_by('id', 'DESC')
+                ->limit(1)
+                ->get()
+                ->row();
+            if ($branchRow) {
+                $branch_id = (int) $branchRow->groupid;
+            }
+        }
 
-		if($check){
-			$data = array(
-			"mr_no" =>$mr_no
-			);
-			$this->db->where('userid', $userid);
-			$this->db->update(db_prefix() . 'clients_new_fields', $data);
-			
-		}
-		return true;
+        $isGlobalSequence = !$branch_id;
+
+        $branch_code = '';
+        $branch_short_code = '';
+
+        if (!$isGlobalSequence) {
+            $get_branch_code = $this->db->get_where(db_prefix() . 'master_settings', [
+                'title'     => 'branch_code',
+                'branch_id' => $branch_id,
+            ])->row();
+            if ($get_branch_code && $get_branch_code->options !== '') {
+                $parts = array_map('trim', explode(',', $get_branch_code->options));
+                $branch_code = $parts[0] ?? '';
+            }
+
+            $get_branch_short_code = $this->db->get_where(db_prefix() . 'master_settings', [
+                'title'     => 'branch_short_code',
+                'branch_id' => $branch_id,
+            ])->row();
+            if ($get_branch_short_code && $get_branch_short_code->options !== '') {
+                $parts = array_map('trim', explode(',', $get_branch_short_code->options));
+                $branch_short_code = $parts[0] ?? '';
+            }
+        }
+
+        $prefix = $branch_short_code !== '' ? $branch_short_code : $branch_code;
+        if ($prefix === '') {
+            $prefix = 'MR';
+        }
+
+        $startPosition = strlen($prefix) + 1;
+
+        $manageTransaction = false;
+        if ($this->db->trans_depth() === 0) {
+            $this->db->trans_begin();
+            $manageTransaction = true;
+        }
+
+        if ($isGlobalSequence) {
+            $sql = 'SELECT MAX(CAST(SUBSTRING(cnf.mr_no, ' . $startPosition . ') AS UNSIGNED)) AS max_seq
+                    FROM ' . db_prefix() . 'clients_new_fields cnf
+                    WHERE cnf.mr_no LIKE ?
+                    FOR UPDATE';
+            $params = [$prefix . '%'];
+        } else {
+            $sql = 'SELECT MAX(CAST(SUBSTRING(cnf.mr_no, ' . $startPosition . ') AS UNSIGNED)) AS max_seq
+                    FROM ' . db_prefix() . 'clients_new_fields cnf
+                    JOIN ' . db_prefix() . 'customer_groups cg ON cg.customer_id = cnf.userid
+                    WHERE cg.groupid = ?
+                      AND cnf.mr_no LIKE ?
+                    FOR UPDATE';
+            $params = [$branch_id, $prefix . '%'];
+        }
+
+        $row = $this->db->query($sql, $params)->row();
+        $nextSequence = ($row && $row->max_seq) ? (int) $row->max_seq : 0;
+        $nextSequence++;
+
+        $mr_no = $prefix . str_pad((string) $nextSequence, 4, '0', STR_PAD_LEFT);
+
+        $this->db->where('userid', $userid);
+        $this->db->group_start();
+        $this->db->where('mr_no', '');
+        $this->db->or_where('mr_no IS NULL', null, false);
+        $this->db->group_end();
+        $this->db->set('mr_no', $mr_no);
+        $this->db->update(db_prefix() . 'clients_new_fields');
+
+        if ($manageTransaction) {
+            if ($this->db->trans_status() === false) {
+                $this->db->trans_rollback();
+                return false;
+            }
+            $this->db->trans_commit();
+        }
+
+        // Double-check in case another process populated the value simultaneously.
+        $latestRecord = $this->db->select('mr_no')
+            ->from(db_prefix() . 'clients_new_fields')
+            ->where('userid', $userid)
+            ->get()
+            ->row();
+
+        return $latestRecord && !empty($latestRecord->mr_no) ? $latestRecord->mr_no : $mr_no;
     }
 	
     public function register_patient($userid, $invoiceId = NULL, $treatment_followup_date = NULL)

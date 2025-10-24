@@ -117,6 +117,9 @@ class Master_model extends App_Model
     public function save_master_settings()
 	{
         $branchId = $this->current_branch_id;
+        if ($branchId === null) {
+            $branchId = 0;
+        }
 
 		foreach ($_POST as $title => $values) {
 			if (!is_array($values)) {
@@ -138,6 +141,9 @@ class Master_model extends App_Model
     public function get_master_settings()
     {
         $branchId = $this->current_branch_id;
+        if ($branchId === null) {
+            $branchId = 0;
+        }
 
         $settings = $this->db
             ->where('branch_id', $branchId)
