@@ -1,6 +1,5 @@
 <?php defined('BASEPATH') or exit('No direct script access allowed'); ?>
 <?php init_head(); ?>
-<br><br>
 <div id="wrapper">
   <div class="content">
     <div class="row">
@@ -16,6 +15,15 @@
                 $appointment_data = $appointment_data[0];
               }
               $appointment_data = json_decode(json_encode($appointment_data), true);
+
+              if (!function_exists('add_form_group_class')) {
+                  function add_form_group_class($html, $class = '')
+                  {
+                      $class = trim($class);
+                      $replacement = 'class="form-group' . ($class ? ' ' . $class : '') . '"';
+                      return preg_replace('/class="form-group"/', $replacement, $html, 1);
+                  }
+              }
             ?>
 
             <form method="post" action="<?= admin_url('client/update_client'); ?>">
@@ -39,36 +47,38 @@
     // Collect only active fields for patient_name section
     if (!in_array('company', $patient_inactive_fields) || !in_array('salutation', $patient_inactive_fields) || !in_array('gender', $patient_inactive_fields)) {
         ob_start(); ?>
-        <label class="form-label"><span style="color: #f00">* </span><?= _l('patient_name') ?></label>
-        <div class="mb-3" style="display: flex; gap: 0;">
-			<?php if (!in_array('salutation', $patient_inactive_fields)) { ?>
-				<div style="flex: 1; max-width: 17%;">
-					<select class="form-control" style="padding:0; margin:0" name="salutation">
-					<option value="Master" <?= ($patient['salutation'] ?? '') == 'Master' ? 'selected' : '' ?>>Master</option>
-						<option value="Baby" <?= ($patient['salutation'] ?? '') == 'Baby' ? 'selected' : '' ?>>Baby</option>
-						<option value="Mr." <?= ($patient['salutation'] ?? '') == 'Mr.' ? 'selected' : '' ?>>Mr.</option>
-						<option value="Mrs." <?= ($patient['salutation'] ?? '') == 'Mrs.' ? 'selected' : '' ?>>Mrs.</option>
-						<option value="Ms." <?= ($patient['salutation'] ?? '') == 'Ms.' ? 'selected' : '' ?>>Ms.</option>
-					</select>
-				</div>
-			<?php } ?>
-			<?php if (!in_array('company', $patient_inactive_fields)) { ?>
-				<div style="flex: 1; max-width: 66%;">
-					<input type="text" class="form-control" name="company" placeholder="<?= _l('enter_patient_name') ?>" value="<?= htmlspecialchars($patient['company'] ?? '') ?>" required>
-				</div>
-			<?php } ?>
-			<?php if (!in_array('gender', $patient_inactive_fields)) { ?>
-				<div style="flex: 1; max-width: 23%;">
-					<select class="form-control"  style="padding:0; margin:0" name="gender">
-						<option value="Male" <?= ($patient['gender'] ?? '') == 'Male' ? 'selected' : '' ?>><?= _l('male') ?></option>
-						<option value="Female" <?= ($patient['gender'] ?? '') == 'Female' ? 'selected' : '' ?>><?= _l('female') ?></option>
-						<option value="Other" <?= ($patient['gender'] ?? '') == 'Other' ? 'selected' : '' ?>><?= _l('other') ?></option>
-					</select>
-				</div>
-			<?php } ?>
-		</div>
+        <div class="form-group mtop15">
+            <label class="form-label"><span class="text-danger">*</span> <?= _l('patient_name'); ?></label>
+            <div class="row">
+                <?php if (!in_array('salutation', $patient_inactive_fields)) { ?>
+                    <div class="col-md-2 col-sm-4 col-xs-12 mtop10">
+                        <select class="form-control" name="salutation">
+                            <option value="Master" <?= ($patient['salutation'] ?? '') == 'Master' ? 'selected' : '' ?>>Master</option>
+                            <option value="Baby" <?= ($patient['salutation'] ?? '') == 'Baby' ? 'selected' : '' ?>>Baby</option>
+                            <option value="Mr." <?= ($patient['salutation'] ?? '') == 'Mr.' ? 'selected' : '' ?>>Mr.</option>
+                            <option value="Mrs." <?= ($patient['salutation'] ?? '') == 'Mrs.' ? 'selected' : '' ?>>Mrs.</option>
+                            <option value="Ms." <?= ($patient['salutation'] ?? '') == 'Ms.' ? 'selected' : '' ?>>Ms.</option>
+                        </select>
+                    </div>
+                <?php } ?>
+                <?php if (!in_array('company', $patient_inactive_fields)) { ?>
+                    <div class="<?= !in_array('salutation', $patient_inactive_fields) && !in_array('gender', $patient_inactive_fields) ? 'col-md-6' : 'col-md-8'; ?> col-sm-8 col-xs-12 mtop10">
+                        <input type="text" class="form-control" name="company" placeholder="<?= _l('enter_patient_name'); ?>" value="<?= htmlspecialchars($patient['company'] ?? '') ?>" required>
+                    </div>
+                <?php } ?>
+                <?php if (!in_array('gender', $patient_inactive_fields)) { ?>
+                    <div class="col-md-4 col-sm-6 col-xs-12 mtop10">
+                        <select class="form-control" name="gender">
+                            <option value="Male" <?= ($patient['gender'] ?? '') == 'Male' ? 'selected' : '' ?>><?= _l('male') ?></option>
+                            <option value="Female" <?= ($patient['gender'] ?? '') == 'Female' ? 'selected' : '' ?>><?= _l('female') ?></option>
+                            <option value="Other" <?= ($patient['gender'] ?? '') == 'Other' ? 'selected' : '' ?>><?= _l('other') ?></option>
+                        </select>
+                    </div>
+                <?php } ?>
+            </div>
+        </div>
         <?php
-        $fields[] = ob_get_clean();
+        $fields[] = ['html' => ob_get_clean(), 'col' => 12];
     }
 	?>
 	
@@ -79,215 +89,267 @@ $selected_languages = isset($patient['default_language'])
                       ? array_map('trim', explode(',', $patient['default_language'])) 
                       : [];
     // Map of field name => field HTML
-    $fields_map = [
-	
-					'age_gender' => '
-						<div class="form-group">
-						  <label class="form-label"><span style="color: #f00">* </span>' . _l('age_dob_gender') . '</label>
-						  <div class="row" style="margin-bottom: 0;">
+$fields_map = [];
 
-							<div class="col-md-4" style="padding-right:2px;">
-							  <select id="ageDobSelector" class="form-control" name="dob_type" required>
-								<option value="age" ' . (!$has_valid_dob ? 'selected' : '') . '>Age</option>
-								<option value="dob" ' . ($has_valid_dob ? 'selected' : '') . '>DOB</option>
-							  </select>
-							</div>
+ob_start(); ?>
+<div class="form-group mtop15">
+    <label class="form-label"><span class="text-danger">*</span> <?= _l('age_dob_gender'); ?></label>
+    <div class="row">
+        <div class="col-md-4 col-sm-6 col-xs-12 mtop10">
+            <select id="ageDobSelector" class="form-control" name="dob_type" required>
+                <option value="age" <?= !$has_valid_dob ? 'selected' : '' ?>><?= _l('age'); ?></option>
+                <option value="dob" <?= $has_valid_dob ? 'selected' : '' ?>><?= _l('date_of_birth'); ?></option>
+            </select>
+        </div>
+        <div class="col-md-8 col-sm-6 col-xs-12 mtop10">
+            <input type="<?= $has_valid_dob ? 'date' : 'text'; ?>" id="ageDobInput" class="form-control" required>
+        </div>
+    </div>
+    <input type="hidden" name="age" id="hiddenAge" value="<?= htmlspecialchars($patient['age'] ?? '') ?>">
+    <input type="hidden" name="dob" id="hiddenDob" value="<?= $has_valid_dob ? htmlspecialchars($patient['dob']) : '' ?>">
+</div>
+<?php
+$fields_map['age_gender'] = [
+    'col'  => 6,
+    'html' => ob_get_clean(),
+];
 
-							<div class="col-md-8" style="padding-left:2px; padding-right:2px;">
-							  <input type="' . ($has_valid_dob ? 'date' : 'text') . '"
-									 id="ageDobInput"
-									 class="form-control"
-									 required>
-							</div>
-						  </div>
+$fields_map['area'] = [
+    'col'  => 4,
+    'html' => add_form_group_class(render_input('area', 'area', $patient['area'] ?? '', 'text', ['placeholder' => _l('enter_area')]), 'mtop15'),
+];
 
-						  <!-- Hidden fields to store actual values -->
-						  <input type="hidden" name="age" id="hiddenAge" value="' . htmlspecialchars($patient['age'] ?? '') . '">
-						  <input type="hidden" name="dob" id="hiddenDob" value="' . ($has_valid_dob ? htmlspecialchars($patient['dob']) : '') . '">
-						</div>
-						',
+ob_start(); ?>
+<div class="form-group mtop15">
+    <label class="form-label"><span class="text-danger">*</span> <?= _l('contact_number'); ?></label>
+    <div class="row">
+        <div class="col-md-4 col-sm-5 col-xs-12 mtop10">
+            <select name="calling_code" id="calling_code" class="form-control selectpicker" data-live-search="true" required>
+                <option value=""><?= _l('select_country_code'); ?></option>
+                <?php foreach (get_all_countries() as $country): ?>
+                    <?php
+                        $selected = '';
+                        if (isset($lead) && $lead->country == $country['country_id']) {
+                            $selected = 'selected';
+                        } elseif (($country['short_name'] ?? '') === 'India' && empty($lead)) {
+                            $selected = 'selected';
+                        }
+                    ?>
+                    <option value="<?= htmlspecialchars($country['calling_code']); ?>" <?= $selected; ?>>
+                        +<?= htmlspecialchars($country['calling_code']); ?> (<?= htmlspecialchars($country['short_name']); ?>)
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div class="col-md-8 col-sm-7 col-xs-12 mtop10">
+            <input type="text" class="form-control" name="contact_number" placeholder="<?= _l('enter_contact_number'); ?>" value="<?= htmlspecialchars($patient['phonenumber'] ?? $contact_number); ?>" required readonly>
+        </div>
+    </div>
+</div>
+<?php
+$fields_map['contact_number'] = [
+    'col'  => 6,
+    'html' => ob_get_clean(),
+];
 
-				'area' => '<label class="form-label">' . _l('area') . '</label>
-					<input type="text" class="form-control" name="area" placeholder="' . _l('enter_area') . '" value="' . htmlspecialchars($patient['area'] ?? '') . '">',
-				
+$fields_map['alt_number1'] = [
+    'col'  => 4,
+    'html' => add_form_group_class(render_input('alt_number1', 'alternative_number1', $patient['alt_number1'] ?? '', 'text', ['placeholder' => _l('enter_alt_number1')]), 'mtop15') . '<input type="hidden" name="alt_number2" value="0">',
+];
 
-				'contact_number' => '
-					<div class="form-group">
-					  <label class="form-label"><span style="color: #f00">* </span>' . _l('contact_number') . '</label>
-					  <div class="row no-gutters" style="margin-bottom: 0;">
-						<div class="col-md-4" style="padding-right:2px;">
-						  <select name="calling_code" id="calling_code" class="form-control selectpicker" data-live-search="true" required>
-							<option value="">' . _l('select_country_code') . '</option>'
-							. array_reduce(get_all_countries(), function ($options, $country) use ($lead) {
-								$selected = isset($lead) && $lead->country == $country['country_id']
-								  ? 'selected'
-								  : ($country['short_name'] == 'India' ? 'selected' : '');
-								return $options . '<option value="' . $country['calling_code'] . '" ' . $selected . '>
-								  +' . $country['calling_code'] . ' (' . $country['short_name'] . ')
-								</option>';
-							  }, '') . '
-						  </select>
-						</div>
+$fields_map['email_id'] = [
+    'col'  => 4,
+    'html' => add_form_group_class(render_input('email_id', 'email', $patient['email_id'] ?? '', 'email', ['placeholder' => _l('enter_email')]), 'mtop15'),
+];
 
-						<div class="col-md-8" style="padding-left:2px;">
-						  <input type="text" class="form-control" name="contact_number" placeholder="' . _l('enter_contact_number') . '"
-						  value="' . htmlspecialchars($patient['phonenumber'] ?? $contact_number) . '" required readonly>
-						</div>
-					  </div>
-					</div>
-					',
-				'alt_number1' => '<label class="form-label">' . _l('alternative_number1') . '</label>
-					<input type="text" class="form-control" name="alt_number1" placeholder="' . _l('enter_alt_number1') . '" value="' . htmlspecialchars($patient['alt_number1'] ?? '') . '">
-					<input type="hidden" name="alt_number2" value="0">',
-				'email_id' => '<label class="form-label">' . _l('email') . '</label>
-					<input type="text" class="form-control" name="email_id" placeholder="' . _l('enter_email') . '" value="' . htmlspecialchars($patient['email_id'] ?? '') . '">',
-				'marital_status' => render_select(
-					'marital_status',
-					[
-						['id' => 'Single', 'name' => _l('single')],
-						['id' => 'Married', 'name' => _l('married')],
-						['id' => 'Divorced', 'name' => _l('divorced')],
-						['id' => 'Widowed', 'name' => _l('widowed')],
-					],
-					['id', 'name'],
-					_l('marital_status'),
-					$patient['marital_status'] ?? '',
-					['data-none-selected-text' => _l('dropdown_non_selected_tex')]
-				),
+$fields_map['marital_status'] = [
+    'col'  => 4,
+    'html' => add_form_group_class(render_select(
+        'marital_status',
+        [
+            ['id' => 'Single', 'name' => _l('single')],
+            ['id' => 'Married', 'name' => _l('married')],
+            ['id' => 'Divorced', 'name' => _l('divorced')],
+            ['id' => 'Widowed', 'name' => _l('widowed')],
+        ],
+        ['id', 'name'],
+        _l('marital_status'),
+        $patient['marital_status'] ?? '',
+        ['data-none-selected-text' => _l('dropdown_non_selected_tex')],
+        [],
+        '',
+        'selectpicker'
+    ), 'mtop15'),
+];
 
-				'language_select' => '
-					<div class="form-group">
-					  <label class="form-label">' . _l('speaking_languages') . '</label>
-					  <div class="row" style="margin-bottom: 0;">
-						<div class="col-md-12" style="padding-right: 0;">
-						  ' . render_select(
-							'default_language[]',
-							$languages,
-							['languages_name', 'languages_name'],
-							'',
-							$selected_languages,
-							[
-							  'multiple' => true,
-							  'data-none-selected-text' => _l('dropdown_non_selected_tex')
-							],
-							[],
-							'',
-							'form-control selectpicker'
-						  ) . '
-						</div>
-					  </div>
-					</div>
-				',
+$language_select_html = render_select(
+    'default_language[]',
+    $languages,
+    ['languages_name', 'languages_name'],
+    _l('speaking_languages'),
+    $selected_languages,
+    [
+        'multiple' => true,
+        'data-none-selected-text' => _l('dropdown_non_selected_tex'),
+        'data-live-search' => 'true'
+    ],
+    [],
+    '',
+    'selectpicker'
+);
+$fields_map['language_select'] = [
+    'col'  => 6,
+    'html' => add_form_group_class($language_select_html, 'mtop15'),
+];
 
+$selected_country = $patient['country'] ?? ($lead->country ?? '');
+$country_select_html = render_select(
+    'country',
+    get_all_countries(),
+    ['country_id', 'short_name'],
+    _l('country'),
+    $selected_country,
+    [
+        'data-none-selected-text' => _l('dropdown_non_selected_tex'),
+        'data-live-search' => 'true'
+    ],
+    [],
+    '',
+    'selectpicker'
+);
+$fields_map['country_select'] = [
+    'col'  => 4,
+    'html' => add_form_group_class($country_select_html, 'mtop15'),
+];
 
+$state_select_html = render_select(
+    'state',
+    $states,
+    ['state_id', 'state_name'],
+    _l('state'),
+    ($patient['state'] ?? ''),
+    [
+        'data-none-selected-text' => _l('dropdown_non_selected_tex'),
+        'data-live-search' => 'true',
+        'id' => 'state'
+    ],
+    [],
+    '',
+    'selectpicker'
+);
+$fields_map['state'] = [
+    'col'  => 4,
+    'html' => add_form_group_class($state_select_html, 'mtop15'),
+];
 
-				'country_select' => '
-				  <div class="form-group">
-					<label class="form-label">' . _l('country') . '</label>
-					<div class="row" style="margin-bottom: 0;">
-					  <div class="col-md-12" style="padding-right: 0;">
-						<select name="country" id="country" class="form-control selectpicker" data-live-search="true">
-						  <option value="">' . _l('select_country') . '</option>'
-						  . implode('', array_map(function ($country) use ($lead) {
-							$selected = (isset($lead) && $lead->country == $country['country_id']) || ($country['short_name'] == 'India') ? 'selected' : '';
-							return '<option value="' . $country['country_id'] . '" ' . $selected . '>' . $country['short_name'] . '</option>';
-						  }, get_all_countries())) .
-						'</select>
-					  </div>
-					</div>
-				  </div>
-				',
-				'state' => render_select(
-					'state',
-					$states,
-					['state_id', 'state_name'],
-					_l('state'),
-					($patient['state'] ?? ''),
-					[
-						'data-none-selected-text' => _l('dropdown_non_selected_tex'),
-						'id' => 'state'
-					]
-				),
+$city_select_html = render_select(
+    'city',
+    $cities,
+    ['city_id', 'city_name'],
+    _l('city'),
+    ($patient['city'] ?? ''),
+    [
+        'data-none-selected-text' => _l('dropdown_non_selected_tex'),
+        'data-live-search' => 'true',
+        'id' => 'city'
+    ],
+    [],
+    '',
+    'selectpicker'
+);
+$fields_map['city'] = [
+    'col'  => 4,
+    'html' => add_form_group_class($city_select_html, 'mtop15'),
+];
 
-				'city' => render_select(
-					'city',
-					$cities,
-					['city_id', 'city_name'],
-					_l('city'),
-					($patient['city'] ?? ''),
-					[
-						'data-none-selected-text' => _l('dropdown_non_selected_tex'),
-						'id' => 'city'
-					]
-				),
+$pincode_select_html = render_select(
+    'pincode',
+    $pincodes,
+    ['pincode_id', 'pincode_name'],
+    _l('pincode'),
+    ($patient['pincode'] ?? ''),
+    [
+        'data-none-selected-text' => _l('dropdown_non_selected_tex'),
+        'data-live-search' => 'true',
+        'id' => 'pincode'
+    ],
+    [],
+    '',
+    'selectpicker'
+);
+$fields_map['pincode'] = [
+    'col'  => 4,
+    'html' => add_form_group_class($pincode_select_html, 'mtop15'),
+];
 
-				'pincode' => render_select(
-					'pincode',
-					$pincodes,
-					['pincode_id', 'pincode_name'],
-					_l('pincode'),
-					($patient['pincode'] ?? ''),
-					[
-						'data-none-selected-text' => _l('dropdown_non_selected_tex'),
-						'id' => 'pincode'
-					]
-				),
-
-				'patient_source_id' => render_select(
-					'patient_source_id',
-					$patient_source,
-					['id', ['name']],
-					'<span style="color: #f00">*</span> '._l('patient_source'),
-					!empty($patient['patient_source_id']) 
-						? $patient['patient_source_id'] 
-						: ($enquiry_type[0]['patient_source_id'] ?? ''),
-					['data-none-selected-text' => _l('dropdown_non_selected_tex'), 'required' => 'required']
-				),
-
-			];
+$patient_source_select_html = render_select(
+    'patient_source_id',
+    $patient_source,
+    ['id', 'name'],
+    '<span class="text-danger">*</span> ' . _l('patient_source'),
+    !empty($patient['patient_source_id'])
+        ? $patient['patient_source_id']
+        : ($enquiry_type[0]['patient_source_id'] ?? ''),
+    [
+        'data-none-selected-text' => _l('dropdown_non_selected_tex'),
+        'required' => 'required'
+    ],
+    [],
+    '',
+    'selectpicker'
+);
+$fields_map['patient_source_id'] = [
+    'col'  => 4,
+    'html' => add_form_group_class($patient_source_select_html, 'mtop15'),
+];
 
     // Add all other active fields
-    foreach ($fields_map as $key => $html) {
+    foreach ($fields_map as $key => $config) {
         if (!in_array($key, $patient_inactive_fields)) {
-            $fields[] = $html;
+            $fields[] = $config;
         }
     }
 
-    // Render fields in rows of 3 columns
-    echo '<div class="row">';
-foreach ($fields as $i => $fieldHtml) {
-    // Start new row every 3 fields
-    if ($i > 0 && $i % 3 == 0) {
-        echo '</div><div class="row">';
+    if ($total_due == 0) {
+        $branch_select = render_select(
+            'groupid',
+            $branch,
+            ['id', 'name'],
+            '<span class="text-danger">*</span> ' . _l('branch'),
+            isset($current_branch_id) ? $current_branch_id : ($patient['groupid'] ?? ''),
+            [
+                'id' => 'branch_id',
+                'data-none-selected-text' => _l('dropdown_non_selected_tex'),
+                'required' => 'required'
+            ],
+            [],
+            '',
+            'selectpicker'
+        );
+        $fields[] = [
+            'col'  => 4,
+            'html' => add_form_group_class($branch_select, 'mtop15'),
+        ];
+    } else {
+        $fields[] = [
+            'col'  => 12,
+            'html' => '<div class="alert alert-info mtop15">' . _l('note') . ': Branch change option will be visible only when there are no dues.</div>',
+        ];
     }
-    echo '<div class="col-md-4">' . $fieldHtml . '</div>';
-}
-if($total_due == 0){
-?>
-<div class="col-md-3">
-	 <?= render_select(
-			'groupid', // name
-			$branch,   // options array
-			['id', 'name'], // option keys
-			_l('branch') . '*', // label
-			isset($current_branch_id) ? $current_branch_id : ($patient['groupid'] ?? ''), // selected
-			[
-				'id' => 'branch_id', // 👈 Add your ID here
-				'data-none-selected-text' => _l('dropdown_non_selected_tex'),
-				'required' => 'required'
-			]
-		) ?>
 
-	  </div>
-<?php
-}else{
-	?>
-	  <small style="color:red; display:block; margin-top:30px;">
-            Note: Branch change option will be visible only when there are no dues.
-        </small>
-<?php
-}
-echo '</div>'; // close last row
+    echo '<div class="row">';
+    $currentWidth = 0;
+    foreach ($fields as $field) {
+        $col = $field['col'] ?? 4;
+        $col = (int) max(1, min(12, $col));
+        if ($currentWidth + $col > 12) {
+            echo '</div><div class="row">';
+            $currentWidth = 0;
+        }
+        echo '<div class="col-md-' . $col . ' col-sm-12">' . $field['html'] . '</div>';
+        $currentWidth += $col;
+    }
+    echo '</div>';
     ?>
 	
 </div>
@@ -297,6 +359,10 @@ echo '</div>'; // close last row
     const input = document.getElementById('ageDobInput');
     const hiddenAge = document.getElementById('hiddenAge');
     const hiddenDob = document.getElementById('hiddenDob');
+
+    if (!selector || !input || !hiddenAge || !hiddenDob) {
+      return;
+    }
 
     // Detect initially selected type
     function initializeInput() {
@@ -350,16 +416,10 @@ echo '</div>'; // close last row
 
 
               </div>
-			<br>
-			  <br>
-			  <br>
               <div class="text-center mt-4">
                 <button type="submit" class="btn btn-primary"><?= _l('submit'); ?></button>
                 <a href="<?= admin_url('client/get_patient_list'); ?>" class="btn btn-default"><?= _l('cancel'); ?></a>
               </div>
-			  <br>
-			  <br>
-			  <br>
             </form>
 
           </div>
@@ -369,36 +429,6 @@ echo '</div>'; // close last row
   </div>
 </div>
 <?php init_tail(); ?>
-<script>
-$(document).ready(function() {
-    $('select[name="state"]').on('change', function() {
-        var state_id = $(this).val();
-
-        $.ajax({
-            url: admin_url + 'leads/get_cities_by_state',
-            type: 'POST',
-            data: {
-                state_id: state_id,
-                <?= $this->security->get_csrf_token_name(); ?>: "<?= $this->security->get_csrf_hash(); ?>"
-            },
-            dataType: 'json',
-            success: function(response) {
-                var $citySelect = $('select[name="city"]');
-                $citySelect.empty().append('<option value=""><?= _l('dropdown_non_selected_tex'); ?></option>');
-
-                $.each(response, function(i, city) {
-                    $citySelect.append($('<option>', {
-                        value: city.city_id,
-                        text: city.city_name
-                    }));
-                });
-
-                $citySelect.selectpicker('refresh');
-            }
-        });
-    });
-});
-</script>
 <script>
 $(document).ready(function () {
   $('#state').on('change', function () {
