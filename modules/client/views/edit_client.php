@@ -107,8 +107,8 @@ $selected_languages = isset($patient['default_language'])
 						</div>
 						',
 
-					'area' => '<label class="form-label"><span style="color: #f00">* </span>' . _l('area') . '</label>
-					<input type="text" class="form-control" name="area" placeholder="' . _l('enter_area') . '" value="' . htmlspecialchars($patient['area'] ?? '') . '" required>',
+				'area' => '<label class="form-label">' . _l('area') . '</label>
+					<input type="text" class="form-control" name="area" placeholder="' . _l('enter_area') . '" value="' . htmlspecialchars($patient['area'] ?? '') . '">',
 				
 
 				'contact_number' => '
@@ -157,7 +157,7 @@ $selected_languages = isset($patient['default_language'])
 
 				'language_select' => '
 					<div class="form-group">
-					  <label class="form-label"><span style="color: #f00">*</span> ' . _l('speaking_languages') . '</label>
+					  <label class="form-label">' . _l('speaking_languages') . '</label>
 					  <div class="row" style="margin-bottom: 0;">
 						<div class="col-md-12" style="padding-right: 0;">
 						  ' . render_select(
@@ -168,8 +168,7 @@ $selected_languages = isset($patient['default_language'])
 							$selected_languages,
 							[
 							  'multiple' => true,
-							  'data-none-selected-text' => _l('dropdown_non_selected_tex'),
-							  'required' => 'required'
+							  'data-none-selected-text' => _l('dropdown_non_selected_tex')
 							],
 							[],
 							'',
@@ -184,10 +183,10 @@ $selected_languages = isset($patient['default_language'])
 
 				'country_select' => '
 				  <div class="form-group">
-					<label class="form-label"><span style="color: #f00">*</span> ' . _l('country') . '</label>
+					<label class="form-label">' . _l('country') . '</label>
 					<div class="row" style="margin-bottom: 0;">
 					  <div class="col-md-12" style="padding-right: 0;">
-						<select name="country" id="country" class="form-control selectpicker" data-live-search="true" required>
+						<select name="country" id="country" class="form-control selectpicker" data-live-search="true">
 						  <option value="">' . _l('select_country') . '</option>'
 						  . implode('', array_map(function ($country) use ($lead) {
 							$selected = (isset($lead) && $lead->country == $country['country_id']) || ($country['short_name'] == 'India') ? 'selected' : '';
@@ -202,12 +201,11 @@ $selected_languages = isset($patient['default_language'])
 					'state',
 					$states,
 					['state_id', 'state_name'],
-					'<span style="color: #f00">*</span> ' . _l('state'),
+					_l('state'),
 					($patient['state'] ?? ''),
 					[
 						'data-none-selected-text' => _l('dropdown_non_selected_tex'),
-						'id' => 'state',
-						'required' => 'required'
+						'id' => 'state'
 					]
 				),
 
@@ -215,12 +213,11 @@ $selected_languages = isset($patient['default_language'])
 					'city',
 					$cities,
 					['city_id', 'city_name'],
-					'<span style="color: #f00">*</span> ' . _l('city'),
+					_l('city'),
 					($patient['city'] ?? ''),
 					[
 						'data-none-selected-text' => _l('dropdown_non_selected_tex'),
-						'id' => 'city',
-						'required' => 'required'
+						'id' => 'city'
 					]
 				),
 
@@ -228,12 +225,11 @@ $selected_languages = isset($patient['default_language'])
 					'pincode',
 					$pincodes,
 					['pincode_id', 'pincode_name'],
-					'<span style="color: #f00">*</span> ' . _l('pincode'),
+					_l('pincode'),
 					($patient['pincode'] ?? ''),
 					[
 						'data-none-selected-text' => _l('dropdown_non_selected_tex'),
-						'id' => 'pincode',
-						'required' => 'required'
+						'id' => 'pincode'
 					]
 				),
 
