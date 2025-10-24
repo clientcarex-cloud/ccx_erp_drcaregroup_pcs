@@ -185,6 +185,67 @@ $filteredRecords = $filterQuery->get()->row()->total;
 $CI->db->reset_query();
 $CI->db->distinct();
 $ciPrefix = db_prefix();
+
+$treatmentSubquery = "(
+    SELECT i.description
+    FROM {$ciPrefix}appointment ap
+    LEFT JOIN {$ciPrefix}items i ON i.id = ap.treatment_id
+    WHERE ap.userid = c.userid
+    ORDER BY ap.appointment_id DESC
+    LIMIT 1
+)";
+
+$doctorSubquery = "(
+    SELECT CONCAT_WS(' ', st.firstname, st.lastname)
+    FROM {$ciPrefix}appointment ap2
+    LEFT JOIN {$ciPrefix}staff st ON st.staffid = ap2.enquiry_doctor_id
+    WHERE ap2.userid = c.userid
+    ORDER BY ap2.appointment_id DESC
+    LIMIT 1
+)";
+
+$lastCallSubquery = "(
+    SELECT cl.created_date
+    FROM {$ciPrefix}patient_call_logs cl
+    WHERE cl.patientid = c.userid
+    ORDER BY cl.id DESC
+    LIMIT 1
+)";
+
+$nextCallSubquery = "(
+    SELECT cl.next_calling_date
+    FROM {$ciPrefix}patient_call_logs cl
+    WHERE cl.patientid = c.userid
+    ORDER BY cl.id DESC
+    LIMIT 1
+)";
+
+$latestStatusNameSubquery = "(
+    SELECT ls.name
+    FROM {$ciPrefix}lead_patient_journey lj
+    LEFT JOIN {$ciPrefix}leads_status ls ON ls.id = lj.status
+    WHERE lj.userid = c.userid
+    ORDER BY lj.id DESC
+    LIMIT 1
+)";
+
+$latestStatusColorSubquery = "(
+    SELECT ls.color
+    FROM {$ciPrefix}lead_patient_journey lj
+    LEFT JOIN {$ciPrefix}leads_status ls ON ls.id = lj.status
+    WHERE lj.userid = c.userid
+    ORDER BY lj.id DESC
+    LIMIT 1
+)";
+
+$latestStatusIdSubquery = "(
+    SELECT lj.status
+    FROM {$ciPrefix}lead_patient_journey lj
+    WHERE lj.userid = c.userid
+    ORDER BY lj.id DESC
+    LIMIT 1
+)";
+
 $CI->db->select("
     c.userid,
     c.company,
@@ -199,59 +260,13 @@ $CI->db->select("
     new.current_status,
     new.patient_status,
     source.name as patient_source_name,
-    (
-        SELECT i.description
-        FROM {$ciPrefix}appointment ap
-        LEFT JOIN {$ciPrefix}items i ON i.id = ap.treatment_id
-        WHERE ap.userid = c.userid
-        ORDER BY ap.appointment_id DESC
-        LIMIT 1
-    ) as treatment_name,
-    (
-        SELECT CONCAT_WS(' ', st.firstname, st.lastname)
-        FROM {$ciPrefix}appointment ap2
-        LEFT JOIN {$ciPrefix}staff st ON st.staffid = ap2.enquiry_doctor_id
-        WHERE ap2.userid = c.userid
-        ORDER BY ap2.appointment_id DESC
-        LIMIT 1
-    ) as doctor_name,
-    (
-        SELECT cl.created_date
-        FROM {$ciPrefix}patient_call_logs cl
-        WHERE cl.patientid = c.userid
-        ORDER BY cl.id DESC
-        LIMIT 1
-    ) as last_calling_date,
-    (
-        SELECT cl.next_calling_date
-        FROM {$ciPrefix}patient_call_logs cl
-        WHERE cl.patientid = c.userid
-        ORDER BY cl.id DESC
-        LIMIT 1
-    ) as next_calling_date,
-    (
-        SELECT ls.name
-        FROM {$ciPrefix}lead_patient_journey lj
-        LEFT JOIN {$ciPrefix}leads_status ls ON ls.id = lj.status
-        WHERE lj.userid = c.userid
-        ORDER BY lj.id DESC
-        LIMIT 1
-    ) as latest_status_name,
-    (
-        SELECT ls.color
-        FROM {$ciPrefix}lead_patient_journey lj
-        LEFT JOIN {$ciPrefix}leads_status ls ON ls.id = lj.status
-        WHERE lj.userid = c.userid
-        ORDER BY lj.id DESC
-        LIMIT 1
-    ) as latest_status_color,
-    (
-        SELECT lj.status
-        FROM {$ciPrefix}lead_patient_journey lj
-        WHERE lj.userid = c.userid
-        ORDER BY lj.id DESC
-        LIMIT 1
-    ) as latest_status_id
+    {$treatmentSubquery} as treatment_name,
+    {$doctorSubquery} as doctor_name,
+    {$lastCallSubquery} as last_calling_date,
+    {$nextCallSubquery} as next_calling_date,
+    {$latestStatusNameSubquery} as latest_status_name,
+    {$latestStatusColorSubquery} as latest_status_color,
+    {$latestStatusIdSubquery} as latest_status_id
 ");
 $CI->db->from(db_prefix() . 'clients c');
 $CI->db->join(db_prefix() . 'clients_new_fields new', 'new.userid = c.userid', 'left');
@@ -272,7 +287,20 @@ if (!empty($search)) {
     $CI->db->or_like('new.alt_number1', $search);
     $CI->db->group_end();
 }
-$CI->db->order_by($order_column, $order_dir);
+$sortableExpressions = [
+    'treatment_name'       => $treatmentSubquery,
+    'doctor_name'          => $doctorSubquery,
+    'patient_source_name'  => 'source.name',
+    'last_calling_date'    => $lastCallSubquery,
+    'next_calling_date'    => $nextCallSubquery,
+    'latest_status_name'   => $latestStatusNameSubquery,
+];
+
+if (isset($sortableExpressions[$order_column])) {
+    $CI->db->order_by($sortableExpressions[$order_column], $order_dir, false);
+} else {
+    $CI->db->order_by($order_column, $order_dir);
+}
 if ($length != -1) {
     $CI->db->limit($length, $start);
 }
