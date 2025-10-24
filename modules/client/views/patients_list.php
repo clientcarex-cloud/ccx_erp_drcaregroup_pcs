@@ -55,12 +55,6 @@ if($master_data){
 											<?= _l('new_client'); ?>
 										</a>
 									<?php } ?>
-									<?php if (staff_can('create', 'customers')) { ?>
-										<a href="<?= admin_url('client/client/import'); ?>" class="btn btn-default">
-											<i class="fa-solid fa-upload tw-mr-1"></i>
-											<?= _l('import_customers'); ?>
-										</a>
-									<?php } ?>
 								</div>
 							</div>
 
@@ -91,7 +85,7 @@ if($master_data){
 								?>
 							  <div class="col-md-3">
 								<label><?= _l('from_date'); ?></label>
-								<input type="date" class="form-control" name="from_date" id="from_date" value="2011-01-01">
+								<input type="date" class="form-control" name="from_date" id="from_date" value="<?= date('Y-m-d'); ?>">
 							  </div>
 							  <div class="col-md-3">
 								<label><?= _l('to_date'); ?></label>
