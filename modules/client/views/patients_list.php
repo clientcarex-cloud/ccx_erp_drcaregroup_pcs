@@ -406,6 +406,21 @@ if($master_data){
 <?php init_tail(); ?>
 <script>
 $(function () {
+    const todayIso = new Date().toISOString().slice(0, 10);
+    if ($('#from_date').length && !$('#from_date').val()) {
+        $('#from_date').val(todayIso);
+    }
+    if ($('#to_date').length && !$('#to_date').val()) {
+        $('#to_date').val(todayIso);
+    }
+    if ($('#consulted_date').length && !$('#consulted_date').val()) {
+        $('#consulted_date').val(todayIso);
+    }
+    if ($('#consulted_to_date').length && !$('#consulted_to_date').val()) {
+        $('#consulted_to_date').val(todayIso);
+    }
+    let appointmentsInitialized = false;
+
     <?php if (isset($clientid) && $clientid): ?>
         // If clientid is set, show patient modal popup
         //$('#client-model-auto').modal('show');
@@ -416,25 +431,61 @@ $(function () {
     <?php else: ?>
         // Only load the Patients table on first load
         initDataTable('.table-patients', '<?= admin_url('client/get_patient_list'); ?>', [0], [0]);
-        initDataTable('.table-appointments', '<?= admin_url('client/appointments'); ?>', [1], [1]);
-		
-		loadClientSummary();
-		loadAppointmentSummary();
+
+        loadClientSummary();
+
+        const initialFrom = $('#consulted_date').length && $('#consulted_date').val()
+            ? $('#consulted_date').val()
+            : new Date().toISOString().slice(0, 10);
+        const initialTo = $('#consulted_to_date').length && $('#consulted_to_date').val()
+            ? $('#consulted_to_date').val()
+            : initialFrom;
+        const initialDoctor = $('#enquiry_doctor_id').length && $('#enquiry_doctor_id').val()
+            ? $('#enquiry_doctor_id').val()
+            : '0';
+        const initialBranch = $('#appointment_branch_id').length && $('#appointment_branch_id').val()
+            ? $('#appointment_branch_id').val()
+            : ($('#groupid').length && $('#groupid').val() ? $('#groupid').val() : '0');
+        const initialAppointmentType = $('#appointment_type_id').length && $('#appointment_type_id').val()
+            ? $('#appointment_type_id').val()
+            : '0';
+        const initialVisitStatusText = $('#appointment_status').length
+            ? $('#appointment_status option:selected').text().trim()
+            : '';
+        const initialVisitStatus = initialVisitStatusText && initialVisitStatusText !== 'Select Response'
+            ? initialVisitStatusText.replace(/\s+/g, '_')
+            : 'All';
+
+        initDataTable(
+            '.table-appointments',
+            `<?= admin_url("client/appointments/1/") ?>${initialFrom}/${initialTo}/${initialDoctor}/${initialVisitStatus}/${initialBranch}/0/${initialAppointmentType}`,
+            [1],
+            [1]
+        );
+        appointmentsInitialized = true;
+
+        loadAppointmentSummary(initialFrom, initialTo, initialDoctor, initialBranch, initialAppointmentType);
     <?php endif; ?>
 
     // Lazy load Appointments tab table
-    let appointmentsInitialized = false;
 
     $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
         let target = $(e.target).attr("href");
 
         if (target === '#appointments-tab' && !appointmentsInitialized) {
-            let fromDate = $('#consulted_date').val();
-            let toDate = $('#consulted_to_date').val();
-            
+            const fromDate = $('#consulted_date').val() || new Date().toISOString().slice(0, 10);
+            const toDate = $('#consulted_to_date').val() || fromDate;
+            const doctorId = $('#enquiry_doctor_id').val() || '0';
+            const branchId = $('#appointment_branch_id').val() || ($('#groupid').val() || '0');
+            const appointmentTypeId = $('#appointment_type_id').val() || '0';
+            const visitStatusText = $('#appointment_status option:selected').text().trim();
+            const visitStatus = visitStatusText && visitStatusText !== 'Select Response'
+                ? visitStatusText.replace(/\s+/g, '_')
+                : 'All';
+
             initDataTable(
                 '.table-appointments',
-                '<?= admin_url("client/appointments/1/") ?>' + fromDate + '/' + toDate,
+                `<?= admin_url("client/appointments/1/") ?>${fromDate}/${toDate}/${doctorId}/${visitStatus}/${branchId}/0/${appointmentTypeId}`,
                 [1],
                 [1]
             );
