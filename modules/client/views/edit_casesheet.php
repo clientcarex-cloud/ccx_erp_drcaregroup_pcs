@@ -11,6 +11,19 @@
 <?php
 
 $case = $case[0];
+$patient_name = '';
+
+if (!empty($case['company'])) {
+	$patient_name = $case['company'];
+} elseif (is_object($client ?? null) && !empty($client->company)) {
+	$patient_name = $client->company;
+} elseif (is_array($client ?? null) && !empty($client['company'])) {
+	$patient_name = $client['company'];
+}
+
+if ($patient_name !== '') {
+	echo '<div class="casesheet-patient-name" style="margin-bottom: 10px;"><strong>' . _l('patient_name') . ':</strong> ' . htmlspecialchars($patient_name, ENT_QUOTES, 'UTF-8') . '</div>';
+}
 
 //if (staff_cant('edit_limit_casesheet', 'customers')) {
 	?>
