@@ -405,6 +405,31 @@ if($master_data){
 
 <?php init_tail(); ?>
 <script>
+const defaultBranchId = <?= json_encode(isset($current_branch_id) ? (string)$current_branch_id : ''); ?>;
+
+const getPatientBranchSelect = () => {
+    const $explicit = $('#branch_id');
+    if ($explicit.length) {
+        return $explicit;
+    }
+    return $('#groupid');
+};
+
+const getPatientBranchValue = () => {
+    const $select = getPatientBranchSelect();
+    if (!$select.length) {
+        return defaultBranchId || '';
+    }
+    const value = $select.val();
+    if (Array.isArray(value)) {
+        return value.filter(Boolean).join(',');
+    }
+    if (value === null || value === undefined) {
+        return '';
+    }
+    return value;
+};
+
 $(function () {
     const todayIso = new Date().toISOString().slice(0, 10);
     if ($('#from_date').length && !$('#from_date').val()) {
@@ -443,9 +468,10 @@ $(function () {
         const initialDoctor = $('#enquiry_doctor_id').length && $('#enquiry_doctor_id').val()
             ? $('#enquiry_doctor_id').val()
             : '0';
-        const initialBranch = $('#appointment_branch_id').length && $('#appointment_branch_id').val()
+        const initialBranchFilter = $('#appointment_branch_id').length && $('#appointment_branch_id').val()
             ? $('#appointment_branch_id').val()
-            : ($('#groupid').length && $('#groupid').val() ? $('#groupid').val() : '0');
+            : getPatientBranchValue();
+        const initialBranchForUrl = initialBranchFilter ? initialBranchFilter : '0';
         const initialAppointmentType = $('#appointment_type_id').length && $('#appointment_type_id').val()
             ? $('#appointment_type_id').val()
             : '0';
@@ -458,13 +484,13 @@ $(function () {
 
         initDataTable(
             '.table-appointments',
-            `<?= admin_url("client/appointments/1/") ?>${initialFrom}/${initialTo}/${initialDoctor}/${initialVisitStatus}/${initialBranch}/0/${initialAppointmentType}`,
+            `<?= admin_url("client/appointments/1/") ?>${initialFrom}/${initialTo}/${initialDoctor}/${initialVisitStatus}/${initialBranchForUrl}/0/${initialAppointmentType}`,
             [1],
             [1]
         );
         appointmentsInitialized = true;
 
-        loadAppointmentSummary(initialFrom, initialTo, initialDoctor, initialBranch, initialAppointmentType);
+        loadAppointmentSummary(initialFrom, initialTo, initialDoctor, initialBranchFilter, initialAppointmentType);
     <?php endif; ?>
 
     // Lazy load Appointments tab table
@@ -476,7 +502,8 @@ $(function () {
             const fromDate = $('#consulted_date').val() || new Date().toISOString().slice(0, 10);
             const toDate = $('#consulted_to_date').val() || fromDate;
             const doctorId = $('#enquiry_doctor_id').val() || '0';
-            const branchId = $('#appointment_branch_id').val() || ($('#groupid').val() || '0');
+            const branchFilter = $('#appointment_branch_id').val() || getPatientBranchValue();
+            const branchId = branchFilter ? branchFilter : '0';
             const appointmentTypeId = $('#appointment_type_id').val() || '0';
             const visitStatusText = $('#appointment_status option:selected').text().trim();
             const visitStatus = visitStatusText && visitStatusText !== 'Select Response'
@@ -490,6 +517,7 @@ $(function () {
                 [1]
             );
             appointmentsInitialized = true;
+            loadAppointmentSummary(fromDate, toDate, doctorId, branchFilter, appointmentTypeId);
         }
     });
 });
@@ -591,11 +619,12 @@ function loadClientSummary(from_date = '', to_date = '', branch_id = '') {
 
                 const from = $('#from_date').val();
                 const to = $('#to_date').val();
-                const branch_id_val = $('#groupid').val();
+                const branchIdValue = getPatientBranchValue();
+                const branchIdForUrl = branchIdValue ? branchIdValue : '0';
 
                 if ($.fn.DataTable.isDataTable('.table-patients')) {
                     $('.table-patients').DataTable().ajax.url(
-                        '<?= admin_url("client/get_patient_list/null/") ?>' + from + '/' + to + '/' + branch_id_val + '?summary_filter=' + filterType
+                        '<?= admin_url("client/get_patient_list/null/") ?>' + from + '/' + to + '/' + branchIdForUrl + '?summary_filter=' + filterType
                     ).load();
                 }
             });
@@ -616,16 +645,17 @@ $(document).ready(function () {
     $('#filterBtn').click(function () {
         const from = $('#from_date').val();
         const to = $('#to_date').val();
-        const branch_id = $('#groupid').val();
+        const branchIdValue = getPatientBranchValue();
+        const branchIdForUrl = branchIdValue ? branchIdValue : '0';
         const appointment_type_id = $('#appointment_type_id').val();
 
         activePatientSummaryFilter = null;
 
-        loadClientSummary(from, to, branch_id);
+        loadClientSummary(from, to, branchIdValue);
 
         if ($.fn.DataTable.isDataTable('.table-patients')) {
             $('.table-patients').DataTable().ajax.url(
-                '<?= admin_url("client/get_patient_list/null/") ?>' + from + '/' + to + '/' + branch_id
+                '<?= admin_url("client/get_patient_list/null/") ?>' + from + '/' + to + '/' + branchIdForUrl
             ).load();
 
             /* $('.table-appointments').DataTable().ajax.url(
@@ -660,10 +690,9 @@ function loadAppointmentSummary(from_date = '', to_date = '', enquiry_doctor_id 
 
     if (!branch_id && branch_id !== 0) {
         const branchInput = $('#appointment_branch_id');
-        const fallbackBranch = $('#groupid');
         branch_id = branchInput.length && branchInput.val()
             ? branchInput.val()
-            : (fallbackBranch.length && fallbackBranch.val() ? fallbackBranch.val() : '0');
+            : (getPatientBranchValue() ? getPatientBranchValue() : '0');
     }
 
     if (!appointment_type_id) {
@@ -705,14 +734,13 @@ function loadAppointmentSummary(from_date = '', to_date = '', enquiry_doctor_id 
                 const toInput = $('#consulted_to_date');
                 const doctor_id = $('#enquiry_doctor_id').val() || '0';
                 const branchSelect = $('#appointment_branch_id');
-                const patientBranchSelect = $('#groupid');
                 const appointmentTypeInput = $('#appointment_type_id');
 
                 const from = fromInput.length && fromInput.val() ? fromInput.val() : new Date().toISOString().slice(0, 10);
                 const to = toInput.length && toInput.val() ? toInput.val() : from;
                 const branch_val = branchSelect.length && branchSelect.val()
                     ? branchSelect.val()
-                    : (patientBranchSelect.length && patientBranchSelect.val() ? patientBranchSelect.val() : '0');
+                    : (getPatientBranchValue() ? getPatientBranchValue() : '0');
                 const appointment_type_id_val = appointmentTypeInput.length && appointmentTypeInput.val() ? appointmentTypeInput.val() : '0';
 
                 $cards.removeClass('is-active').attr('aria-pressed', 'false');
@@ -753,7 +781,8 @@ $(document).ready(function () {
 
         let appointment_type_id = $('#appointment_type_id').val();
         let branch_id = $('#appointment_branch_id').val();
-        branch_id = branch_id ? branch_id : '0';
+        branch_id = branch_id ? branch_id : getPatientBranchValue();
+        const branchIdForUrl = branch_id ? branch_id : '0';
 
         let visit_status = $('#appointment_status option:selected').text().trim();
         visit_status = visit_status && visit_status !== 'Select Response' ? visit_status.replace(/\s+/g, '_') : 'All';
@@ -762,7 +791,7 @@ $(document).ready(function () {
         loadAppointmentSummary(from, to, enquiry_doctor_id, branch_id, appointment_type_id);
 
         if ($.fn.DataTable.isDataTable('.table-appointments')) {
-            const url = `<?= admin_url("client/appointments/1/") ?>${from}/${to}/${enquiry_doctor_id}/${visit_status}/${branch_id}/0/${appointment_type_id}`;
+            const url = `<?= admin_url("client/appointments/1/") ?>${from}/${to}/${enquiry_doctor_id}/${visit_status}/${branchIdForUrl}/0/${appointment_type_id}`;
             $('.table-appointments').DataTable().ajax.url(url).load();
         }
     });
