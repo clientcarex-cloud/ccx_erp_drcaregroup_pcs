@@ -357,7 +357,7 @@ $(function () {
 		});
     <?php else: ?>
         // Only load the Patients table on first load
-        initDataTable('.table-patients', '<?= admin_url('client/get_patient_list'); ?>', [1], [1]);
+        initDataTable('.table-patients', '<?= admin_url('client/get_patient_list'); ?>', [0], [0]);
         initDataTable('.table-appointments', '<?= admin_url('client/appointments'); ?>', [1], [1]);
 		
 		loadClientSummary();

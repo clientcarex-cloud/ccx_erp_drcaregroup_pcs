@@ -355,7 +355,7 @@ $(function () {
     <?php else: ?>
         // Only load the Patients table on first load
         if (window.location.hash === '') {
-            initDataTable('.table-patients', '<?= admin_url('client/get_patient_list'); ?>', [1], [1]);
+            initDataTable('.table-patients', '<?= admin_url('client/get_patient_list'); ?>', [0], [0]);
 			loadClientSummary();
         }
 
