@@ -13,14 +13,32 @@ $from_date = $consulted_from_date;
 $to_date = $consulted_to_date;
 
 $order_column_index = $CI->input->post('order')[0]['column'] ?? 0;
-$order_dir = 'desc';
-
+$order_dir = strtolower($CI->input->post('order')[0]['dir'] ?? 'desc');
+if (!in_array($order_dir, ['asc', 'desc'], true)) {
+    $order_dir = 'desc';
+}
 
 
 $summary_filter = $CI->input->get('summary_filter');
 
 // Replace with your column order
-$columns = ['c.userid', 'c.company', 'c.phonenumber', 'c.city', 'c.state'];
+$columns = [
+    'c.userid',
+    'c.company',
+    'new.age',
+    'new.gender',
+    'c.phonenumber',
+    'treatment_name',
+    'doctor_name',
+    'patient_source_name',
+    'last_calling_date',
+    'next_calling_date',
+    'latest_status_name',
+    'new.current_status',
+    'new.registration_start_date',
+    'new.registration_end_date',
+    'new.patient_status',
+];
 $order_column = $columns[$order_column_index] ?? 'c.userid';
 // Total count
 $totalQuery = $CI->db;
@@ -166,7 +184,75 @@ $filteredRecords = $filterQuery->get()->row()->total;
 // Main data query
 $CI->db->reset_query();
 $CI->db->distinct();
-$CI->db->select('c.userid, c.company, c.phonenumber, c.datecreated, new.age, new.gender, c.city, c.state, new.registration_start_date, new.registration_end_date, new.current_status, new.patient_status, source.name as patient_source_name');
+$ciPrefix = db_prefix();
+$CI->db->select("
+    c.userid,
+    c.company,
+    c.phonenumber,
+    c.datecreated,
+    new.age,
+    new.gender,
+    c.city,
+    c.state,
+    new.registration_start_date,
+    new.registration_end_date,
+    new.current_status,
+    new.patient_status,
+    source.name as patient_source_name,
+    (
+        SELECT i.description
+        FROM {$ciPrefix}appointment ap
+        LEFT JOIN {$ciPrefix}items i ON i.id = ap.treatment_id
+        WHERE ap.userid = c.userid
+        ORDER BY ap.appointment_id DESC
+        LIMIT 1
+    ) as treatment_name,
+    (
+        SELECT CONCAT_WS(' ', st.firstname, st.lastname)
+        FROM {$ciPrefix}appointment ap2
+        LEFT JOIN {$ciPrefix}staff st ON st.staffid = ap2.enquiry_doctor_id
+        WHERE ap2.userid = c.userid
+        ORDER BY ap2.appointment_id DESC
+        LIMIT 1
+    ) as doctor_name,
+    (
+        SELECT cl.created_date
+        FROM {$ciPrefix}patient_call_logs cl
+        WHERE cl.patientid = c.userid
+        ORDER BY cl.id DESC
+        LIMIT 1
+    ) as last_calling_date,
+    (
+        SELECT cl.next_calling_date
+        FROM {$ciPrefix}patient_call_logs cl
+        WHERE cl.patientid = c.userid
+        ORDER BY cl.id DESC
+        LIMIT 1
+    ) as next_calling_date,
+    (
+        SELECT ls.name
+        FROM {$ciPrefix}lead_patient_journey lj
+        LEFT JOIN {$ciPrefix}leads_status ls ON ls.id = lj.status
+        WHERE lj.userid = c.userid
+        ORDER BY lj.id DESC
+        LIMIT 1
+    ) as latest_status_name,
+    (
+        SELECT ls.color
+        FROM {$ciPrefix}lead_patient_journey lj
+        LEFT JOIN {$ciPrefix}leads_status ls ON ls.id = lj.status
+        WHERE lj.userid = c.userid
+        ORDER BY lj.id DESC
+        LIMIT 1
+    ) as latest_status_color,
+    (
+        SELECT lj.status
+        FROM {$ciPrefix}lead_patient_journey lj
+        WHERE lj.userid = c.userid
+        ORDER BY lj.id DESC
+        LIMIT 1
+    ) as latest_status_id
+");
 $CI->db->from(db_prefix() . 'clients c');
 $CI->db->join(db_prefix() . 'clients_new_fields new', 'new.userid = c.userid', 'left');
 $CI->db->join(db_prefix() . 'customer_groups group', 'group.customer_id = c.userid', 'left');
@@ -246,67 +332,6 @@ exit; */
 
 $results = $CI->db->get()->result_array();
 
-// Process user IDs
-$userIds = array_column($results, 'userid');
-$treatmentMap = $doctorMap = $callLogMap = $leadStatuses = [];
-
-if (!empty($userIds)) {
-		// Latest appointment
-		$treatmentMap = [];
-		$doctorMap    = [];
-
-		$CI->db->select('
-			a.userid,
-			a.enquiry_doctor_id,
-			i.description AS treatment_name,
-			CONCAT_WS(" ", s.firstname, s.lastname) AS doctor_name
-		');
-		$CI->db->from(db_prefix() . 'appointment a');
-		$CI->db->join(
-			'(SELECT MAX(appointment_id) AS max_id, userid FROM ' . db_prefix() . 'appointment GROUP BY userid) AS latest',
-			'a.appointment_id = latest.max_id',
-			'INNER'
-		);
-		$CI->db->join(db_prefix() . 'items i', 'i.id = a.treatment_id', 'LEFT');
-		$CI->db->join(db_prefix() . 'staff s', 's.staffid = a.enquiry_doctor_id', 'LEFT');
-		$CI->db->where_in('a.userid', $userIds);
-
-		$appointments = $CI->db->get()->result_array();
-
-		foreach ($appointments as $app) {
-			$treatmentMap[$app['userid']] = $app['treatment_name'] ?? '-';
-			$doctorMap[$app['userid']] = [
-				'id'   => $app['enquiry_doctor_id'],
-				'name' => $app['doctor_name'] ?? '-',
-			];
-		}
-
-
-
-    // Latest call logs
-    $CI->db->select('c.patientid, c.created_date as last_calling_date, c.next_calling_date');
-    $CI->db->from(db_prefix() . 'patient_call_logs c');
-    $CI->db->join("(SELECT MAX(id) as max_id, patientid FROM " . db_prefix() . "patient_call_logs GROUP BY patientid) as latest", 'c.id = latest.max_id', 'inner');
-    $CI->db->where_in('c.patientid', $userIds);
-    $callLogs = $CI->db->get()->result_array();
-    foreach ($callLogs as $log) {
-        $callLogMap[$log['patientid']] = $log;
-    }
-
-    // Latest journey status
-    $CI->db->select('j.userid, j.status, s.name as status_name, s.color as status_color');
-    $CI->db->from(db_prefix() . 'lead_patient_journey j');
-    $CI->db->join(db_prefix() . 'leads_status s', 's.id = j.status', 'left');
-    $CI->db->where_in('j.userid', $userIds);
-    $CI->db->order_by('j.id', 'DESC');
-    $statuses = $CI->db->get()->result_array();
-    foreach ($statuses as $s) {
-        if (!isset($leadStatuses[$s['userid']])) {
-            $leadStatuses[$s['userid']] = $s;
-        }
-    }
-}
-
 // Prepare output
 $output = [
     "draw" => $draw,
@@ -338,7 +363,8 @@ foreach ($results as $row) {
     $company = '<a href="' . $url . '" class="tw-font-medium">' . $company . '</a>';
     $company .= '<div class="row-options">';
     if ($hasPermissionDelete) {
-        $company .= '<a href="' . admin_url('client/delete/' . $row['userid']) . '" class="_delete" onclick="return confirm(\'Are you sure?\')">' . _l('delete') . '</a>';
+        $confirmText = addslashes(_l('confirm_action_prompt'));
+        $company    .= '<a href="' . admin_url('client/delete/' . $row['userid']) . '" class="_delete" onclick="return confirm(\'' . $confirmText . '\')">' . _l('delete') . '</a>';
     }
     $company .= '</div>';
 
@@ -346,10 +372,10 @@ foreach ($results as $row) {
         ? mask_last_5_digits_1($row['phonenumber']) 
         : $row['phonenumber'];
 
-    $callLog = $callLogMap[$row['userid']] ?? ['last_calling_date' => '', 'next_calling_date' => ''];
-    $status = $leadStatuses[$row['userid']] ?? ['status' => 1, 'status_name' => 'Unknown', 'status_color' => '#7cb342'];
-    $color = $status['status_color'];
-    $statusLabel = '<span class="lead-status-' . $status['status'] . ' label" style="color:' . $color . ';border:1px solid ' . adjust_hex_brightness($color, 0.4) . ';background: ' . adjust_hex_brightness($color, 0.04) . ';">' . e($status['status_name']) . '</span>';
+    $statusId    = (int) ($row['latest_status_id'] ?? 0);
+    $statusName  = $row['latest_status_name'] ?? 'Unknown';
+    $statusColor = $row['latest_status_color'] ?? '#7cb342';
+    $statusLabel = '<span class="lead-status-' . $statusId . ' label" style="color:' . $statusColor . ';border:1px solid ' . adjust_hex_brightness($statusColor, 0.4) . ';background:' . adjust_hex_brightness($statusColor, 0.04) . ';">' . e($statusName) . '</span>';
 	
 	
 	$currentStatusName = trim($row['current_status']);
@@ -369,12 +395,12 @@ foreach ($results as $row) {
     $dataRow[] = $row['age'];
     $dataRow[] = $row['gender'];
     $dataRow[] = $phonenumber;
-    $dataRow[] = $treatmentMap[$row['userid']] ?? '';
-    $dataRow[] = isset($doctorMap[$row['userid']]) ? $doctorMap[$row['userid']]['name'] : '-';
+    $dataRow[] = $row['treatment_name'] ?? '';
+    $dataRow[] = $row['doctor_name'] ?? '-';
 
     $dataRow[] = $row['patient_source_name'];
-    $dataRow[] = $callLog['last_calling_date'];
-    $dataRow[] = $callLog['next_calling_date'];
+    $dataRow[] = $row['last_calling_date'];
+    $dataRow[] = $row['next_calling_date'];
     $dataRow[] = $statusLabel;
     $dataRow[] = $currentStatusLabel;
     //$dataRow[] = $row['current_status'];
