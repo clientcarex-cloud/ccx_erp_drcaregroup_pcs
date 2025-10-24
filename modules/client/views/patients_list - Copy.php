@@ -2,9 +2,73 @@
 <?php init_head(); ?>
 <style>
     .swal2-popup { font-size: 1.6rem !important; }
-	.tw-bg-white {
-		--tw-bg-opacity: 1 !important;
-	}
+    .tw-bg-white {
+        --tw-bg-opacity: 1 !important;
+    }
+    .summary-card {
+        position: relative;
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+        background: #ffffff;
+        border: 1px solid rgba(15, 23, 42, 0.08);
+        border-radius: 12px;
+        padding: 14px 16px;
+        box-shadow: 0 3px 8px rgba(15, 23, 42, 0.05);
+        cursor: pointer;
+        transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+        --card-accent: #2563eb;
+        --card-accent-rgb: 37, 99, 235;
+    }
+    .summary-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+    }
+    .summary-card:focus-visible {
+        outline: 3px solid rgba(var(--card-accent-rgb), 0.35);
+        outline-offset: 2px;
+    }
+    .summary-card__content {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    .summary-card__count {
+        font-size: 20px;
+        font-weight: 600;
+        color: #111827;
+        line-height: 1.2;
+    }
+    .summary-card__label {
+        font-size: 13px;
+        font-weight: 500;
+        color: #6b7280;
+        letter-spacing: 0.02em;
+    }
+    .summary-card__indicator {
+        align-self: center;
+        width: 12px;
+        height: 12px;
+        border-radius: 999px;
+        background-color: rgba(var(--card-accent-rgb), 0.18);
+        box-shadow: 0 0 0 4px rgba(var(--card-accent-rgb), 0.12);
+        transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+    }
+    .summary-card.is-active {
+        border-color: var(--card-accent);
+        background: linear-gradient(135deg, rgba(var(--card-accent-rgb), 0.1), #ffffff);
+        box-shadow: 0 18px 30px rgba(var(--card-accent-rgb), 0.28);
+    }
+    .summary-card.is-active .summary-card__indicator {
+        transform: scale(1.25);
+        background-color: var(--card-accent);
+        box-shadow: 0 0 0 6px rgba(var(--card-accent-rgb), 0.2);
+    }
+    .summary-card.is-active .summary-card__count,
+    .summary-card.is-active .summary-card__label {
+        color: var(--card-accent);
+    }
 </style>
 <?php
 if($master_data){
@@ -438,6 +502,18 @@ function confirmBooking(id) {
 </script>
 
 <script>
+let activePatientSummaryFilter = null;
+
+const buildSummaryCard = (count, label, filter, accentHex, accentRgb) => `
+    <div class="summary-card tw-flex tw-items-start" data-filter="${filter}" role="button" tabindex="0" aria-pressed="false" style="--card-accent:${accentHex}; --card-accent-rgb:${accentRgb};">
+        <div class="summary-card__content">
+            <span class="summary-card__count">${count}</span>
+            <span class="summary-card__label">${label}</span>
+        </div>
+        <span class="summary-card__indicator" aria-hidden="true"></span>
+    </div>
+`;
+
 function loadClientSummary(from_date = '', to_date = '', branch_id = '') {
     $.ajax({
         url: admin_url + 'client/get_client_summary',
@@ -449,79 +525,73 @@ function loadClientSummary(from_date = '', to_date = '', branch_id = '') {
         },
         dataType: 'json',
         success: function (res) {
-			$('#summaryCards').html(`
-				
-				<div class="tw-border tw-rounded-lg tw-px-4 tw-py-3 tw-flex tw-items-center tw-bg-white summary-card" data-filter="registered">
-					<span class="tw-font-semibold tw-mr-1">${res.registered}</span>
-					<span class="text-primary"><?= _l('registered_patients'); ?></span>
-				</div>
-				<div class="tw-border tw-rounded-lg tw-px-4 tw-py-3 tw-flex tw-items-center tw-bg-white summary-card" data-filter="not_registered">
-					<span class="tw-font-semibold tw-mr-1">${res.not_registered}</span>
-					<span class="text-warning"><?= _l('not_registered_patients'); ?></span>
-				</div>
-				<div class="tw-border tw-rounded-lg tw-px-4 tw-py-3 tw-flex tw-items-center tw-bg-white summary-card" data-filter="new_patients">
-					<span class="tw-font-semibold tw-mr-1">${res.new_patients}</span>
-					<span class="text-success"><?= _l('new_patients'); ?></span>
-				</div>
-				<div class="tw-border tw-rounded-lg tw-px-4 tw-py-3 tw-flex tw-items-center tw-bg-white summary-card" data-filter="renewal">
-					<span class="tw-font-semibold tw-mr-1">${res.renewal_patients}</span>
-					<span class="text-primary"><?= _l('renewal_patients'); ?></span>
-				</div>
-				<div class="tw-border tw-rounded-lg tw-px-4 tw-py-3 tw-flex tw-items-center tw-bg-white summary-card" data-filter="no_due">
-					<span class="tw-font-semibold tw-mr-1">${res.no_due_registered_patients}</span>
-					<span class="text-success"><?= _l('no_due_patients'); ?></span>
-				</div>
-				<div class="tw-border tw-rounded-lg tw-px-4 tw-py-3 tw-flex tw-items-center tw-bg-white summary-card" data-filter="due">
-					<span class="tw-font-semibold tw-mr-1">${res.due_patients}</span>
-					<span class="text-danger"><?= _l('due_patients'); ?></span>
-				</div>
-			`);
+            $('#summaryCards').html([
+                buildSummaryCard(res.registered, '<?= _l('registered_patients'); ?>', 'registered', '#2563eb', '37, 99, 235'),
+                buildSummaryCard(res.not_registered, '<?= _l('not_registered_patients'); ?>', 'not_registered', '#f59e0b', '245, 158, 11'),
+                buildSummaryCard(res.new_patients, '<?= _l('new_patients'); ?>', 'new_patients', '#10b981', '16, 185, 129'),
+                buildSummaryCard(res.renewal_patients, '<?= _l('renewal_patients'); ?>', 'renewal', '#9333ea', '147, 51, 234'),
+                buildSummaryCard(res.no_due_registered_patients, '<?= _l('no_due_patients'); ?>', 'no_due', '#0ea5e9', '14, 165, 233'),
+                buildSummaryCard(res.due_patients, '<?= _l('due_patients'); ?>', 'due', '#ef4444', '239, 68, 68')
+            ].join(''));
 
-			// Add click handler
-			$('.summary-card').on('click', function () {
-				const filterType = $(this).data('filter');
-				const from = $('#from_date').val();
-				const to = $('#to_date').val();
-				const branch_id = $('#groupid').val();
+            const $cards = $('#summaryCards .summary-card');
 
-				// Reload DataTable with custom summary filter
-				if ($.fn.DataTable.isDataTable('.table-patients')) {
-					$('.table-patients').DataTable().ajax.url(
-						'<?= admin_url("client/get_patient_list/null/") ?>' + from + '/' + to + '/' + branch_id + '?summary_filter=' + filterType
-					).load();
-				}
-			});
-		}
+            if (activePatientSummaryFilter) {
+                const $activeCard = $cards.filter('[data-filter="' + activePatientSummaryFilter + '"]');
+                if ($activeCard.length) {
+                    $activeCard.addClass('is-active').attr('aria-pressed', 'true');
+                }
+            }
+
+            $cards.on('click', function () {
+                const $card = $(this);
+                const filterType = $card.data('filter');
+
+                $cards.removeClass('is-active').attr('aria-pressed', 'false');
+                $card.addClass('is-active').attr('aria-pressed', 'true');
+                activePatientSummaryFilter = filterType;
+
+                const from = $('#from_date').val();
+                const to = $('#to_date').val();
+                const branch_id_val = $('#groupid').val();
+
+                if ($.fn.DataTable.isDataTable('.table-patients')) {
+                    $('.table-patients').DataTable().ajax.url(
+                        '<?= admin_url("client/get_patient_list/null/") ?>' + from + '/' + to + '/' + branch_id_val + '?summary_filter=' + filterType
+                    ).load();
+                }
+            });
+
+            $cards.on('keydown', function (e) {
+                if (e.key === ' ' || e.key === 'Enter') {
+                    e.preventDefault();
+                    $(this).trigger('click');
+                }
+            });
+        }
 
     });
 }
 
-
-
-
-// Initial load
 $(document).ready(function () {
-    // Initial summary load
-    //loadClientSummary();
-
     $('#filterBtn').click(function () {
         const from = $('#from_date').val();
         const to = $('#to_date').val();
-		const branch_id = $('#groupid').val();
-		
-        // Reload summary cards
+        const branch_id = $('#groupid').val();
+
+        activePatientSummaryFilter = null;
+
         loadClientSummary(from, to, branch_id);
 
-        // Reload DataTable with filtered data
         if ($.fn.DataTable.isDataTable('.table-patients')) {
             $('.table-patients').DataTable().ajax.url(
                 '<?= admin_url("client/get_patient_list/null/") ?>' + from + '/' + to + '/' + branch_id
-            ).load();  
-			
-			$('.table-appointments').DataTable().ajax.url(
+            ).load();
+
+            $('.table-appointments').DataTable().ajax.url(
                 '<?= admin_url("client/appointments/") ?>' + from + '/' + to
             ).load();
-			
+
         }
     });
 });
@@ -530,7 +600,9 @@ $(document).ready(function () {
 </script>
 <!-- Appointments -->
 <script>
-function loadAppointmentSummary(from_date = '', to_date = '', enquiry_doctor_id = '', branch_id = '') {
+let activeAppointmentSummaryFilter = null;
+
+function loadAppointmentSummary(from_date = '', to_date = '', enquiry_doctor_id = '', branch_id = '', appointment_type_id = '') {
     $.ajax({
         url: admin_url + 'client/get_appointment_summary',
         type: 'POST',
@@ -539,31 +611,37 @@ function loadAppointmentSummary(from_date = '', to_date = '', enquiry_doctor_id 
             to_date: to_date,
             enquiry_doctor_id: enquiry_doctor_id,
             branch_id: branch_id,
+            appointment_type_id: appointment_type_id,
         },
         dataType: 'json',
         success: function (res) {
-            $('#appointmentSummaryCards').html(`
-			<div class="tw-border tw-rounded-lg tw-px-4 tw-py-3 tw-flex tw-items-center tw-bg-white summary-card tw-cursor-pointer hover:tw-shadow" data-filter="all">
-				<span class="tw-font-semibold tw-mr-1">${res.total}</span>
-				<span class="text-success"><?= _l('appointments'); ?></span>
-			</div>
-			<div class="tw-border tw-rounded-lg tw-px-4 tw-py-3 tw-flex tw-items-center tw-bg-white summary-card tw-cursor-pointer hover:tw-shadow" data-filter="missed">
-				<span class="tw-font-semibold tw-mr-1">${res.missed}</span>
-				<span class="text-danger"><?= _l('missed'); ?></span>
-			</div>
-			<div class="tw-border tw-rounded-lg tw-px-4 tw-py-3 tw-flex tw-items-center tw-bg-white summary-card tw-cursor-pointer hover:tw-shadow" data-filter="consulted">
-				<span class="tw-font-semibold tw-mr-1">${res.consulted}</span>
-				<span class="text-success"><?= _l('consulted'); ?></span>
-			</div>
-		`);
+            $('#appointmentSummaryCards').html([
+                buildSummaryCard(res.total, '<?= _l('appointments'); ?>', 'all', '#2563eb', '37, 99, 235'),
+                buildSummaryCard(res.missed, '<?= _l('missed'); ?>', 'missed', '#ef4444', '239, 68, 68'),
+                buildSummaryCard(res.consulted, '<?= _l('consulted'); ?>', 'consulted', '#10b981', '16, 185, 129')
+            ].join(''));
 
+            const $cards = $('#appointmentSummaryCards .summary-card');
 
-            $('.summary-card').on('click', function () {
-                const filterType = $(this).data('filter');
+            if (activeAppointmentSummaryFilter) {
+                const $activeCard = $cards.filter('[data-filter="' + activeAppointmentSummaryFilter + '"]');
+                if ($activeCard.length) {
+                    $activeCard.addClass('is-active').attr('aria-pressed', 'true');
+                }
+            }
+
+            $cards.on('click', function () {
+                const $card = $(this);
+                const filterType = $card.data('filter');
                 const from = $('#from_date').val();
                 const to = $('#to_date').val();
                 const doctor_id = $('#enquiry_doctor_id').val();
-                const branch_id = $('#groupid').val();
+                const branch_val = $('#groupid').val();
+                const appointment_type_id_val = $('#appointment_type_id').val();
+
+                $cards.removeClass('is-active').attr('aria-pressed', 'false');
+                $card.addClass('is-active').attr('aria-pressed', 'true');
+                activeAppointmentSummaryFilter = filterType;
 
                 if ($.fn.DataTable.isDataTable('.table-appointments')) {
                     let table = $('.table-appointments').DataTable();
@@ -571,44 +649,48 @@ function loadAppointmentSummary(from_date = '', to_date = '', enquiry_doctor_id 
                         d.from_date = from;
                         d.to_date = to;
                         d.enquiry_doctor_id = doctor_id;
-                        d.branch_id = branch_id;
+                        d.branch_id = branch_val;
                         d.summary_filter = filterType;
+                        d.appointment_type_id = appointment_type_id_val;
                     };
                     table.ajax.reload();
+                }
+            });
+
+            $cards.on('keydown', function (e) {
+                if (e.key === ' ' || e.key === 'Enter') {
+                    e.preventDefault();
+                    $(this).trigger('click');
                 }
             });
         }
     });
 }
 
-
-
-
 $(document).ready(function () {
-    // Initial load
-    
     $('#searchAppointmentsBtn').click(function () {
-		const from = $('#consulted_date').val();
-		const to = $('#consulted_to_date').val();
+        const from = $('#consulted_date').val();
+        const to = $('#consulted_to_date').val();
 
-		let enquiry_doctor_id = $('#enquiry_doctor_id').val();
-		enquiry_doctor_id = enquiry_doctor_id ? enquiry_doctor_id : '0';
+        let enquiry_doctor_id = $('#enquiry_doctor_id').val();
+        enquiry_doctor_id = enquiry_doctor_id ? enquiry_doctor_id : '0';
 
-		let branch_id = $('#appointment_branch_id').val();
-		branch_id = branch_id ? branch_id : '0';
+        let branch_id = $('#appointment_branch_id').val();
+        branch_id = branch_id ? branch_id : '0';
 
-		let visit_status = $('#appointment_status option:selected').text().trim();
-		visit_status = visit_status && visit_status !== 'Select Response' ? visit_status.replace(/\s+/g, '_') : 'All';
+        let appointment_type_id = $('#appointment_type_id').val();
 
-		loadClientSummary(from, to);
-		loadAppointmentSummary(from, to, enquiry_doctor_id, branch_id);
+        let visit_status = $('#appointment_status option:selected').text().trim();
+        visit_status = visit_status && visit_status !== 'Select Response' ? visit_status.replace(/\s+/g, '_') : 'All';
 
-		if ($.fn.DataTable.isDataTable('.table-appointments')) {
-			const url = `<?= admin_url("client/appointments/1/") ?>${from}/${to}/${enquiry_doctor_id}/${visit_status}/${branch_id}`;
-			$('.table-appointments').DataTable().ajax.url(url).load();
-		}
-	});
+        activeAppointmentSummaryFilter = null;
+        loadAppointmentSummary(from, to, enquiry_doctor_id, branch_id, appointment_type_id);
 
+        if ($.fn.DataTable.isDataTable('.table-appointments')) {
+            const url = `<?= admin_url("client/appointments/1/") ?>${from}/${to}/${enquiry_doctor_id}/${visit_status}/${branch_id}/0/${appointment_type_id}`;
+            $('.table-appointments').DataTable().ajax.url(url).load();
+        }
+    });
 });
 
 
