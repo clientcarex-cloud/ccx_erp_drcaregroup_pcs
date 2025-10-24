@@ -331,7 +331,8 @@ function master_install()
 	['table' => 'customer_groups',      'title' => 'medicine_followup_days',              'options' => '', 'multi_select' => '2'],
 	['table' => 'customer_groups',      'title' => 'discount_limit_settings',                    'options' => '', 'multi_select' => '2'],
 	['table' => 'customer_groups',      'title' => 'invoice_minimum_period_settings',                    'options' => '', 'multi_select' => '2'],
-    ['table' => 'acknowledge', 'title' => 'invoice_acknowledge', 'options' => '', 'multi_select' => '3']
+    ['table' => 'acknowledge', 'title' => 'invoice_acknowledge', 'options' => '', 'multi_select' => '3'],
+	['table' => 'roles',               'title' => 'medicine_period_mandatory_roles',            'options' => '', 'multi_select' => '1'],
 	];
 
 	$CI = &get_instance();

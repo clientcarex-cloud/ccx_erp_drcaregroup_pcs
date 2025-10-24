@@ -116,6 +116,8 @@ class Master_model extends App_Model
 
     public function save_master_settings()
 	{
+        $branchId = $this->current_branch_id;
+
 		foreach ($_POST as $title => $values) {
 			if (!is_array($values)) {
 				$values = [$values];
@@ -124,7 +126,7 @@ class Master_model extends App_Model
 			$csv = !empty($values) ? implode(', ', array_map('trim', $values)) : '';
 
 			$this->db->where('title', $title);
-			$this->db->where('branch_id', $this->current_branch_id);
+			$this->db->where('branch_id', $branchId);
 			$this->db->update(db_prefix() . 'master_settings', [
 				'options' => $csv,
 			]);
@@ -135,8 +137,48 @@ class Master_model extends App_Model
 
     public function get_master_settings()
     {
-        return  $this->db->get_where(db_prefix() . 'master_settings', array("branch_id"=>$this->current_branch_id))->result_array();
-		
+        $branchId = $this->current_branch_id;
+
+        $settings = $this->db
+            ->where('branch_id', $branchId)
+            ->get(db_prefix() . 'master_settings')
+            ->result_array();
+
+        $requiredSettings = [
+            [
+                'title'        => 'medicine_period_mandatory_roles',
+                'table'        => 'roles',
+                'multi_select' => 1,
+            ],
+        ];
+
+        $existingTitles = array_column($settings, 'title');
+        $newSettingInserted = false;
+
+        foreach ($requiredSettings as $required) {
+            if (!in_array($required['title'], $existingTitles, true)) {
+                $this->db->insert(
+                    db_prefix() . 'master_settings',
+                    [
+                        'title'        => $required['title'],
+                        'table'        => $required['table'],
+                        'options'      => '',
+                        'multi_select' => $required['multi_select'],
+                        'branch_id'    => $branchId,
+                    ]
+                );
+                $newSettingInserted = true;
+            }
+        }
+
+        if ($newSettingInserted) {
+            $settings = $this->db
+                ->where('branch_id', $branchId)
+                ->get(db_prefix() . 'master_settings')
+                ->result_array();
+        }
+
+        return $settings;
     }
 
     public function get_options($table)
@@ -147,6 +189,9 @@ class Master_model extends App_Model
         } elseif ($table == 'leads_status') {
             $this->db->select("name as name");
             return $this->db->get(db_prefix() . 'leads_status')->result_array();
+        } elseif ($table == 'roles') {
+            $this->db->select('roleid, name');
+            return $this->db->get(db_prefix() . 'roles')->result_array();
         } elseif ($table == 'show_finance_in_doctor_reports') {
           return [
 				['name' => 'Yes'],

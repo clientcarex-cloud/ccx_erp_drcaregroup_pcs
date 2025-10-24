@@ -23,6 +23,8 @@ if ($patient_name !== '') {
 	echo '<div class="casesheet-patient-name" style="margin-bottom: 10px;"><strong>' . _l('patient_name') . ':</strong> ' . htmlspecialchars($patient_name, ENT_QUOTES, 'UTF-8') . '</div>';
 }
 
+$medicine_period_required = $is_medicine_period_required ?? false;
+
 //if (staff_cant('edit_limit_casesheet', 'customers')) {
 	?>
 	<?php
@@ -182,8 +184,19 @@ if (isset($casesheet_data['duration_value']) && $casesheet_data['duration_value'
 		<div class="row">
 			
             <div class="col-md-4">
-              <label for="medicine_days"><?php echo _l('medicine_days'); ?><!-- <span class="text-danger">*</span> --></label>
-              <input type="number" name="medicine_days" id="medicine_days" value="<?php echo $case['medicine_days'];?>" class="form-control" min="1" <!-- required --> >
+              <label for="medicine_days">
+                  <?php echo _l('medicine_days'); ?>
+                  <?php if ($medicine_period_required): ?>
+                      <span class="text-danger">*</span>
+                  <?php endif; ?>
+              </label>
+              <input type="number"
+                     name="medicine_days"
+                     id="medicine_days"
+                     value="<?php echo $case['medicine_days'];?>"
+                     class="form-control"
+                     min="1"
+                     <?php echo $medicine_period_required ? 'required aria-required="true"' : ''; ?>>
             </div>
 			<div class="col-md-4">
               <label for="followup_date"><?php echo _l('followup_date'); ?></label>

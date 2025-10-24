@@ -35,3 +35,4 @@ $lang['invoice_minimum_period_settings']   = 'Invoice Minimum Period Settings';
 $lang['invoice_acknowledge']   = 'Invoice Acknowledge';
 $lang['show_finance_for_all']   = 'Show Finance For All';
 $lang['missed_appointment']   = 'Missed Appointment';
+$lang['medicine_period_mandatory_roles'] = 'Medicine Period Mandatory Roles';

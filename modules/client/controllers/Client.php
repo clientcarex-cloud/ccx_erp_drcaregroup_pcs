@@ -2183,6 +2183,33 @@ public function save_prescription()
 		$data['prev_documents'] = $this->client_model->prev_documents($patientid);
 		$data['treatments'] = $this->master_model->get_all('treatment');
 		$data['patient_status'] = $this->master_model->get_all('patient_status');
+        $master_settings = $this->master_model->get_master_settings();
+        $data['master_settings'] = $master_settings;
+
+        $medicinePeriodRoles = [];
+        foreach ($master_settings as $setting) {
+            if ($setting['title'] === 'medicine_period_mandatory_roles' && !empty($setting['options'])) {
+                $medicinePeriodRoles = array_filter(array_map('trim', explode(',', $setting['options'])), 'strlen');
+                break;
+            }
+        }
+
+        $staffRoleId = null;
+        $staffId = get_staff_user_id();
+        if ($staffId) {
+            $roleRow = $this->db
+                ->select('role')
+                ->from(db_prefix() . 'staff')
+                ->where('staffid', $staffId)
+                ->get()
+                ->row();
+            if ($roleRow) {
+                $staffRoleId = (string) $roleRow->role;
+            }
+        }
+
+        $data['is_medicine_period_required'] = $staffRoleId !== null
+            && in_array($staffRoleId, $medicinePeriodRoles, true);
 		$this->load->view('add_casesheet', $data);
 	}
 	public function update_casesheet()

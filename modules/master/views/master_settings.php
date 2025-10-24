@@ -52,6 +52,14 @@
 						echo '<input type="hidden" name="' . htmlspecialchars($field_base_name) . '" value="">';
 					}
 
+					$valueField = 'name';
+					$labelField = 'name';
+
+					if ($res['table'] === 'roles') {
+						$valueField = 'roleid';
+						$labelField = 'name';
+					}
+
 					// Render different fields based on multi_select value
 					if ($res['multi_select'] == 1) {
 						
@@ -59,7 +67,7 @@
 						echo render_select(
 							$field_name,
 							$option_array,
-							['name', 'name'],
+							[$valueField, $labelField],
 							'',
 							$selected_values,
 							['multiple' => true, 'data-none-selected-text' => _l('dropdown_non_selected_tex')]
@@ -88,7 +96,7 @@
 						echo render_select(
 							$field_name,
 							$option_array,
-							['name', 'name'],
+							[$valueField, $labelField],
 							'',
 							$selected_values,
 							['data-none-selected-text' => _l('dropdown_non_selected_tex')]
