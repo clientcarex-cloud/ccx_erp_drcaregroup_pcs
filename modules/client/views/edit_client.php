@@ -142,7 +142,7 @@ ob_start(); ?>
             </select>
         </div>
         <div class="col-md-8 col-sm-7 col-xs-12 mtop10">
-            <input type="text" class="form-control" name="contact_number" placeholder="<?= _l('enter_contact_number'); ?>" value="<?= htmlspecialchars($patient['phonenumber'] ?? $contact_number); ?>" required readonly>
+            <input type="text" class="form-control" name="contact_number" placeholder="<?= _l('enter_contact_number'); ?>" value="<?= htmlspecialchars($patient['phonenumber'] ?? $contact_number); ?>" required>
         </div>
     </div>
 </div>
