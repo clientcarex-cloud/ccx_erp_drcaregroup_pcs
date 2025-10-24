@@ -287,20 +287,7 @@ if (!empty($search)) {
     $CI->db->or_like('new.alt_number1', $search);
     $CI->db->group_end();
 }
-$sortableExpressions = [
-    'treatment_name'       => $treatmentSubquery,
-    'doctor_name'          => $doctorSubquery,
-    'patient_source_name'  => 'source.name',
-    'last_calling_date'    => $lastCallSubquery,
-    'next_calling_date'    => $nextCallSubquery,
-    'latest_status_name'   => $latestStatusNameSubquery,
-];
-
-if (isset($sortableExpressions[$order_column])) {
-    $CI->db->order_by($sortableExpressions[$order_column], $order_dir, false);
-} else {
-    $CI->db->order_by($order_column, $order_dir);
-}
+$CI->db->order_by($order_column, $order_dir);
 if ($length != -1) {
     $CI->db->limit($length, $start);
 }
