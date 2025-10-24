@@ -592,6 +592,34 @@ $(document).ready(function () {
 let activeAppointmentSummaryFilter = null;
 
 function loadAppointmentSummary(from_date = '', to_date = '', enquiry_doctor_id = '', branch_id = '', appointment_type_id = '') {
+    if (!from_date) {
+        const fromInput = $('#consulted_date');
+        from_date = fromInput.length && fromInput.val() ? fromInput.val() : new Date().toISOString().slice(0, 10);
+    }
+
+    if (!to_date) {
+        const toInput = $('#consulted_to_date');
+        to_date = toInput.length && toInput.val() ? toInput.val() : new Date().toISOString().slice(0, 10);
+    }
+
+    if (!enquiry_doctor_id) {
+        const doctorInput = $('#enquiry_doctor_id');
+        enquiry_doctor_id = doctorInput.length && doctorInput.val() ? doctorInput.val() : '0';
+    }
+
+    if (!branch_id && branch_id !== 0) {
+        const branchInput = $('#appointment_branch_id');
+        const fallbackBranch = $('#groupid');
+        branch_id = branchInput.length && branchInput.val()
+            ? branchInput.val()
+            : (fallbackBranch.length && fallbackBranch.val() ? fallbackBranch.val() : '0');
+    }
+
+    if (!appointment_type_id) {
+        const appointmentTypeInput = $('#appointment_type_id');
+        appointment_type_id = appointmentTypeInput.length && appointmentTypeInput.val() ? appointmentTypeInput.val() : '0';
+    }
+
     $.ajax({
         url: admin_url + 'client/get_appointment_summary',
         type: 'POST',
@@ -622,11 +650,19 @@ function loadAppointmentSummary(from_date = '', to_date = '', enquiry_doctor_id 
             $cards.on('click', function () {
                 const $card = $(this);
                 const filterType = $card.data('filter');
-                const from = $('#from_date').val();
-                const to = $('#to_date').val();
-                const doctor_id = $('#enquiry_doctor_id').val();
-                const branch_val = $('#groupid').val();
-                const appointment_type_id_val = $('#appointment_type_id').val();
+                const fromInput = $('#consulted_date');
+                const toInput = $('#consulted_to_date');
+                const doctor_id = $('#enquiry_doctor_id').val() || '0';
+                const branchSelect = $('#appointment_branch_id');
+                const patientBranchSelect = $('#groupid');
+                const appointmentTypeInput = $('#appointment_type_id');
+
+                const from = fromInput.length && fromInput.val() ? fromInput.val() : new Date().toISOString().slice(0, 10);
+                const to = toInput.length && toInput.val() ? toInput.val() : from;
+                const branch_val = branchSelect.length && branchSelect.val()
+                    ? branchSelect.val()
+                    : (patientBranchSelect.length && patientBranchSelect.val() ? patientBranchSelect.val() : '0');
+                const appointment_type_id_val = appointmentTypeInput.length && appointmentTypeInput.val() ? appointmentTypeInput.val() : '0';
 
                 $cards.removeClass('is-active').attr('aria-pressed', 'false');
                 $card.addClass('is-active').attr('aria-pressed', 'true');
