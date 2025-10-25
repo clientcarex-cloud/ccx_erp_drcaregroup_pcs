@@ -56,10 +56,76 @@ class Session_database_driver extends CI_Session_driver implements SessionHandle
             $this->_platform = 'postgre';
         }
 
+        $this->ensure_sessions_table_exists();
+
         // Note: BC work-around for the old 'sess_table_name' setting, should be removed in the future.
         if (! isset($this->_config['save_path']) && ($this->_config['save_path'] = config_item('sess_table_name'))) {
             log_message('debug', 'Session: "sess_save_path" is empty; using BC fallback to "sess_table_name".');
         }
+    }
+
+    /**
+     * Create the sessions table on the fly if an upgrade or manual change removed it.
+     *
+     * Prevents fatal errors (HTTP 500) when the database session table is missing.
+     *
+     * @return void
+     */
+    protected function ensure_sessions_table_exists()
+    {
+        if (! isset($this->_config['save_path']) || $this->_config['save_path'] === '' || ! method_exists($this->_db, 'table_exists')) {
+            return;
+        }
+
+        $table = $this->_config['save_path'];
+
+        try {
+            if ($this->_db->table_exists($table)) {
+                return;
+            }
+        } catch (Throwable $e) {
+            log_message('error', 'Session: failed to check for sessions table existence - ' . $e->getMessage());
+
+            return;
+        }
+
+        $prefixedTable = $this->_db->dbprefix($table);
+        $charset       = $this->sanitize_charset_name(defined('APP_DB_CHARSET') ? APP_DB_CHARSET : $this->_db->char_set);
+        $collation     = $this->sanitize_charset_name(defined('APP_DB_COLLATION') ? APP_DB_COLLATION : $this->_db->dbcollat);
+
+        $charset   = $charset ?: 'utf8mb4';
+        $collation = $collation ?: 'utf8mb4_unicode_ci';
+
+        $sql = "CREATE TABLE IF NOT EXISTS `{$prefixedTable}` (
+            `id` varchar(128) NOT NULL,
+            `ip_address` varchar(45) NOT NULL,
+            `timestamp` int(10) unsigned NOT NULL DEFAULT 0,
+            `data` blob,
+            KEY `ci_sessions_timestamp` (`timestamp`)
+        ) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE={$collation};";
+
+        try {
+            $this->_db->query($sql);
+            unset($this->_db->data_cache['table_names']);
+            log_message('debug', 'Session: auto-created missing session table "' . $prefixedTable . '".');
+        } catch (Throwable $e) {
+            log_message('error', 'Session: failed to auto-create sessions table "' . $prefixedTable . '" - ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Sanitizes charset/collation identifiers so we can safely place them inside SQL.
+     *
+     * @param  string|null $value
+     * @return string
+     */
+    protected function sanitize_charset_name($value)
+    {
+        if ($value === null) {
+            return '';
+        }
+
+        return preg_replace('/[^a-zA-Z0-9_]/', '', $value);
     }
 
     // ------------------------------------------------------------------------
