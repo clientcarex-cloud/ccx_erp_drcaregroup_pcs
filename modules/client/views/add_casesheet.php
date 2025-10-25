@@ -32,10 +32,6 @@ if ($patient_name !== '') {
 				$bg = adjust_hex_brightness($color, 0.04);
 				$border = adjust_hex_brightness($color, 0.4);
 
-				$consultation_label_suffix = $patient_name !== ''
-					? '&nbsp;' . htmlspecialchars($patient_name, ENT_QUOTES, 'UTF-8')
-					: '';
-
 				echo '<label id="consultation_timer_container" style="display: none; margin-left: 10px;">
 				  <span class="label label-default" 
 						style="color:' . $color . ';
@@ -43,7 +39,7 @@ if ($patient_name !== '') {
 							   background:' . $bg . ';
 							   padding: 4px 8px;
 							   border-radius: 4px;">
-					Consultation Duration' . $consultation_label_suffix . ':&nbsp;<span id="consultation_timer"> 00:00</span>
+					Consultation Duration:&nbsp;<span id="consultation_timer"> 00:00</span>
 				  </span>
 				</label>';
 				?>
