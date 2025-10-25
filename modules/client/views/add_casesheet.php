@@ -33,7 +33,7 @@ if ($patient_name !== '') {
 				$border = adjust_hex_brightness($color, 0.4);
 
 				$consultation_label_suffix = $patient_name !== ''
-					? '&nbsp;(' . htmlspecialchars($patient_name, ENT_QUOTES, 'UTF-8') . ')'
+					? '&nbsp;' . htmlspecialchars($patient_name, ENT_QUOTES, 'UTF-8')
 					: '';
 
 				echo '<label id="consultation_timer_container" style="display: none; margin-left: 10px;">
