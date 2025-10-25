@@ -2165,12 +2165,64 @@ public function save_prescription()
 		 $this->load->model('taxes_model');
 		 $this->load->model('invoice_items_model');
 		 $this->load->model('estimates_model');
+
+		$cases = $this->client_model->get_casesheet($patientid);
+		$latestCase = !empty($cases) ? $cases[0] : [];
+		$latestCasesheetId = isset($latestCase['id']) ? $latestCase['id'] : null;
+
+		$defaultCaseStructure = [
+			'userid'                       => $patientid,
+			'medicine_days'                => '',
+			'followup_date'                => '',
+			'patient_status'               => '',
+			'height'                       => '',
+			'weight'                       => '',
+			'bmi'                          => '',
+			'temperature'                  => '',
+			'pulse'                        => '',
+			'bp'                           => '',
+			'sleep'                        => '',
+			'mind'                         => '',
+			'clinical_observation'         => '',
+			'presenting_complaints'        => '',
+			'complaint'                    => '',
+			'past_treatment_history'       => '',
+			'family_history'               => '',
+			'menstrual_obstetric_history'  => '',
+			'desires'                      => '',
+			'aversion'                     => '',
+			'thirst'                       => '',
+			'appetite'                     => '',
+			'sweat'                        => '',
+			'urine'                        => '',
+			'bowels'                       => '',
+			'tongue'                       => '',
+			'side'                         => '',
+			'dreams'                       => '',
+			'hyperlipidemia'               => '',
+			'hypertension'                 => '',
+			'diabetes'                     => '',
+			'thyroid'                      => '',
+			'thermals'                     => '',
+			'sun_headache'                 => '',
+			'addiction'                    => '',
+			'habits'                       => '',
+			'nutrition'                    => '',
+			'treatment_type_id'            => '',
+			'duration_value'               => '',
+			'improvement'                  => '',
+			'suggested_diagnostics_id'     => '',
+		];
+
+		$caseForView = array_merge($defaultCaseStructure, $latestCase);
+
 		// Normal view loading
-		$data['case'] = $case;
-		$data['prescription'] = $this->client_model->get_patient_prescription($patientid, $casesheet_id);
+		$data['case'] = [$caseForView];
+		$data['casesheet_data'] = $caseForView;
+		$data['prescription'] = $this->client_model->get_patient_prescription($patientid, $latestCasesheetId);
 		$data['client'] = $this->client_model->get($patientid);
 		$data['prev_treatments'] = $this->client_model->prev_treatments($patientid);
-		$data['casesheet'] = $this->client_model->get_casesheet($patientid);
+		$data['casesheet'] = $cases;
 		$data['appointment_data'] = $this->client_model->get_appointment_data($patientid);
 		// Fetch medicine data (names, potencies, doses, timings)
 		$data['items'] = $this->invoice_items_model->get_grouped();
