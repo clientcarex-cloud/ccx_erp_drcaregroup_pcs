@@ -2165,64 +2165,12 @@ public function save_prescription()
 		 $this->load->model('taxes_model');
 		 $this->load->model('invoice_items_model');
 		 $this->load->model('estimates_model');
-
-		$cases = $this->client_model->get_casesheet($patientid);
-		$latestCase = !empty($cases) ? $cases[0] : [];
-		$latestCasesheetId = isset($latestCase['id']) ? $latestCase['id'] : null;
-
-		$defaultCaseStructure = [
-			'userid'                       => $patientid,
-			'medicine_days'                => '',
-			'followup_date'                => '',
-			'patient_status'               => '',
-			'height'                       => '',
-			'weight'                       => '',
-			'bmi'                          => '',
-			'temperature'                  => '',
-			'pulse'                        => '',
-			'bp'                           => '',
-			'sleep'                        => '',
-			'mind'                         => '',
-			'clinical_observation'         => '',
-			'presenting_complaints'        => '',
-			'complaint'                    => '',
-			'past_treatment_history'       => '',
-			'family_history'               => '',
-			'menstrual_obstetric_history'  => '',
-			'desires'                      => '',
-			'aversion'                     => '',
-			'thirst'                       => '',
-			'appetite'                     => '',
-			'sweat'                        => '',
-			'urine'                        => '',
-			'bowels'                       => '',
-			'tongue'                       => '',
-			'side'                         => '',
-			'dreams'                       => '',
-			'hyperlipidemia'               => '',
-			'hypertension'                 => '',
-			'diabetes'                     => '',
-			'thyroid'                      => '',
-			'thermals'                     => '',
-			'sun_headache'                 => '',
-			'addiction'                    => '',
-			'habits'                       => '',
-			'nutrition'                    => '',
-			'treatment_type_id'            => '',
-			'duration_value'               => '',
-			'improvement'                  => '',
-			'suggested_diagnostics_id'     => '',
-		];
-
-		$caseForView = array_merge($defaultCaseStructure, $latestCase);
-
 		// Normal view loading
-		$data['case'] = [$caseForView];
-		$data['casesheet_data'] = $caseForView;
-		$data['prescription'] = $this->client_model->get_patient_prescription($patientid, $latestCasesheetId);
+		$data['case'] = $case;
+		$data['prescription'] = $this->client_model->get_patient_prescription($patientid, $casesheet_id);
 		$data['client'] = $this->client_model->get($patientid);
 		$data['prev_treatments'] = $this->client_model->prev_treatments($patientid);
-		$data['casesheet'] = $cases;
+		$data['casesheet'] = $this->client_model->get_casesheet($patientid);
 		$data['appointment_data'] = $this->client_model->get_appointment_data($patientid);
 		// Fetch medicine data (names, potencies, doses, timings)
 		$data['items'] = $this->invoice_items_model->get_grouped();
@@ -2235,33 +2183,6 @@ public function save_prescription()
 		$data['prev_documents'] = $this->client_model->prev_documents($patientid);
 		$data['treatments'] = $this->master_model->get_all('treatment');
 		$data['patient_status'] = $this->master_model->get_all('patient_status');
-        $master_settings = $this->master_model->get_master_settings();
-        $data['master_settings'] = $master_settings;
-
-        $medicinePeriodRoles = [];
-        foreach ($master_settings as $setting) {
-            if ($setting['title'] === 'medicine_period_mandatory_roles' && !empty($setting['options'])) {
-                $medicinePeriodRoles = array_filter(array_map('trim', explode(',', $setting['options'])), 'strlen');
-                break;
-            }
-        }
-
-        $staffRoleId = null;
-        $staffId = get_staff_user_id();
-        if ($staffId) {
-            $roleRow = $this->db
-                ->select('role')
-                ->from(db_prefix() . 'staff')
-                ->where('staffid', $staffId)
-                ->get()
-                ->row();
-            if ($roleRow) {
-                $staffRoleId = (string) $roleRow->role;
-            }
-        }
-
-        $data['is_medicine_period_required'] = $staffRoleId !== null
-            && in_array($staffRoleId, $medicinePeriodRoles, true);
 		$this->load->view('add_casesheet', $data);
 	}
 	public function update_casesheet()
