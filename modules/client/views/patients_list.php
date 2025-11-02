@@ -165,6 +165,7 @@ if($master_data){
                                <?= render_datatable([
 								_l('S.No'),           // Name
 								_l('patient_name'),           // Name
+								_l('mr_no'),
 								_l('age'),                    // Age
 								_l('gender'),                // Gender
 								_l('mobile'),                // Contact Number

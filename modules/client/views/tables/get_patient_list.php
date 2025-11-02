@@ -20,7 +20,7 @@ $order_dir = 'desc';
 $summary_filter = $CI->input->get('summary_filter');
 
 // Replace with your column order
-$columns = ['c.userid', 'c.company', 'c.phonenumber', 'c.city', 'c.state'];
+$columns = ['c.userid', 'c.company', 'new.mr_no', 'new.age', 'new.gender', 'c.phonenumber'];
 $order_column = $columns[$order_column_index] ?? 'c.userid';
 // Total count
 $totalQuery = $CI->db;
@@ -166,7 +166,7 @@ $filteredRecords = $filterQuery->get()->row()->total;
 // Main data query
 $CI->db->reset_query();
 $CI->db->distinct();
-$CI->db->select('c.userid, c.company, c.phonenumber, c.datecreated, new.age, new.gender, c.city, c.state, new.registration_start_date, new.registration_end_date, new.current_status, new.patient_status, source.name as patient_source_name');
+$CI->db->select('c.userid, c.company, c.phonenumber, c.datecreated, new.mr_no, new.age, new.gender, c.city, c.state, new.registration_start_date, new.registration_end_date, new.current_status, new.patient_status, source.name as patient_source_name');
 $CI->db->from(db_prefix() . 'clients c');
 $CI->db->join(db_prefix() . 'clients_new_fields new', 'new.userid = c.userid', 'left');
 $CI->db->join(db_prefix() . 'customer_groups group', 'group.customer_id = c.userid', 'left');
@@ -366,6 +366,7 @@ foreach ($results as $row) {
 
     $dataRow[] = $i++;
     $dataRow[] = $company;
+    $dataRow[] = !empty($row['mr_no']) ? e($row['mr_no']) : '-';
     $dataRow[] = $row['age'];
     $dataRow[] = $row['gender'];
     $dataRow[] = $phonenumber;
