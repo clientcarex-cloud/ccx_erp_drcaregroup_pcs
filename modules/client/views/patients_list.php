@@ -471,14 +471,14 @@ $(function () {
         }
         initDataTable('.table-appointments', '<?= admin_url('client/appointments'); ?>', [1], [1]);
 
-        if (patientsTable && patientsTable.on) {
-            patientsTable.on('preXhr.dt', function (e, settings, data) {
-                data.branch_ids = getSelectedBranchParam();
-                data.from_date_filter = $('#from_date').val();
-                data.to_date_filter = $('#to_date').val();
-                data.patient_doctor_id = $('#patient_doctor_id').val() || '';
-            });
-        }
+        const $patientsTableEl = $('.table-patients');
+        $patientsTableEl.off('preXhr.dt.cfPatients');
+        $patientsTableEl.on('preXhr.dt.cfPatients', function (e, settings, data) {
+            data.branch_ids = getSelectedBranchParam();
+            data.from_date_filter = $('#from_date').val();
+            data.to_date_filter = $('#to_date').val();
+            data.patient_doctor_id = $('#patient_doctor_id').val() || '';
+        });
 
         const initialBranchParam = getSelectedBranchParam();
         const initialDoctorFilter = $('#patient_doctor_id').val() || '';
@@ -585,7 +585,7 @@ const buildSummaryCard = (count, label, filter, accentHex, accentRgb) => `
 function buildPatientListUrl(from, to, branchParam, summaryFilter = '') {
     const safeFrom = from || '';
     const safeTo = to || '';
-    const branchSegment = branchParam || '';
+    const branchSegment = branchParam ? encodeURIComponent(branchParam) : 'null';
     let url = '<?= admin_url("client/get_patient_list/null/") ?>' + safeFrom + '/' + safeTo + '/null/' + branchSegment;
     if (summaryFilter) {
         url += (url.indexOf('?') === -1 ? '?' : '&') + 'summary_filter=' + encodeURIComponent(summaryFilter);
