@@ -3621,15 +3621,12 @@ public function get_invoice_data($invoice_id)
 	}
 
 	public function get_client_summary()
-		{
-			$from = $this->input->post('from_date') ?: "2011-01-01";
-			$to   = $this->input->post('to_date') ?: date('Y-m-d');
-			$branch_id = $this->input->post('branch_id');
-			$doctor_id = $this->input->post('doctor_id');
-			$status_id = $this->input->post('status_id');
-
-			$doctor_id = (is_numeric($doctor_id) && (int)$doctor_id > 0) ? (int)$doctor_id : null;
-			$status_id = (is_numeric($status_id) && (int)$status_id > 0) ? (int)$status_id : null;
+	{
+		$from = $this->input->post('from_date') ?: '2011-01-01';
+		$to   = $this->input->post('to_date') ?: date('Y-m-d');
+		$branch_id = $this->input->post('branch_id');
+		$doctor_id = $this->input->post('doctor_id');
+		$doctor_id = (is_numeric($doctor_id) && (int) $doctor_id > 0) ? (int) $doctor_id : null;
 
 		$decodeParam = static function ($value) {
 			if ($value === null) {
@@ -3687,44 +3684,28 @@ public function get_invoice_data($invoice_id)
 		if ($from_date && $to_date) {
 			$this->db->where("DATE(new.registration_start_date) BETWEEN '$from_date' AND '$to_date'");
 		}
-			$client_ids_result = $this->db->get()->result_array();
-			$client_ids = array_column($client_ids_result, 'userid');
-			$client_ids = array_values(array_unique(array_column($client_ids_result, 'userid')));
+		$client_ids_result = $this->db->get()->result_array();
+		$client_ids = array_values(array_unique(array_column($client_ids_result, 'userid')));
 
-			if ($doctor_id !== null && !empty($client_ids)) {
-				$this->db->reset_query();
-				$this->db->select('ap.userid');
-				$this->db->from(db_prefix() . 'appointment ap');
-				$this->db->join(
-					'(SELECT MAX(appointment_id) AS latest_id, userid FROM ' . db_prefix() . 'appointment GROUP BY userid) latest_ap',
-					'latest_ap.latest_id = ap.appointment_id',
-					'inner'
-				);
-				$this->db->where('ap.enquiry_doctor_id', $doctor_id);
-				$this->db->where_in('ap.userid', $client_ids);
-				$doctor_rows = $this->db->get()->result_array();
-				$client_ids = array_values(array_unique(array_column($doctor_rows, 'userid')));
-			}
+		if ($doctor_id !== null && !empty($client_ids)) {
+			$this->db->reset_query();
+			$this->db->select('ap.userid');
+			$this->db->from(db_prefix() . 'appointment ap');
+			$this->db->join(
+				'(SELECT MAX(appointment_id) AS latest_id, userid FROM ' . db_prefix() . 'appointment GROUP BY userid) latest_ap',
+				'latest_ap.latest_id = ap.appointment_id',
+				'inner'
+			);
+			$this->db->where('ap.enquiry_doctor_id', $doctor_id);
+			$this->db->where_in('ap.userid', $client_ids);
+			$doctor_rows = $this->db->get()->result_array();
+			$client_ids = array_values(array_unique(array_column($doctor_rows, 'userid')));
+		}
 
-			if ($status_id !== null && !empty($client_ids)) {
-				$this->db->reset_query();
-				$this->db->select('lpj.userid');
-				$this->db->from(db_prefix() . 'lead_patient_journey lpj');
-				$this->db->join(
-					'(SELECT MAX(id) AS latest_id, userid FROM ' . db_prefix() . 'lead_patient_journey GROUP BY userid) latest_status',
-					'latest_status.latest_id = lpj.id',
-					'inner'
-				);
-				$this->db->where('lpj.status', $status_id);
-				$this->db->where_in('lpj.userid', $client_ids);
-				$status_rows = $this->db->get()->result_array();
-				$client_ids = array_values(array_unique(array_column($status_rows, 'userid')));
-			}
-
-			if (empty($client_ids)) {
-				echo json_encode($summary);
-				return;
-			}
+		if (empty($client_ids)) {
+			echo json_encode($summary);
+			return;
+		}
 
 		$this->db->distinct();
 		$this->db->select('new.userid, mr_no');

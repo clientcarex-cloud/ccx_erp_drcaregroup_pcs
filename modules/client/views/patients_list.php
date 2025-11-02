@@ -169,21 +169,6 @@ if($master_data){
 										); ?>
 									</div>
 									<?php endif; ?>
-									<div class="col-md-4">
-										<label for="patient_status_filter"><?= _l('status'); ?></label>
-										<select class="form-control" id="patient_status_filter" name="patient_status_filter">
-											<option value=""><?= _l('select_response'); ?></option>
-											<?php
-												$allowed_status_names = ['Only Consulted', 'Visited'];
-												$allowed_status_names_lower = array_map('strtolower', $allowed_status_names);
-												foreach ($statuses as $status) {
-													if (in_array(strtolower($status['name']), $allowed_status_names_lower)) {
-														echo '<option value="' . $status['id'] . '">' . $status['name'] . '</option>';
-													}
-												}
-											?>
-										</select>
-									</div>
 								</div>
 								<div class="row align-items-end">
 									<div class="col-md-4">
@@ -492,14 +477,12 @@ $(function () {
                 data.from_date_filter = $('#from_date').val();
                 data.to_date_filter = $('#to_date').val();
                 data.patient_doctor_id = $('#patient_doctor_id').val() || '';
-                data.patient_status_id = $('#patient_status_filter').val() || '';
             });
         }
 
         const initialBranchParam = getSelectedBranchParam();
         const initialDoctorFilter = $('#patient_doctor_id').val() || '';
-        const initialStatusFilter = $('#patient_status_filter').val() || '';
-        loadClientSummary('', '', initialBranchParam, initialDoctorFilter, initialStatusFilter);
+        loadClientSummary('', '', initialBranchParam, initialDoctorFilter);
         const initialListUrl = buildPatientListUrl('', '', initialBranchParam);
         if ($.fn.DataTable.isDataTable('.table-patients')) {
             var tableInstance = $('.table-patients').DataTable();
@@ -610,7 +593,7 @@ function buildPatientListUrl(from, to, branchParam, summaryFilter = '') {
     return url;
 }
 
-function loadClientSummary(from_date = '', to_date = '', branch_id = '', doctor_id = '', status_id = '') {
+function loadClientSummary(from_date = '', to_date = '', branch_id = '', doctor_id = '') {
     $.ajax({
         url: admin_url + 'client/get_client_summary',
         type: 'POST',
@@ -618,8 +601,7 @@ function loadClientSummary(from_date = '', to_date = '', branch_id = '', doctor_
             from_date: from_date,
             to_date: to_date,
             branch_id: branch_id,
-            doctor_id: doctor_id,
-            status_id: status_id
+            doctor_id: doctor_id
         },
         dataType: 'json',
         success: function (res) {
@@ -678,11 +660,10 @@ $(document).ready(function () {
         const to = $('#to_date').val();
         const branchParam = getSelectedBranchParam();
         const doctorId = $('#patient_doctor_id').val() || '';
-        const statusId = $('#patient_status_filter').val() || '';
 
         activePatientSummaryFilter = null;
 
-        loadClientSummary(from, to, branchParam, doctorId, statusId);
+        loadClientSummary(from, to, branchParam, doctorId);
 
         if ($.fn.DataTable.isDataTable('.table-patients')) {
             const dataUrl = buildPatientListUrl(from, to, branchParam);

@@ -19,9 +19,7 @@ $order_dir = 'desc';
 
 $summary_filter = $CI->input->get('summary_filter');
 $patientDoctorId = $CI->input->post('patient_doctor_id');
-$patientStatusId = $CI->input->post('patient_status_id');
 $patientDoctorId = (is_numeric($patientDoctorId) && (int)$patientDoctorId > 0) ? (int)$patientDoctorId : null;
-$patientStatusId = (is_numeric($patientStatusId) && (int)$patientStatusId > 0) ? (int)$patientStatusId : null;
 
 $latestAppointmentSubQuery = '
     SELECT ap.userid, ap.enquiry_doctor_id
@@ -33,27 +31,10 @@ $latestAppointmentSubQuery = '
     )
 ';
 
-$latestStatusSubQuery = '
-    SELECT lpj.userid, lpj.status AS status_id
-    FROM ' . db_prefix() . 'lead_patient_journey lpj
-    WHERE lpj.id = (
-        SELECT MAX(lpj2.id)
-        FROM ' . db_prefix() . 'lead_patient_journey lpj2
-        WHERE lpj2.userid = lpj.userid
-    )
-';
-
 $applyDoctorFilter = static function ($query) use ($patientDoctorId, $latestAppointmentSubQuery) {
     if ($patientDoctorId !== null) {
         $query->join('(' . $latestAppointmentSubQuery . ') AS latest_appointment', 'latest_appointment.userid = c.userid', 'left');
         $query->where('latest_appointment.enquiry_doctor_id', $patientDoctorId);
-    }
-};
-
-$applyPatientStatusFilter = static function ($query) use ($patientStatusId, $latestStatusSubQuery) {
-    if ($patientStatusId !== null) {
-        $query->join('(' . $latestStatusSubQuery . ') AS latest_status', 'latest_status.userid = c.userid', 'left');
-        $query->where('latest_status.status_id', $patientStatusId);
     }
 };
 
@@ -112,7 +93,6 @@ $totalQuery->join(db_prefix() . 'clients_new_fields new', 'new.userid = c.userid
 $totalQuery->join(db_prefix() . 'customer_groups group', 'group.customer_id = c.userid', 'left');
 
 $applyDoctorFilter($totalQuery);
-$applyPatientStatusFilter($totalQuery);
 
 if (!empty($branchFilterIds)) {
     $totalQuery->where_in('group.groupid', $branchFilterIds);
@@ -180,7 +160,6 @@ $filterQuery->join(db_prefix() . 'customer_groups group', 'group.customer_id = c
 $filterQuery->join(db_prefix() . 'leads_sources source', 'source.id = new.patient_source_id', 'left');
 
 $applyDoctorFilter($filterQuery);
-$applyPatientStatusFilter($filterQuery);
 
 if (!empty($branchFilterIds)) {
     $filterQuery->where_in('group.groupid', $branchFilterIds);
@@ -266,7 +245,6 @@ $CI->db->join(db_prefix() . 'customer_groups group', 'group.customer_id = c.user
 $CI->db->join(db_prefix() . 'leads_sources source', 'source.id = new.patient_source_id', 'left');
 
 $applyDoctorFilter($CI->db);
-$applyPatientStatusFilter($CI->db);
 
 if (!empty($branchFilterIds)) {
     $CI->db->where_in('group.groupid', $branchFilterIds);
