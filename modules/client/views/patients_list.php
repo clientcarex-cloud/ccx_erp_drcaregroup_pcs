@@ -489,6 +489,61 @@ function confirmBooking(id) {
 </script>
 
 <script>
+const patientModalGenericError = <?= json_encode(_l('something_went_wrong')); ?>;
+
+$(document).on('click', '.patient-modal-trigger', function (event) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const $link = $(this);
+    const patientId = parseInt($link.data('patient-id'), 10);
+
+    if (!patientId || $link.data('loading')) {
+        return;
+    }
+
+    $link.data('loading', true);
+    $link.attr('aria-busy', 'true');
+
+    $.ajax({
+        url: admin_url + 'client/patient_modal/' + patientId,
+        data: { callback_url: 'get_patient_list' },
+        method: 'GET',
+        dataType: 'json',
+        success: function (response) {
+            if (response && response.success && response.html) {
+                const $existingModal = $('#client-model-auto');
+                if ($existingModal.length) {
+                    $existingModal.modal('hide');
+                    $existingModal.remove();
+                }
+
+                $('body').append(response.html);
+                const $modal = $('#client-model-auto');
+                $modal.on('hidden.bs.modal', function () {
+                    $(this).remove();
+                });
+                $modal.modal({
+                    backdrop: 'static',
+                    keyboard: false
+                });
+            } else {
+                const message = response && response.message ? response.message : patientModalGenericError;
+                alert_float('danger', message);
+            }
+        },
+        error: function () {
+            alert_float('danger', patientModalGenericError);
+        },
+        complete: function () {
+            $link.data('loading', false);
+            $link.removeAttr('aria-busy');
+        }
+    });
+});
+</script>
+
+<script>
 let activePatientSummaryFilter = null;
 
 const buildSummaryCard = (count, label, filter, accentHex, accentRgb) => `

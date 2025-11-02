@@ -335,7 +335,7 @@ foreach ($results as $row) {
     $company = e(format_name($row['company'])) ?: _l('no_company_view_profile');
     $company .= '<br><label style="font-weight: 300; font-size: 12px">' . e(_dt($row['datecreated'])) . '</label>';
     $url = admin_url('client/get_patient_list/' . $row['userid']);
-    $company = '<a href="' . $url . '" class="tw-font-medium">' . $company . '</a>';
+    $company = '<a href="' . $url . '" class="tw-font-medium patient-modal-trigger" data-patient-id="' . (int) $row['userid'] . '">' . $company . '</a>';
     $company .= '<div class="row-options">';
     if ($hasPermissionDelete) {
         $company .= '<a href="' . admin_url('client/delete/' . $row['userid']) . '" class="_delete" onclick="return confirm(\'Are you sure?\')">' . _l('delete') . '</a>';

@@ -2522,161 +2522,215 @@ public function save_prescription()
 		}
 		
 		if ($id) {
-			 $this->load->model('leads_model');
-			 $this->load->model('currencies_model');
-			 $this->load->model('taxes_model');
-			 $this->load->model('invoice_items_model');
-			 $this->load->model('estimates_model');
-			$data['clientid'] = $id;
-            // Fetch the existing patient data
-            $client = $this->client_model->get($id);
-            $estimates = $this->client_model->get_estimates($id);
-			foreach ($estimates as &$estimate) {
-				$this->db->select('description');
-				$this->db->where('rel_type', 'estimate');
-				$this->db->where('rel_id', $estimate['id']);
-				$items = $this->db->get('tblitemable')->row();
-				
-				$estimate['description'] = $items->description; // append to estimate
-			}
-			
-            $customer_new_fields = $this->client_model->get_customer_new_fields($id);
-			$currencies= $this->currencies_model->get();
-			$taxes = $this->taxes_model->get();
-			$items_groups = $this->invoice_items_model->get_groups();
-			$staff            = $this->staff_model->get('', ['active' => 1]);
-			$estimate_statuses = $this->estimates_model->get_statuses();
-			$base_currency = $this->currencies_model->get_base_currency();
-			
-			$items = $this->invoice_items_model->get_grouped();
-            $first_appointment = $this->client_model->get_first_appointment($id);
-            $appointment_data = $this->client_model->get_appointment_data($id);
-            $patient_activity_log = $this->client_model->get_patient_activity_log($id);
-            $patient_prescription = $this->client_model->get_patient_prescription($id);
-			
-            $patient_treatment = $this->client_model->get_patient_treatment($id);
-            $casesheet = $this->client_model->get_casesheet($id);
-            // Fetch patient call logs
-            $patient_call_logs = $this->client_model->get_patient_call_logs($id); // NEW
-            $invoices = $this->client_model->get_invoices($id); // NEW
-            $invoice_payments = $this->client_model->get_invoice_payments($id); // NEW
-            $shared_requests = $this->client_model->get_shared_requests($id); // NEW
-
-            // Fetch medicine data (names, potencies, doses, timings)
-            $medicines = $this->master_model->get_all('medicine');
-            $potencies = $this->master_model->get_all('medicine_potency');
-            $doses = $this->master_model->get_all('medicine_dose');
-            $timings = $this->master_model->get_all('medicine_timing');
-            $appointment_type = $this->master_model->get_all('appointment_type');
-            $criteria = $this->master_model->get_all('criteria');
-            $treatments = $this->master_model->get_all('treatment');
-            $patient_status = $this->master_model->get_all('patient_status');
-            $master_settings = $this->master_model->get_all('master_settings');
-            $suggested_diagnostics = $this->master_model->get_all('suggested_diagnostics');
-			$testimonials = $this->client_model->get_testimonial();
-			$latest_casesheet = $this->client_model->get_latest_casesheet($id);
-			$latest_casesheet_package = $this->client_model->get_latest_casesheet_package($id);
-			
-			$payment_modes  = $this->client_model->get_payment_modes();
-			
-			
-			$doctors = $this->doctor_model->get_doctors();
-			
-			$today_appointment_data = $this->client_model->get_today_appointment_data($id);
-			
-			$staff_id = get_staff_user_id();
-
-			$staff_data = $this->db
-				->select('s.staffid, r.name as role_name')
-				->from(db_prefix() . 'staff s')
-				->join(db_prefix() . 'roles r', 'r.roleid = s.role', 'left')
-				->where('s.staffid', $staff_id)
-				->get()
-				->row();
-			
-			function get_estimation_payment_summary($estimation_id)
-			{
-				$CI =& get_instance();
-
-				// 1. Get the estimate row
-				$CI->db->select('total, invoiceid, currency, date, expirydate');
-				$CI->db->where('id', $estimation_id);
-				$estimate = $CI->db->get(db_prefix() . 'estimates')->row();
-
-				if (!$estimate || !$estimate->invoiceid) {
-					return [
-						'total' => 0,
-						'paid' => 0,
-						'dues' => 0,
-						'currency' => '',
-						'invoice_id' => null,
-					];
-				}
-
-				// 2. Sum payments from invoicepaymentrecords
-				$CI->db->select_sum('amount');
-				$CI->db->where('invoiceid', $estimate->invoiceid);
-				$paid_row = $CI->db->get(db_prefix() . 'invoicepaymentrecords')->row();
-				$paid = $paid_row ? (float)$paid_row->amount : 0;
-
-				return [
-					'total'     => (float)$estimate->total,
-					'paid'      => $paid,
-					'dues'      => (float)$estimate->total - $paid,
-					'currency'  => $estimate->currency,
-					'invoice_id'=> $estimate->invoiceid,
-					'date'=> $estimate->date,
-					'expirydate'=> $estimate->expirydate,
-				];
-			}
-			$home_branch_id = $this->client_model->get_client_branch($id);
-			$branch = $this->client_model->get_branch();
-            // Pass the data to the view
-            $data['client_modal'] = $this->load->view('client_model_popup', [
-                'latest_casesheet' => $latest_casesheet,
-                'latest_casesheet_package' => $latest_casesheet_package,
-                'first_appointment' => $first_appointment,
-                'callback_url' => $callback_url,
-                'home_branch_id' => $home_branch_id,
-                'branch' => $branch,
-                'doctors' => $doctors,
-                'statuses' => $statuses,
-                'estimates' => $estimates,
-                'payment_modes' => $payment_modes,
-                'client' => $client,
-                'casesheet' => $casesheet,
-                'testimonials' => $testimonials,
-                'shared_requests' => $shared_requests,
-                'master_settings' => $master_settings,
-                'suggested_diagnostics' => $suggested_diagnostics,
-                'customer_new_fields' => $customer_new_fields,
-                'currencies' => $currencies,
-                'staff_data' => $staff_data,
-                'taxes' => $taxes,
-                'items' => $items,
-                'base_currency' => $base_currency,
-                'items_groups' => $items_groups,
-                'staff' => $staff,
-                'estimate_statuses' => $estimate_statuses,
-                'appointment_data' => $appointment_data,
-                'today_appointment_data' => $today_appointment_data,
-                'patient_activity_log' => $patient_activity_log,
-                'patient_call_logs' => $patient_call_logs, // NEW
-                'patient_prescriptions' => $patient_prescription, // NEW
-                'patient_treatment' => $patient_treatment, // NEW
-                'medicines' => $medicines, // NEW
-                'potencies' => $potencies, // NEW
-                'appointment_type' => $appointment_type, // NEW
-                'criteria' => $criteria, // NEW
-                'doses' => $doses, // NEW
-                'treatments' => $treatments, // NEW
-                'patient_status' => $patient_status, // NEW
-                'invoices' => $invoices, // NEW
-                'invoice_payments' => $invoice_payments, // NEW
-                'timings' => $timings // NEW
-            ], true);
-        }
+			$data['clientid']     = $id;
+			$data['client_modal'] = $this->build_client_modal($id, $callback_url ?? 'get_patient_list', $statuses);
+		}
        $this->load->view('patients_list', $data);
+    }
+
+    /**
+     * Build the patient modal markup used across list and ajax flows.
+     */
+    protected function build_client_modal($client_id, $callback_url = 'get_patient_list', $statuses = null)
+    {
+        $client_id = (int) $client_id;
+        if ($client_id <= 0) {
+            return '';
+        }
+
+        $client = $this->client_model->get($client_id);
+        if (!$client) {
+            return '';
+        }
+
+        $this->load->model('leads_model');
+        if ($statuses === null) {
+            $statuses = $this->leads_model->get_status();
+        }
+        $this->load->model('currencies_model');
+        $this->load->model('taxes_model');
+        $this->load->model('invoice_items_model');
+        $this->load->model('estimates_model');
+
+        $estimates = $this->client_model->get_estimates($client_id);
+        foreach ($estimates as &$estimate) {
+            $this->db->select('description');
+            $this->db->where('rel_type', 'estimate');
+            $this->db->where('rel_id', $estimate['id']);
+            $items = $this->db->get('tblitemable')->row();
+            $estimate['description'] = $items->description ?? '';
+        }
+        unset($estimate);
+
+        $customer_new_fields      = $this->client_model->get_customer_new_fields($client_id);
+        $currencies               = $this->currencies_model->get();
+        $taxes                    = $this->taxes_model->get();
+        $items_groups             = $this->invoice_items_model->get_groups();
+        $staff                    = $this->staff_model->get('', ['active' => 1]);
+        $estimate_statuses        = $this->estimates_model->get_statuses();
+        $base_currency            = $this->currencies_model->get_base_currency();
+        $items                    = $this->invoice_items_model->get_grouped();
+        $first_appointment        = $this->client_model->get_first_appointment($client_id);
+        $appointment_data         = $this->client_model->get_appointment_data($client_id);
+        $patient_activity_log     = $this->client_model->get_patient_activity_log($client_id);
+        $patient_prescription     = $this->client_model->get_patient_prescription($client_id);
+        $patient_treatment        = $this->client_model->get_patient_treatment($client_id);
+        $casesheet                = $this->client_model->get_casesheet($client_id);
+        $patient_call_logs        = $this->client_model->get_patient_call_logs($client_id);
+        $invoices                 = $this->client_model->get_invoices($client_id);
+        $invoice_payments         = $this->client_model->get_invoice_payments($client_id);
+        $shared_requests          = $this->client_model->get_shared_requests($client_id);
+        $medicines                = $this->master_model->get_all('medicine');
+        $potencies                = $this->master_model->get_all('medicine_potency');
+        $doses                    = $this->master_model->get_all('medicine_dose');
+        $timings                  = $this->master_model->get_all('medicine_timing');
+        $appointment_type         = $this->master_model->get_all('appointment_type');
+        $criteria                 = $this->master_model->get_all('criteria');
+        $treatments               = $this->master_model->get_all('treatment');
+        $patient_status           = $this->master_model->get_all('patient_status');
+        $master_settings          = $this->master_model->get_all('master_settings');
+        $suggested_diagnostics    = $this->master_model->get_all('suggested_diagnostics');
+        $testimonials             = $this->client_model->get_testimonial();
+        $latest_casesheet         = $this->client_model->get_latest_casesheet($client_id);
+        $latest_casesheet_package = $this->client_model->get_latest_casesheet_package($client_id);
+        $payment_modes            = $this->client_model->get_payment_modes();
+        $doctors                  = $this->doctor_model->get_doctors();
+        $today_appointment_data   = $this->client_model->get_today_appointment_data($client_id);
+        $home_branch_id           = $this->client_model->get_client_branch($client_id);
+        $branch                   = $this->client_model->get_branch();
+
+        $staff_id = get_staff_user_id();
+        $staff_data = $this->db
+            ->select('s.staffid, r.name as role_name')
+            ->from(db_prefix() . 'staff s')
+            ->join(db_prefix() . 'roles r', 'r.roleid = s.role', 'left')
+            ->where('s.staffid', $staff_id)
+            ->get()
+            ->row();
+
+        if (!function_exists('get_estimation_payment_summary')) {
+            function get_estimation_payment_summary($estimation_id)
+            {
+                $CI =& get_instance();
+
+                $CI->db->select('total, invoiceid, currency, date, expirydate');
+                $CI->db->where('id', $estimation_id);
+                $estimate = $CI->db->get(db_prefix() . 'estimates')->row();
+
+                if (!$estimate || !$estimate->invoiceid) {
+                    return [
+                        'total'      => 0,
+                        'paid'       => 0,
+                        'dues'       => 0,
+                        'currency'   => '',
+                        'invoice_id' => null,
+                        'date'       => null,
+                        'expirydate' => null,
+                    ];
+                }
+
+                $CI->db->select_sum('amount');
+                $CI->db->where('invoiceid', $estimate->invoiceid);
+                $paid_row = $CI->db->get(db_prefix() . 'invoicepaymentrecords')->row();
+                $paid = $paid_row ? (float) $paid_row->amount : 0;
+
+                return [
+                    'total'      => (float) $estimate->total,
+                    'paid'       => $paid,
+                    'dues'       => (float) $estimate->total - $paid,
+                    'currency'   => $estimate->currency,
+                    'invoice_id' => $estimate->invoiceid,
+                    'date'       => $estimate->date,
+                    'expirydate' => $estimate->expirydate,
+                ];
+            }
+        }
+
+       return $this->load->view('client_model_popup', [
+            'latest_casesheet'         => $latest_casesheet,
+            'latest_casesheet_package' => $latest_casesheet_package,
+            'first_appointment'        => $first_appointment,
+            'callback_url'             => $callback_url,
+            'home_branch_id'           => $home_branch_id,
+            'branch'                   => $branch,
+            'doctors'                  => $doctors,
+            'statuses'                 => $statuses,
+            'estimates'                => $estimates,
+            'payment_modes'            => $payment_modes,
+            'client'                   => $client,
+            'casesheet'                => $casesheet,
+            'testimonials'             => $testimonials,
+            'shared_requests'          => $shared_requests,
+            'master_settings'          => $master_settings,
+            'suggested_diagnostics'    => $suggested_diagnostics,
+            'customer_new_fields'      => $customer_new_fields,
+            'currencies'               => $currencies,
+            'staff_data'               => $staff_data,
+            'taxes'                    => $taxes,
+            'items'                    => $items,
+            'base_currency'            => $base_currency,
+            'items_groups'             => $items_groups,
+            'staff'                    => $staff,
+            'estimate_statuses'        => $estimate_statuses,
+            'appointment_data'         => $appointment_data,
+            'today_appointment_data'   => $today_appointment_data,
+            'patient_activity_log'     => $patient_activity_log,
+            'patient_call_logs'        => $patient_call_logs,
+            'patient_prescriptions'    => $patient_prescription,
+            'patient_treatment'        => $patient_treatment,
+            'medicines'                => $medicines,
+            'potencies'                => $potencies,
+            'appointment_type'         => $appointment_type,
+            'criteria'                 => $criteria,
+            'doses'                    => $doses,
+            'treatments'               => $treatments,
+            'patient_status'           => $patient_status,
+            'invoices'                 => $invoices,
+            'invoice_payments'         => $invoice_payments,
+            'timings'                  => $timings,
+        ], true);
+    }
+
+    public function patient_modal($id = null)
+    {
+        if (!$this->input->is_ajax_request()) {
+            show_404();
+        }
+
+        if (staff_cant('view', 'customers') && staff_cant('view_own', 'customers')) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => _l('access_denied')]);
+            return;
+        }
+
+        $patient_id = (int) $id;
+        $notFoundMessage = _l('client_not_found');
+        if ($notFoundMessage === 'client_not_found') {
+            $notFoundMessage = _l('no_results_found');
+        }
+        if ($notFoundMessage === 'no_results_found') {
+            $notFoundMessage = 'Client not found.';
+        }
+
+        if ($patient_id <= 0) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => $notFoundMessage]);
+            return;
+        }
+
+        $callback_url = $this->input->get('callback_url') ?: 'get_patient_list';
+        $modal_html   = $this->build_client_modal($patient_id, $callback_url);
+
+        header('Content-Type: application/json');
+        if (empty($modal_html)) {
+            echo json_encode(['success' => false, 'message' => $notFoundMessage]);
+            return;
+        }
+
+        echo json_encode([
+            'success' => true,
+            'html'    => $modal_html,
+        ]);
     }
 	
 	
