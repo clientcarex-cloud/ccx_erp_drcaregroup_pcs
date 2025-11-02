@@ -1220,8 +1220,16 @@ $now = date('Y-m-d\TH:i'); // Correct format for datetime-local input
         <option value=""></option>
         <?php foreach ($items as $group_id => $_items) {
           if (isset($_items[0]['group_name']) && $_items[0]['group_name'] == 'Package') {
-            foreach ($_items as $item) { ?>
-              <option value="<?= e($item['id']); ?>"><?= e($item['description']); ?></option>
+            foreach ($_items as $item) {
+              $item_id = $item['id'] ?? '';
+              $item_name = $item['description'] ?? '';
+              $item_rate = isset($item['rate']) ? $item['rate'] : '';
+              ?>
+              <option value="<?= e($item_id); ?>"
+                data-rate="<?= e($item_rate); ?>"
+                <?= ($selected !== '' && (string) $selected === (string) $item_id) ? 'selected' : ''; ?>>
+                <?= e($item_name); ?>
+              </option>
             <?php }
           }
         } ?>
@@ -1502,6 +1510,35 @@ $(function () {
     toggleFieldsByResponse();
 
     $('#patient_response_id').on('change', toggleFieldsByResponse);
+});
+</script>
+<script>
+$(function () {
+    const $treatmentSelect = $('#treatment_id');
+    const $leadValueInput = $('input[name="lead_value"]');
+    if (!$treatmentSelect.length || !$leadValueInput.length) {
+        return;
+    }
+
+    function syncLeadValue(forceUpdate) {
+        const $selected = $treatmentSelect.find('option:selected');
+        const rateAttr = $selected.data('rate');
+        const hasRate = typeof rateAttr !== 'undefined' && rateAttr !== null && rateAttr !== '';
+
+        if (hasRate) {
+            if (forceUpdate || !$leadValueInput.val()) {
+                $leadValueInput.val(rateAttr);
+            }
+        } else if (forceUpdate) {
+            $leadValueInput.val('');
+        }
+    }
+
+    syncLeadValue(false);
+
+    $treatmentSelect.on('changed.bs.select change', function () {
+        syncLeadValue(true);
+    });
 });
 </script>
 
