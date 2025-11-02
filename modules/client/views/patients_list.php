@@ -180,6 +180,7 @@ if($master_data){
 								_l('treatment'),             // Treatment
 								_l('assigned_doctor'),       // Assigned Doctor
 								_l('source'),                // Source
+								_l('branch'),                // Branch
 								_l('last_calling_date'),     // Last Calling Date
 								_l('next_calling_date'),     // Next Calling Date
 								_l('current_status'),        // Current Status
@@ -449,6 +450,10 @@ $(function () {
 
         const initialBranchParam = getSelectedBranchParam();
         loadClientSummary('', '', initialBranchParam);
+        const initialListUrl = buildPatientListUrl('', '', initialBranchParam);
+        if ($.fn.DataTable.isDataTable('.table-patients')) {
+            $('.table-patients').DataTable().ajax.url(initialListUrl).load();
+        }
 
         const initialAppointmentBranch = $('#appointment_branch_id').val() || '0';
         loadAppointmentSummary('', '', '', initialAppointmentBranch);
@@ -544,8 +549,8 @@ const buildSummaryCard = (count, label, filter, accentHex, accentRgb) => `
 function buildPatientListUrl(from, to, branchParam, summaryFilter = '') {
     const safeFrom = from || '';
     const safeTo = to || '';
-    const encodedBranch = branchParam ? encodeURIComponent(branchParam) : '';
-    let url = '<?= admin_url("client/get_patient_list/null/") ?>' + safeFrom + '/' + safeTo + '/null/' + encodedBranch;
+    const branchSegment = branchParam || '';
+    let url = '<?= admin_url("client/get_patient_list/null/") ?>' + safeFrom + '/' + safeTo + '/null/' + branchSegment;
     if (summaryFilter) {
         url += (url.indexOf('?') === -1 ? '?' : '&') + 'summary_filter=' + encodeURIComponent(summaryFilter);
     }

@@ -181,7 +181,13 @@ $filteredRecords = $filterQuery->get()->row()->total;
 // Main data query
 $CI->db->reset_query();
 $CI->db->distinct();
-$CI->db->select('c.userid, c.company, c.phonenumber, c.datecreated, new.mr_no, new.age, new.gender, c.city, c.state, new.registration_start_date, new.registration_end_date, new.current_status, new.patient_status, source.name as patient_source_name');
+$CI->db->select('c.userid, c.company, c.phonenumber, c.datecreated, new.mr_no, new.age, new.gender, c.city, c.state, new.registration_start_date, new.registration_end_date, new.current_status, new.patient_status, source.name as patient_source_name,
+    (
+        SELECT GROUP_CONCAT(DISTINCT cg_names.name ORDER BY cg_names.name SEPARATOR ", ")
+        FROM ' . db_prefix() . 'customer_groups cg_rel
+        LEFT JOIN ' . db_prefix() . 'customers_groups cg_names ON cg_names.id = cg_rel.groupid
+        WHERE cg_rel.customer_id = c.userid
+    ) AS branch_names');
 $CI->db->from(db_prefix() . 'clients c');
 $CI->db->join(db_prefix() . 'clients_new_fields new', 'new.userid = c.userid', 'left');
 $CI->db->join(db_prefix() . 'customer_groups group', 'group.customer_id = c.userid', 'left');
@@ -389,6 +395,7 @@ foreach ($results as $row) {
     $dataRow[] = isset($doctorMap[$row['userid']]) ? $doctorMap[$row['userid']]['name'] : '-';
 
     $dataRow[] = $row['patient_source_name'];
+    $dataRow[] = !empty($row['branch_names']) ? e($row['branch_names']) : '-';
     $dataRow[] = $callLog['last_calling_date'];
     $dataRow[] = $callLog['next_calling_date'];
     $dataRow[] = $statusLabel;

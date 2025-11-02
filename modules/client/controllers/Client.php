@@ -2492,13 +2492,26 @@ public function save_prescription()
 		$data['doctors'] = $this->doctor_model->get_doctors();
 		$data['master_data'] = $this->client_model->get_master_data();
 		
-		$current_branch_id = ($current_branch_id === null || $current_branch_id === '' || strtolower((string) $current_branch_id) === 'null')
-			? null
-			: urldecode((string) $current_branch_id);
+		$decodeParam = static function ($value, $default = '') {
+			if ($value === null) {
+				return $default;
+			}
+			$value = (string) $value;
+			if ($value === '' || strtolower($value) === 'null') {
+				return $default;
+			}
+			do {
+				$decoded = rawurldecode($value);
+				if ($decoded === $value) {
+					break;
+				}
+				$value = $decoded;
+			} while (true);
+			return $value;
+		};
 
-		$selected_branch_id = ($selected_branch_id === null || $selected_branch_id === '' || strtolower((string) $selected_branch_id) === 'null')
-			? ''
-			: urldecode((string) $selected_branch_id);
+		$current_branch_id = $decodeParam($current_branch_id, null);
+		$selected_branch_id = $decodeParam($selected_branch_id, '');
 
 		$selected_branch_ids = array_filter(array_map('intval', array_filter(explode(',', $selected_branch_id), function ($value) {
 			return $value !== '' && is_numeric($value);
@@ -3613,11 +3626,29 @@ public function get_invoice_data($invoice_id)
 		$to   = $this->input->post('to_date') ?: date('Y-m-d');
 		$branch_id = $this->input->post('branch_id');
 
-		$selected_branch_id = urldecode($branch_id);
-		$selected_branch_id = explode(',', $selected_branch_id);
-		$selected_branch_id = array_filter($selected_branch_id, fn($id) => is_numeric($id));
-		$selected_branch_id = array_map('intval', $selected_branch_id);
-		$selected_branch_id = $selected_branch_id ?: $this->current_branch_id;
+		$decodeParam = static function ($value) {
+			if ($value === null) {
+				return '';
+			}
+			$value = (string) $value;
+			if ($value === '' || strtolower($value) === 'null') {
+				return '';
+			}
+			do {
+				$decoded = rawurldecode($value);
+				if ($decoded === $value) {
+					break;
+				}
+				$value = $decoded;
+			} while (true);
+			return $value;
+		};
+
+		$selected_branch_raw = $decodeParam($branch_id);
+		$selected_branch_id = array_filter(array_map('intval', array_filter(explode(',', $selected_branch_raw), fn($id) => $id !== '' && is_numeric($id))));
+		if (empty($selected_branch_id) && !empty($this->current_branch_id)) {
+			$selected_branch_id = is_array($this->current_branch_id) ? array_map('intval', $this->current_branch_id) : [(int) $this->current_branch_id];
+		}
 
 		$from_date = $to_date = null;
 		if ($from && $to) {
@@ -3854,15 +3885,26 @@ public function get_invoice_data($invoice_id)
 		if($branch_id == 0){
 			//$branch_id = $this->current_branch_id;
 		}
-		$selected_branch_id = urldecode($branch_id); // decode %2C to ,
-		$selected_branch_id = explode(',', $selected_branch_id); // split by comma
-
-		// Clean the array to ensure numeric values only
-		$selected_branch_id = array_filter($selected_branch_id, fn($id) => is_numeric($id));
-
-		// Optional: cast to int
-		$selected_branch_id = array_map('intval', $selected_branch_id);
-		
+		$decodeParam = static function ($value) {
+			if ($value === null) {
+				return '';
+			}
+			$value = (string) $value;
+			if ($value === '' || strtolower($value) === 'null') {
+				return '';
+			}
+			do {
+				$decoded = rawurldecode($value);
+				if ($decoded === $value) {
+					break;
+				}
+				$value = $decoded;
+			} while (true);
+			return $value;
+		};
+		$selected_branch_decoded = $decodeParam($branch_id);
+		$selected_branch_id = array_filter(array_map('intval', array_filter(explode(',', $selected_branch_decoded), fn($id) => $id !== '' && is_numeric($id))));
+ 		
 		//$selected_branch_id = $selected_branch_id ?: $this->current_branch_id;
 		
 		$staff_id = get_staff_user_id();
