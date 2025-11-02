@@ -964,7 +964,15 @@ echo render_select(
 
         <?php
 		if(!isset($lead)){
-			$allowed_status_names = ['Enquiry', 'New', 'Paid Appointment', 'On Appointment'];
+			$allowed_status_names = [
+				'Enquiry',
+				'New',
+				'Paid Appointment',
+				'On Appointment',
+				'No Feedback',
+				'Call Back',
+				'No Response',
+			];
 			$selected = isset($lead_with_doctor) ? $lead_with_doctor->patient_response_id : '';
 
 			// Filter $statuses to include only allowed names
