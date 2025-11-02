@@ -4,82 +4,94 @@ defined('BASEPATH') or exit('No direct script access allowed');
 
 $CI =& get_instance();
 
-$output = [];
-$output['aaData'] = [];
-$output['draw'] = intval($CI->input->post('draw'));
+$output = [
+    'draw'            => (int) $CI->input->post('draw'),
+    'recordsTotal'    => 0,
+    'recordsFiltered' => 0,
+    'aaData'          => [],
+];
 
-$search_value = $CI->input->post('search')['value'] ?? '';
-$start        = (int) $CI->input->post('start') ?? 0;
-$length       = (int) $CI->input->post('length') ?? 10;
+$search_value = trim($CI->input->post('search')['value'] ?? '');
+$start        = (int) ($CI->input->post('start') ?? 0);
+$length       = (int) ($CI->input->post('length') ?? 10);
 
 $CI->db->start_cache();
 
 $CI->db->select([
-	'patients.userid',
-    'new.mr_no',
+    'casesheet.id AS casesheet_id',
+    'patients.userid',
+    'patient_meta.mr_no',
     'patients.company as patient_name',
     'casesheet.created_at',
     'casesheet.staffid',
-    'prescription.prescription_data',
     'prescription.medicine_given_by',
 ]);
 
 $CI->db->from(db_prefix() . 'casesheet casesheet');
-
 $CI->db->join(db_prefix() . 'clients patients', 'patients.userid = casesheet.userid', 'left');
-$CI->db->join(db_prefix() . 'clients_new_fields AS cn', 'cn.userid = patients.userid');
-$CI->db->join(db_prefix() . 'patient_prescription prescription', 'prescription.casesheet_id = casesheet.id', 'inner');
-$CI->db->join(db_prefix() . 'clients_new_fields new', 'new.userid = patients.userid', 'left');
+
+$prescriptionSubQuery = '(SELECT 
+        casesheet_id,
+        SUBSTRING_INDEX(
+            GROUP_CONCAT(medicine_given_by ORDER BY COALESCE(medicine_given_date, created_datetime) DESC),
+            ",",
+            1
+        ) AS medicine_given_by
+    FROM ' . db_prefix() . 'patient_prescription
+    WHERE casesheet_id IS NOT NULL
+    GROUP BY casesheet_id) prescription';
+
+$CI->db->join($prescriptionSubQuery, 'prescription.casesheet_id = casesheet.id', 'inner', false);
+$CI->db->join(db_prefix() . 'clients_new_fields patient_meta', 'patient_meta.userid = patients.userid', 'left');
 $CI->db->join(db_prefix() . 'customer_groups branch', 'branch.customer_id = patients.userid', 'left');
 
-//$CI->db->where('cn.mr_no IS NOT NULL', null, false);
+$from_date = !empty($consulted_from_date) ? to_sql_date($consulted_from_date) : null;
+$to_date   = !empty($consulted_to_date) ? to_sql_date($consulted_to_date) : null;
 
-if (!empty($consulted_from_date) && !empty($consulted_to_date)) {
-    $from_date = to_sql_date($consulted_from_date);
-    $to_date   = to_sql_date($consulted_to_date);
-
-    $CI->db->where('DATE(casesheet.created_at) >=', $from_date);
-    $CI->db->where('DATE(casesheet.created_at) <=', $to_date);
-
-} elseif (!empty($consulted_from_date)) {
-    $sql_date = to_sql_date($consulted_from_date);
-    $CI->db->where('DATE(casesheet.created_at)', $sql_date);
-
+if ($from_date && $to_date) {
+    if ($from_date > $to_date) {
+        [$from_date, $to_date] = [$to_date, $from_date];
+    }
+    $CI->db->where('casesheet.created_at >=', $from_date . ' 00:00:00');
+    $CI->db->where('casesheet.created_at <=', $to_date . ' 23:59:59');
+} elseif ($from_date) {
+    $CI->db->where('casesheet.created_at >=', $from_date . ' 00:00:00');
+    $CI->db->where('casesheet.created_at <=', $from_date . ' 23:59:59');
+} elseif ($to_date) {
+    $CI->db->where('casesheet.created_at >=', $to_date . ' 00:00:00');
+    $CI->db->where('casesheet.created_at <=', $to_date . ' 23:59:59');
 } else {
     $today = date('Y-m-d');
-    $CI->db->where('DATE(casesheet.created_at)', $today);
+    $CI->db->where('casesheet.created_at >=', $today . ' 00:00:00');
+    $CI->db->where('casesheet.created_at <=', $today . ' 23:59:59');
 }
 
-$branch_id = intval($branch_id);
-if ($branch_id > 0) {
-    $CI->db->where('branch.groupid', $branch_id);
-}
-
-
-// Global search
-if (!empty($search_value)) {
-    $CI->db->group_start();
-    $CI->db->like('patients.company', $search_value);
-    $CI->db->or_like('patients.phonenumber', $search_value);
-    $CI->db->or_like('new.mr_no', $search_value);
-    $CI->db->group_end();
+$branch_filter = is_numeric($branch_id) ? (int) $branch_id : 0;
+if ($branch_filter > 0) {
+    $CI->db->where('branch.groupid', $branch_filter);
 }
 
 $CI->db->stop_cache();
-$recordsFiltered = $CI->db->count_all_results();
 
+$output['recordsTotal'] = $CI->db->count_all_results('', false);
+
+if ($search_value !== '') {
+    $CI->db->group_start();
+    $CI->db->like('patients.company', $search_value);
+    $CI->db->or_like('patients.phonenumber', $search_value);
+    $CI->db->or_like('patient_meta.mr_no', $search_value);
+    $CI->db->group_end();
+
+    $output['recordsFiltered'] = $CI->db->count_all_results('', false);
+} else {
+    $output['recordsFiltered'] = $output['recordsTotal'];
+}
+
+$CI->db->order_by('casesheet.created_at', 'DESC');
 $CI->db->limit($length, $start);
-
-$CI->db->order_by("casesheet.created_at", "DESC");
-$query = $CI->db->get();
-$results = $query->result_array();
+$results = $CI->db->get()->result_array();
 
 $CI->db->flush_cache();
-$CI->db->from(db_prefix() . 'casesheet');
-$recordsTotal = $CI->db->count_all_results();
-
-$output['recordsTotal'] = $recordsTotal;
-$output['recordsFiltered'] = $recordsFiltered;
 
 // Start building rows
 foreach ($results as $aRow) {

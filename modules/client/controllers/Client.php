@@ -4667,6 +4667,14 @@ public function add_pincode()
 		} 
 
 		// 🧼 Normalize incoming values
+		$enquiry_doctor_id = $this->input->get('enquiry_doctor_id');
+		if ($enquiry_doctor_id === null) {
+			$enquiry_doctor_id = $this->input->post('enquiry_doctor_id');
+		}
+		$visit_status = $this->input->get('visit_status');
+		if ($visit_status === null) {
+			$visit_status = $this->input->post('visit_status');
+		}
 		$enquiry_doctor_id = ($enquiry_doctor_id === '0' || empty($enquiry_doctor_id)) ? null : $enquiry_doctor_id;
 		$branch_id = ($branch_id === '0' || empty($branch_id)) ? null : $branch_id;
 		$visit_status = ($visit_status === 'All' || empty($visit_status)) ? null : str_replace('_', ' ', $visit_status);
