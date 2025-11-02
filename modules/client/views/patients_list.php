@@ -125,19 +125,79 @@ if($master_data){
 							</div>
                                
                                 <hr class="hr-panel-heading" />
+                                <div class="row">
+									<?php
+										if (staff_can('branch_filter', 'customers')) {
+									?>
+									<div class="col-md-4">
+										<?= render_select(
+											'groupid',
+											$branch,
+											['id', 'name'],
+											_l('branch') . '*',
+											isset($current_branch_id) ? $current_branch_id : ($patient['groupid'] ?? ''),
+											[
+												'id' => 'branch_id',
+												'data-none-selected-text' => _l('dropdown_non_selected_tex'),
+												'required' => 'required',
+											]
+										); ?>
+									</div>
+									<?php } ?>
+									<?php
+										$logged_in_staff_id = get_staff_user_id();
+										$patient_doctor_list = array_filter($doctors, function ($doctor) use ($logged_in_staff_id) {
+											return $doctor['staffid'] == $logged_in_staff_id;
+										});
+										if (!empty($patient_doctor_list)) {
+											$patient_doctor_list = array_values($patient_doctor_list);
+											$patient_selected_doctor = $logged_in_staff_id;
+										} else {
+											$patient_doctor_list = $doctors;
+											$patient_selected_doctor = '';
+										}
+									?>
+									<?php if (count($patient_doctor_list) > 0 && count($patient_doctor_list) != 1): ?>
+									<div class="col-md-4">
+										<?= render_select(
+											'patient_doctor_id',
+											$patient_doctor_list,
+											['staffid', ['firstname', 'lastname']],
+											_l('doctor'),
+											$patient_selected_doctor,
+											['id' => 'patient_doctor_id', 'data-none-selected-text' => _l('dropdown_non_selected_tex')]
+										); ?>
+									</div>
+									<?php endif; ?>
+									<div class="col-md-4">
+										<label for="patient_status_filter"><?= _l('status'); ?></label>
+										<select class="form-control" id="patient_status_filter" name="patient_status_filter">
+											<option value=""><?= _l('select_response'); ?></option>
+											<?php
+												$allowed_status_names = ['Only Consulted', 'Visited'];
+												$allowed_status_names_lower = array_map('strtolower', $allowed_status_names);
+												foreach ($statuses as $status) {
+													if (in_array(strtolower($status['name']), $allowed_status_names_lower)) {
+														echo '<option value="' . $status['id'] . '">' . $status['name'] . '</option>';
+													}
+												}
+											?>
+										</select>
+									</div>
+								</div>
 								<div class="row align-items-end">
-							  <div class="col-md-4">
-								<label><?= _l('from_date'); ?></label>
-								<input type="date" class="form-control" name="from_date" id="from_date" value="<?= date('Y-m-d'); ?>">
-							  </div>
-							  <div class="col-md-4">
-								<label><?= _l('to_date'); ?></label>
-								<input type="date" class="form-control" name="to_date" id="to_date" value="<?= date('Y-m-d'); ?>">
-							  </div>
-							  <div class="col-md-2" style="margin-top: 24px">
-								<button id="filterBtn" class="btn btn-success w-100"><?= _l('Search'); ?></button>
-							  </div>
-							</div>
+									<div class="col-md-4">
+										<label><?= _l('from_date'); ?></label>
+										<input type="date" class="form-control" name="from_date" id="from_date" value="<?= date('Y-m-d'); ?>">
+									</div>
+									<div class="col-md-4">
+										<label><?= _l('to_date'); ?></label>
+										<input type="date" class="form-control" name="to_date" id="to_date" value="<?= date('Y-m-d'); ?>">
+									</div>
+									<div class="col-md-2" style="margin-top: 24px">
+										<button id="filterBtn" class="btn btn-success w-100"><?= _l('Search'); ?></button>
+									</div>
+								</div>
 							<br>
                                 <div class="clearfix"></div>
 								
@@ -431,11 +491,15 @@ $(function () {
                 data.branch_ids = getSelectedBranchParam();
                 data.from_date_filter = $('#from_date').val();
                 data.to_date_filter = $('#to_date').val();
+                data.patient_doctor_id = $('#patient_doctor_id').val() || '';
+                data.patient_status_id = $('#patient_status_filter').val() || '';
             });
         }
 
         const initialBranchParam = getSelectedBranchParam();
-        loadClientSummary('', '', initialBranchParam);
+        const initialDoctorFilter = $('#patient_doctor_id').val() || '';
+        const initialStatusFilter = $('#patient_status_filter').val() || '';
+        loadClientSummary('', '', initialBranchParam, initialDoctorFilter, initialStatusFilter);
         const initialListUrl = buildPatientListUrl('', '', initialBranchParam);
         if ($.fn.DataTable.isDataTable('.table-patients')) {
             var tableInstance = $('.table-patients').DataTable();
@@ -546,14 +610,16 @@ function buildPatientListUrl(from, to, branchParam, summaryFilter = '') {
     return url;
 }
 
-function loadClientSummary(from_date = '', to_date = '', branch_id = '') {
+function loadClientSummary(from_date = '', to_date = '', branch_id = '', doctor_id = '', status_id = '') {
     $.ajax({
         url: admin_url + 'client/get_client_summary',
         type: 'POST',
         data: {
             from_date: from_date,
             to_date: to_date,
-            branch_id: branch_id
+            branch_id: branch_id,
+            doctor_id: doctor_id,
+            status_id: status_id
         },
         dataType: 'json',
         success: function (res) {
@@ -611,11 +677,12 @@ $(document).ready(function () {
         const from = $('#from_date').val();
         const to = $('#to_date').val();
         const branchParam = getSelectedBranchParam();
-        const appointment_type_id = $('#appointment_type_id').val();
+        const doctorId = $('#patient_doctor_id').val() || '';
+        const statusId = $('#patient_status_filter').val() || '';
 
         activePatientSummaryFilter = null;
 
-        loadClientSummary(from, to, branchParam);
+        loadClientSummary(from, to, branchParam, doctorId, statusId);
 
         if ($.fn.DataTable.isDataTable('.table-patients')) {
             const dataUrl = buildPatientListUrl(from, to, branchParam);
