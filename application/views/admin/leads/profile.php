@@ -1539,6 +1539,13 @@ $(function () {
     $treatmentSelect.on('changed.bs.select change', function () {
         syncLeadValue(true);
     });
+
+    $('#patient_response_id').on('changed.bs.select change', function () {
+        const response = $('#patient_response_id option:selected').text().toLowerCase().trim();
+        if (response === 'on appointment' || response === 'paid appointment') {
+            syncLeadValue(true);
+        }
+    });
 });
 </script>
 
