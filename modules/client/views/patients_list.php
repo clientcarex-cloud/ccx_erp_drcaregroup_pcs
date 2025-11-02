@@ -413,30 +413,6 @@ if($master_data){
 
 <?php init_tail(); ?>
 <script>
-const BRANCH_SELECT_ID = '#branch_id';
-
-function getSelectedBranchValues() {
-    const $branchSelect = $(BRANCH_SELECT_ID);
-    if (!$branchSelect.length) {
-        return [];
-    }
-    const raw = $branchSelect.val();
-    if (!raw) {
-        return [];
-    }
-    if (Array.isArray(raw)) {
-        return raw.filter(function (value) {
-            return value !== null && value !== undefined && value !== '';
-        });
-    }
-    return raw ? [raw] : [];
-}
-
-function getSelectedBranchParam() {
-    const values = getSelectedBranchValues();
-    return values.length ? values.join(',') : '';
-}
-
 $(function () {
     <?php if (isset($clientid) && $clientid): ?>
         // If clientid is set, show patient modal popup
@@ -456,16 +432,14 @@ $(function () {
         const $patientsTableEl = $('.table-patients');
         $patientsTableEl.off('preXhr.dt.cfPatients');
         $patientsTableEl.on('preXhr.dt.cfPatients', function (e, settings, data) {
-            data.branch_ids = getSelectedBranchParam();
             data.from_date_filter = $('#from_date').val();
             data.to_date_filter = $('#to_date').val();
             data.patient_doctor_id = $('#patient_doctor_id').val() || '';
         });
 
-        const initialBranchParam = getSelectedBranchParam();
         const initialDoctorFilter = $('#patient_doctor_id').val() || '';
-        loadClientSummary('', '', initialBranchParam, initialDoctorFilter);
-        const initialListUrl = buildPatientListUrl('', '', initialBranchParam);
+        loadClientSummary('', '', initialDoctorFilter);
+        const initialListUrl = buildPatientListUrl('', '');
         if ($.fn.DataTable.isDataTable('.table-patients')) {
             var tableInstance = $('.table-patients').DataTable();
             tableInstance.ajax.url(initialListUrl).load();
@@ -494,16 +468,6 @@ $(function () {
             appointmentsInitialized = true;
         }
     });
-
-    if ($(BRANCH_SELECT_ID).length) {
-        $(BRANCH_SELECT_ID).on('changed.bs.select', function () {
-            // reset summary filter when branches change
-            activePatientSummaryFilter = null;
-            $('#summaryCards .summary-card').removeClass('is-active').attr('aria-pressed', 'false');
-        });
-
-        $(BRANCH_SELECT_ID).selectpicker('refresh');
-    }
 });
 </script>
 
@@ -564,25 +528,23 @@ const buildSummaryCard = (count, label, filter, accentHex, accentRgb) => `
     </div>
 `;
 
-function buildPatientListUrl(from, to, branchParam, summaryFilter = '') {
+function buildPatientListUrl(from, to, summaryFilter = '') {
     const safeFrom = from || '';
     const safeTo = to || '';
-    const branchSegment = branchParam ? encodeURIComponent(branchParam) : 'null';
-    let url = '<?= admin_url("client/get_patient_list/null/") ?>' + safeFrom + '/' + safeTo + '/null/' + branchSegment;
+    let url = '<?= admin_url("client/get_patient_list/null/") ?>' + safeFrom + '/' + safeTo + '/null/null';
     if (summaryFilter) {
         url += (url.indexOf('?') === -1 ? '?' : '&') + 'summary_filter=' + encodeURIComponent(summaryFilter);
     }
     return url;
 }
 
-function loadClientSummary(from_date = '', to_date = '', branch_id = '', doctor_id = '') {
+function loadClientSummary(from_date = '', to_date = '', doctor_id = '') {
     $.ajax({
         url: admin_url + 'client/get_client_summary',
         type: 'POST',
         data: {
             from_date: from_date,
             to_date: to_date,
-            branch_id: branch_id,
             doctor_id: doctor_id
         },
         dataType: 'json',
@@ -615,10 +577,9 @@ function loadClientSummary(from_date = '', to_date = '', branch_id = '', doctor_
 
                 const from = $('#from_date').val();
                 const to = $('#to_date').val();
-                const branchParam = getSelectedBranchParam();
 
                 if ($.fn.DataTable.isDataTable('.table-patients')) {
-                    const dataUrl = buildPatientListUrl(from, to, branchParam, filterType);
+                    const dataUrl = buildPatientListUrl(from, to, filterType);
                     var tableInstance = $('.table-patients').DataTable();
                     tableInstance.ajax.url(dataUrl).load();
                 }
@@ -640,15 +601,14 @@ $(document).ready(function () {
     $('#filterBtn').click(function () {
         const from = $('#from_date').val();
         const to = $('#to_date').val();
-        const branchParam = getSelectedBranchParam();
         const doctorId = $('#patient_doctor_id').val() || '';
 
         activePatientSummaryFilter = null;
 
-        loadClientSummary(from, to, branchParam, doctorId);
+        loadClientSummary(from, to, doctorId);
 
         if ($.fn.DataTable.isDataTable('.table-patients')) {
-            const dataUrl = buildPatientListUrl(from, to, branchParam);
+            const dataUrl = buildPatientListUrl(from, to);
             var tableInstance = $('.table-patients').DataTable();
             tableInstance.ajax.url(dataUrl).load();
 
@@ -700,7 +660,8 @@ function loadAppointmentSummary(from_date = '', to_date = '', enquiry_doctor_id 
                 const from = $('#from_date').val();
                 const to = $('#to_date').val();
                 const doctor_id = $('#enquiry_doctor_id').val();
-                const branch_val = getSelectedBranchParam();
+                let branch_val = $('#appointment_branch_id').val();
+                branch_val = branch_val ? branch_val : '0';
                 const appointment_type_id_val = $('#appointment_type_id').val();
 
                 $cards.removeClass('is-active').attr('aria-pressed', 'false');
