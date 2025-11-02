@@ -587,6 +587,7 @@ class Misc_model extends App_Model
 				OR ' . db_prefix() . 'clients_new_fields.alt_number1 LIKE "%' . $this->db->escape_like_str($q) . '%" ESCAPE \'!\'
 				)');
 
+			$this->db->group_by(db_prefix() . 'clients.userid');
 			$this->db->limit($limit);
 			$result[] = [
 				'result'         => $this->db->get()->result_array(),

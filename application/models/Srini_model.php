@@ -671,6 +671,7 @@ class Srini_model extends App_Model
                 OR ' . db_prefix() . 'countries.numcode LIKE "%' . $this->db->escape_like_str($q) . '%" ESCAPE \'!\'
                 )');
 
+            $this->db->group_by(db_prefix() . 'clients.userid');
             $this->db->limit($limit);
             $result[] = [
                 'result'         => $this->db->get()->result_array(),
