@@ -126,40 +126,11 @@ if($master_data){
                                
                                 <hr class="hr-panel-heading" />
 								<div class="row align-items-end">
-								<?php
-								if (staff_can('branch_filter', 'customers')) {
-								?>
-							  <div class="col-md-3">
-							 <?= render_select(
-									'groupid[]', // name
-									$branch,   // options array
-									['id', 'name'], // option keys
-									_l('branch') . '*', // label
-									isset($selected_branch_id) && !empty($selected_branch_id) ? $selected_branch_id : (isset($current_branch_id) ? [$current_branch_id] : []), // selected
-			[
-				'id' => 'branch_id', // 👈 Add your ID here
-				'multiple' => 'true',
-				'data-actions-box' => 'true',
-				'data-selected-text-format' => 'count > 2',
-				'data-live-search' => 'true',
-				'data-none-selected-text' => _l('dropdown_non_selected_tex'),
-				'required' => 'required'
-			],
-									[],
-									'',
-									'',
-									true
-								) ?>
-
-							  </div>
-							  <?php
-								}
-								?>
-							  <div class="col-md-3">
+							  <div class="col-md-4">
 								<label><?= _l('from_date'); ?></label>
 								<input type="date" class="form-control" name="from_date" id="from_date" value="<?= date('Y-m-d'); ?>">
 							  </div>
-							  <div class="col-md-3">
+							  <div class="col-md-4">
 								<label><?= _l('to_date'); ?></label>
 								<input type="date" class="form-control" name="to_date" id="to_date" value="<?= date('Y-m-d'); ?>">
 							  </div>
@@ -418,7 +389,11 @@ if($master_data){
 const BRANCH_SELECT_ID = '#branch_id';
 
 function getSelectedBranchValues() {
-    const raw = $(BRANCH_SELECT_ID).val();
+    const $branchSelect = $(BRANCH_SELECT_ID);
+    if (!$branchSelect.length) {
+        return [];
+    }
+    const raw = $branchSelect.val();
     if (!raw) {
         return [];
     }
@@ -491,13 +466,15 @@ $(function () {
         }
     });
 
-    $(BRANCH_SELECT_ID).on('changed.bs.select', function () {
-        // reset summary filter when branches change
-        activePatientSummaryFilter = null;
-        $('#summaryCards .summary-card').removeClass('is-active').attr('aria-pressed', 'false');
-    });
+    if ($(BRANCH_SELECT_ID).length) {
+        $(BRANCH_SELECT_ID).on('changed.bs.select', function () {
+            // reset summary filter when branches change
+            activePatientSummaryFilter = null;
+            $('#summaryCards .summary-card').removeClass('is-active').attr('aria-pressed', 'false');
+        });
 
-    $(BRANCH_SELECT_ID).selectpicker('refresh');
+        $(BRANCH_SELECT_ID).selectpicker('refresh');
+    }
 });
 </script>
 
@@ -562,9 +539,7 @@ function buildPatientListUrl(from, to, branchParam, summaryFilter = '') {
     const safeFrom = from || '';
     const safeTo = to || '';
     const branchSegment = branchParam || '';
-    const branchPath = branchSegment !== '' ? branchSegment : 'null';
-    let url = '<?= admin_url("client/get_patient_list/null/") ?>' + safeFrom + '/' + safeTo + '/' + branchPath + '/';
-    url += branchSegment;
+    let url = '<?= admin_url("client/get_patient_list/null/") ?>' + safeFrom + '/' + safeTo + '/null/' + branchSegment;
     if (summaryFilter) {
         url += (url.indexOf('?') === -1 ? '?' : '&') + 'summary_filter=' + encodeURIComponent(summaryFilter);
     }
