@@ -74,10 +74,12 @@ class Client_model extends App_Model
         ls.name as status_name,
         ls.color as status_color,
         latest_journey.status as status_id,
-		city.city_name as city_name,
-		state.state_name as state_name,
-		pincode.pincode_name as pincode_name,
-    '); // Select everything plus latest status
+        city.city_name as city_name,
+        state.state_name as state_name,
+        pincode.pincode_name as pincode_name,
+        lead_src.name as source_name,
+        lead.source as lead_source_id
+    '); // Select everything plus latest status and lead source details
 
     $this->db->from(db_prefix() . 'clients c');
     $this->db->join(db_prefix() . 'countries co', 'co.country_id = c.country', 'left');
@@ -88,6 +90,8 @@ class Client_model extends App_Model
     $this->db->join(db_prefix() . 'city city', 'city.city_id = c.city', 'left');
     $this->db->join(db_prefix() . 'pincode pincode', 'pincode.pincode_id = new.pincode', 'left');
     $this->db->join(db_prefix() . 'state state', 'state.state_id = c.state', 'left');
+    $this->db->join(db_prefix() . 'leads lead', 'lead.id = c.leadid', 'left');
+    $this->db->join(db_prefix() . 'leads_sources lead_src', 'lead_src.id = lead.source', 'left');
 
     // 👇 Join latest journey per client
     $this->db->join(
