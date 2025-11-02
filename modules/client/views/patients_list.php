@@ -131,16 +131,24 @@ if($master_data){
 								?>
 							  <div class="col-md-3">
 							 <?= render_select(
-									'groupid', // name
+									'groupid[]', // name
 									$branch,   // options array
 									['id', 'name'], // option keys
 									_l('branch') . '*', // label
-									isset($current_branch_id) ? $current_branch_id : ($patient['groupid'] ?? ''), // selected
-									[
-										'id' => 'branch_id', // 👈 Add your ID here
-										'data-none-selected-text' => _l('dropdown_non_selected_tex'),
-										'required' => 'required'
-									]
+									isset($selected_branch_id) && !empty($selected_branch_id) ? $selected_branch_id : (isset($current_branch_id) ? [$current_branch_id] : []), // selected
+			[
+				'id' => 'branch_id', // 👈 Add your ID here
+				'multiple' => 'true',
+				'data-actions-box' => 'true',
+				'data-selected-text-format' => 'count > 2',
+				'data-live-search' => 'true',
+				'data-none-selected-text' => _l('dropdown_non_selected_tex'),
+				'required' => 'required'
+			],
+									[],
+									'',
+									'',
+									true
 								) ?>
 
 							  </div>
@@ -406,6 +414,26 @@ if($master_data){
 
 <?php init_tail(); ?>
 <script>
+const BRANCH_SELECT_ID = '#branch_id';
+
+function getSelectedBranchValues() {
+    const raw = $(BRANCH_SELECT_ID).val();
+    if (!raw) {
+        return [];
+    }
+    if (Array.isArray(raw)) {
+        return raw.filter(function (value) {
+            return value !== null && value !== undefined && value !== '';
+        });
+    }
+    return raw ? [raw] : [];
+}
+
+function getSelectedBranchParam() {
+    const values = getSelectedBranchValues();
+    return values.length ? values.join(',') : '';
+}
+
 $(function () {
     <?php if (isset($clientid) && $clientid): ?>
         // If clientid is set, show patient modal popup
@@ -418,9 +446,12 @@ $(function () {
         // Only load the Patients table on first load
         initDataTable('.table-patients', '<?= admin_url('client/get_patient_list'); ?>', [0], [0]);
         initDataTable('.table-appointments', '<?= admin_url('client/appointments'); ?>', [1], [1]);
-		
-		loadClientSummary();
-		loadAppointmentSummary();
+
+        const initialBranchParam = getSelectedBranchParam();
+        loadClientSummary('', '', initialBranchParam);
+
+        const initialAppointmentBranch = $('#appointment_branch_id').val() || '0';
+        loadAppointmentSummary('', '', '', initialAppointmentBranch);
     <?php endif; ?>
 
     // Lazy load Appointments tab table
@@ -442,6 +473,14 @@ $(function () {
             appointmentsInitialized = true;
         }
     });
+
+    $(BRANCH_SELECT_ID).on('changed.bs.select', function () {
+        // reset summary filter when branches change
+        activePatientSummaryFilter = null;
+        $('#summaryCards .summary-card').removeClass('is-active').attr('aria-pressed', 'false');
+    });
+
+    $(BRANCH_SELECT_ID).selectpicker('refresh');
 });
 </script>
 
@@ -502,6 +541,17 @@ const buildSummaryCard = (count, label, filter, accentHex, accentRgb) => `
     </div>
 `;
 
+function buildPatientListUrl(from, to, branchParam, summaryFilter = '') {
+    const safeFrom = from || '';
+    const safeTo = to || '';
+    const encodedBranch = branchParam ? encodeURIComponent(branchParam) : '';
+    let url = '<?= admin_url("client/get_patient_list/null/") ?>' + safeFrom + '/' + safeTo + '/null/' + encodedBranch;
+    if (summaryFilter) {
+        url += (url.indexOf('?') === -1 ? '?' : '&') + 'summary_filter=' + encodeURIComponent(summaryFilter);
+    }
+    return url;
+}
+
 function loadClientSummary(from_date = '', to_date = '', branch_id = '') {
     $.ajax({
         url: admin_url + 'client/get_client_summary',
@@ -541,12 +591,11 @@ function loadClientSummary(from_date = '', to_date = '', branch_id = '') {
 
                 const from = $('#from_date').val();
                 const to = $('#to_date').val();
-                const branch_id_val = $('#groupid').val();
+                const branchParam = getSelectedBranchParam();
 
                 if ($.fn.DataTable.isDataTable('.table-patients')) {
-                    $('.table-patients').DataTable().ajax.url(
-                        '<?= admin_url("client/get_patient_list/null/") ?>' + from + '/' + to + '/' + branch_id_val + '?summary_filter=' + filterType
-                    ).load();
+                    const dataUrl = buildPatientListUrl(from, to, branchParam, filterType);
+                    $('.table-patients').DataTable().ajax.url(dataUrl).load();
                 }
             });
 
@@ -566,17 +615,16 @@ $(document).ready(function () {
     $('#filterBtn').click(function () {
         const from = $('#from_date').val();
         const to = $('#to_date').val();
-        const branch_id = $('#groupid').val();
+        const branchParam = getSelectedBranchParam();
         const appointment_type_id = $('#appointment_type_id').val();
 
         activePatientSummaryFilter = null;
 
-        loadClientSummary(from, to, branch_id);
+        loadClientSummary(from, to, branchParam);
 
         if ($.fn.DataTable.isDataTable('.table-patients')) {
-            $('.table-patients').DataTable().ajax.url(
-                '<?= admin_url("client/get_patient_list/null/") ?>' + from + '/' + to + '/' + branch_id
-            ).load();
+            const dataUrl = buildPatientListUrl(from, to, branchParam);
+            $('.table-patients').DataTable().ajax.url(dataUrl).load();
 
             /* $('.table-appointments').DataTable().ajax.url(
                 '<?= admin_url("client/appointments/") ?>' + from + '/' + to + '/NULL/NULL/NULL/NULL/' + appointment_type_id
@@ -626,7 +674,7 @@ function loadAppointmentSummary(from_date = '', to_date = '', enquiry_doctor_id 
                 const from = $('#from_date').val();
                 const to = $('#to_date').val();
                 const doctor_id = $('#enquiry_doctor_id').val();
-                const branch_val = $('#groupid').val();
+                const branch_val = getSelectedBranchParam();
                 const appointment_type_id_val = $('#appointment_type_id').val();
 
                 $cards.removeClass('is-active').attr('aria-pressed', 'false');

@@ -2492,20 +2492,35 @@ public function save_prescription()
 		$data['doctors'] = $this->doctor_model->get_doctors();
 		$data['master_data'] = $this->client_model->get_master_data();
 		
-		$selected_branch_id = urldecode($selected_branch_id); // decode %2C to ,
-		$selected_branch_id = explode(',', $selected_branch_id); // split by comma
+		$current_branch_id = ($current_branch_id === null || $current_branch_id === '' || strtolower((string) $current_branch_id) === 'null')
+			? null
+			: urldecode((string) $current_branch_id);
 
-		// Clean the array to ensure numeric values only
-		$selected_branch_id = array_filter($selected_branch_id, fn($id) => is_numeric($id));
+		$selected_branch_id = ($selected_branch_id === null || $selected_branch_id === '' || strtolower((string) $selected_branch_id) === 'null')
+			? ''
+			: urldecode((string) $selected_branch_id);
 
-		// Optional: cast to int
-		$selected_branch_id = array_map('intval', $selected_branch_id);
+		$selected_branch_ids = array_filter(array_map('intval', array_filter(explode(',', $selected_branch_id), function ($value) {
+			return $value !== '' && is_numeric($value);
+		}))); 
 
-		$data['selected_branch_id'] = $selected_branch_id;
+		if (empty($selected_branch_ids) && $current_branch_id !== null) {
+			$current_branch_ids = array_filter(array_map('intval', array_filter(explode(',', $current_branch_id), function ($value) {
+				return $value !== '' && is_numeric($value);
+			})));
+			$selected_branch_ids = $current_branch_ids;
+		}
+
+		if (empty($selected_branch_ids) && !empty($this->current_branch_id)) {
+			$selected_branch_ids = [(int) $this->current_branch_id];
+		}
+
+		$data['selected_branch_id'] = $selected_branch_ids;
+		$data['branch_filter_ids'] = $selected_branch_ids;
 		
-		if($current_branch_id != NULL ){
+		if ($current_branch_id !== null && $current_branch_id !== '') {
 			$data['current_branch_id'] = $current_branch_id;
-		}else{
+		} else {
 			$data['current_branch_id'] = $this->current_branch_id;
 		}
 		
