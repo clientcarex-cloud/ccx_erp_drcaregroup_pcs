@@ -127,24 +127,6 @@ if($master_data){
                                 <hr class="hr-panel-heading" />
                                 <div class="row">
 									<?php
-										if (staff_can('branch_filter', 'customers')) {
-									?>
-									<div class="col-md-4">
-										<?= render_select(
-											'groupid',
-											$branch,
-											['id', 'name'],
-											_l('branch') . '*',
-											isset($current_branch_id) ? $current_branch_id : ($patient['groupid'] ?? ''),
-											[
-												'id' => 'branch_id',
-												'data-none-selected-text' => _l('dropdown_non_selected_tex'),
-												'required' => 'required',
-											]
-										); ?>
-									</div>
-									<?php } ?>
-									<?php
 										$logged_in_staff_id = get_staff_user_id();
 										$patient_doctor_list = array_filter($doctors, function ($doctor) use ($logged_in_staff_id) {
 											return $doctor['staffid'] == $logged_in_staff_id;
