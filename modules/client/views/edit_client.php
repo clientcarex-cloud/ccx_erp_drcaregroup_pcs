@@ -350,7 +350,69 @@ $fields_map['patient_source_id'] = [
         $currentWidth += $col;
     }
     echo '</div>';
+
+    $selected_treatment_id = $appointment_data['treatment_id'] ?? '';
+    $selected_treatment_label = '';
+    if (!empty($appointment_data)) {
+        $selected_treatment_label = $appointment_data['description'] ?? ($appointment_data['treatment_name'] ?? '');
+    }
+    $selected_treatment_label = is_string($selected_treatment_label) ? trim($selected_treatment_label) : '';
+    $treatments_available = !empty($items) && is_array($items);
     ?>
+
+    <?php if ($treatments_available): ?>
+        <h4 class="customer-profile-group-heading"><?= _l('appointment_information'); ?></h4>
+        <div class="row" style="padding: 15px">
+            <div class="col-md-4 col-sm-12">
+                <div class="form-group mtop15">
+                    <label class="form-label"><?= _l('treatment_name'); ?></label>
+                    <select
+                        name="treatment_id"
+                        class="form-control selectpicker"
+                        data-live-search="true"
+                        data-none-selected-text="<?= htmlspecialchars(_l('dropdown_non_selected_tex')); ?>"
+                    >
+                        <option value=""><?= htmlspecialchars(_l('dropdown_non_selected_tex')); ?></option>
+                        <?php
+                        $treatment_selected_in_options = false;
+                        foreach ($items as $group_id => $_items) {
+                            if (empty($_items)) {
+                                continue;
+                            }
+                            $group_name = $_items[0]['group_name'] ?? '';
+                            if (strcasecmp((string) $group_name, 'Package') !== 0) {
+                                continue;
+                            }
+                            foreach ($_items as $item) {
+                                $item_id = $item['id'] ?? '';
+                                $item_label = $item['description'] ?? '';
+                                if ($item_id === '') {
+                                    continue;
+                                }
+                                $is_selected = (string) $selected_treatment_id === (string) $item_id;
+                                if ($is_selected) {
+                                    $treatment_selected_in_options = true;
+                                }
+                                ?>
+                                <option value="<?= htmlspecialchars($item_id); ?>" <?= $is_selected ? 'selected' : ''; ?>>
+                                    <?= htmlspecialchars($item_label); ?>
+                                </option>
+                                <?php
+                            }
+                        }
+                        if ($selected_treatment_id !== '' && !$treatment_selected_in_options && $selected_treatment_label !== '') {
+                            ?>
+                            <option value="<?= htmlspecialchars($selected_treatment_id); ?>" selected>
+                                <?= htmlspecialchars($selected_treatment_label); ?>
+                            </option>
+                            <?php
+                        }
+                        ?>
+                    </select>
+                </div>
+            </div>
+        </div>
+    <?php endif; ?>
 	
 </div>
 <script>

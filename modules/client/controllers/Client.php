@@ -1359,6 +1359,8 @@ class Client extends AdminController
         }
 
         $data['master_data'] = $this->load_master_data();
+        $this->load->model('invoice_items_model');
+        $data['items'] = $this->invoice_items_model->get_grouped();
 		$this->load->model('leads_model');
 		$data['states']  = $this->leads_model->get_state();
 		$data['cities']  = $this->leads_model->get_city();
