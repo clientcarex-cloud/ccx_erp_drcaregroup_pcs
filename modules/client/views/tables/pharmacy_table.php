@@ -17,6 +17,12 @@ $length       = (int) ($CI->input->post('length') ?? 10);
 
 $CI->db->start_cache();
 
+$prescriptionTable = db_prefix() . 'patient_prescription';
+$casesheetTable     = db_prefix() . 'casesheet';
+$clientsTable       = db_prefix() . 'clients';
+$clientFieldsTable  = db_prefix() . 'clients_new_fields';
+$customerGroups     = db_prefix() . 'customer_groups';
+
 $CI->db->select([
     'casesheet.id AS casesheet_id',
     'patients.userid',
@@ -24,26 +30,23 @@ $CI->db->select([
     'patients.company as patient_name',
     'casesheet.created_at',
     'casesheet.staffid',
-    'prescription.medicine_given_by',
+    "(SELECT pr.medicine_given_by
+        FROM {$prescriptionTable} AS pr
+        WHERE pr.casesheet_id = casesheet.id
+        ORDER BY COALESCE(pr.medicine_given_date, pr.created_datetime) DESC
+        LIMIT 1) AS medicine_given_by",
 ]);
 
-$CI->db->from(db_prefix() . 'casesheet casesheet');
-$CI->db->join(db_prefix() . 'clients patients', 'patients.userid = casesheet.userid', 'left');
+$CI->db->from($casesheetTable . ' AS casesheet');
+$CI->db->join($clientsTable . ' AS patients', 'patients.userid = casesheet.userid', 'left');
+$CI->db->join($clientFieldsTable . ' AS patient_meta', 'patient_meta.userid = patients.userid', 'left');
+$CI->db->join($customerGroups . ' AS branch', 'branch.customer_id = patients.userid', 'left');
 
-$prescriptionSubQuery = '(SELECT 
-        casesheet_id,
-        SUBSTRING_INDEX(
-            GROUP_CONCAT(medicine_given_by ORDER BY COALESCE(medicine_given_date, created_datetime) DESC),
-            ",",
-            1
-        ) AS medicine_given_by
-    FROM ' . db_prefix() . 'patient_prescription
-    WHERE casesheet_id IS NOT NULL
-    GROUP BY casesheet_id) prescription';
-
-$CI->db->join($prescriptionSubQuery, 'prescription.casesheet_id = casesheet.id', 'inner', false);
-$CI->db->join(db_prefix() . 'clients_new_fields patient_meta', 'patient_meta.userid = patients.userid', 'left');
-$CI->db->join(db_prefix() . 'customer_groups branch', 'branch.customer_id = patients.userid', 'left');
+$CI->db->where("EXISTS (
+    SELECT 1
+    FROM {$prescriptionTable} AS pr_exists
+    WHERE pr_exists.casesheet_id = casesheet.id
+)", null, false);
 
 $from_date = !empty($consulted_from_date) ? to_sql_date($consulted_from_date) : null;
 $to_date   = !empty($consulted_to_date) ? to_sql_date($consulted_to_date) : null;
@@ -73,7 +76,7 @@ if ($branch_filter > 0) {
 
 $CI->db->stop_cache();
 
-$output['recordsTotal'] = $CI->db->count_all_results('', false);
+$output['recordsTotal'] = (int) $CI->db->count_all_results();
 
 if ($search_value !== '') {
     $CI->db->group_start();
@@ -82,9 +85,17 @@ if ($search_value !== '') {
     $CI->db->or_like('patient_meta.mr_no', $search_value);
     $CI->db->group_end();
 
-    $output['recordsFiltered'] = $CI->db->count_all_results('', false);
+    $output['recordsFiltered'] = (int) $CI->db->count_all_results();
 } else {
     $output['recordsFiltered'] = $output['recordsTotal'];
+}
+
+if ($search_value !== '') {
+    $CI->db->group_start();
+    $CI->db->like('patients.company', $search_value);
+    $CI->db->or_like('patients.phonenumber', $search_value);
+    $CI->db->or_like('patient_meta.mr_no', $search_value);
+    $CI->db->group_end();
 }
 
 $CI->db->order_by('casesheet.created_at', 'DESC');
