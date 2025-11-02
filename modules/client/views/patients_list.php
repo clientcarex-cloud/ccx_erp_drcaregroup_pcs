@@ -445,14 +445,26 @@ $(function () {
 		});
     <?php else: ?>
         // Only load the Patients table on first load
-        initDataTable('.table-patients', '<?= admin_url('client/get_patient_list'); ?>', [0], [0]);
+        var patientsTable = initDataTable('.table-patients', '<?= admin_url('client/get_patient_list'); ?>', [0], [0]);
+        if (!patientsTable || !patientsTable.on) {
+            patientsTable = $('.table-patients').DataTable();
+        }
         initDataTable('.table-appointments', '<?= admin_url('client/appointments'); ?>', [1], [1]);
+
+        if (patientsTable && patientsTable.on) {
+            patientsTable.on('preXhr.dt', function (e, settings, data) {
+                data.branch_ids = getSelectedBranchParam();
+                data.from_date_filter = $('#from_date').val();
+                data.to_date_filter = $('#to_date').val();
+            });
+        }
 
         const initialBranchParam = getSelectedBranchParam();
         loadClientSummary('', '', initialBranchParam);
         const initialListUrl = buildPatientListUrl('', '', initialBranchParam);
         if ($.fn.DataTable.isDataTable('.table-patients')) {
-            $('.table-patients').DataTable().ajax.url(initialListUrl).load();
+            var tableInstance = $('.table-patients').DataTable();
+            tableInstance.ajax.url(initialListUrl).load();
         }
 
         const initialAppointmentBranch = $('#appointment_branch_id').val() || '0';
@@ -600,7 +612,8 @@ function loadClientSummary(from_date = '', to_date = '', branch_id = '') {
 
                 if ($.fn.DataTable.isDataTable('.table-patients')) {
                     const dataUrl = buildPatientListUrl(from, to, branchParam, filterType);
-                    $('.table-patients').DataTable().ajax.url(dataUrl).load();
+                    var tableInstance = $('.table-patients').DataTable();
+                    tableInstance.ajax.url(dataUrl).load();
                 }
             });
 
@@ -629,7 +642,8 @@ $(document).ready(function () {
 
         if ($.fn.DataTable.isDataTable('.table-patients')) {
             const dataUrl = buildPatientListUrl(from, to, branchParam);
-            $('.table-patients').DataTable().ajax.url(dataUrl).load();
+            var tableInstance = $('.table-patients').DataTable();
+            tableInstance.ajax.url(dataUrl).load();
 
             /* $('.table-appointments').DataTable().ajax.url(
                 '<?= admin_url("client/appointments/") ?>' + from + '/' + to + '/NULL/NULL/NULL/NULL/' + appointment_type_id

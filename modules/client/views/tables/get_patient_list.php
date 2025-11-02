@@ -23,20 +23,48 @@ $summary_filter = $CI->input->get('summary_filter');
 $columns = ['c.userid', 'c.company', 'new.mr_no', 'new.age', 'new.gender', 'c.phonenumber'];
 $order_column = $columns[$order_column_index] ?? 'c.userid';
 // Total count
-$branchFilterIds = [];
-if (isset($branch_filter_ids) && is_array($branch_filter_ids)) {
-    $branchFilterIds = array_filter(array_map('intval', $branch_filter_ids));
-} elseif (isset($selected_branch_id) && is_array($selected_branch_id)) {
-    $branchFilterIds = array_filter(array_map('intval', $selected_branch_id));
-} elseif (isset($current_branch_id) && $current_branch_id) {
-    if (is_array($current_branch_id)) {
-        $branchFilterIds = array_filter(array_map('intval', $current_branch_id));
-    } else {
-        $branchFilterIds = [(int) $current_branch_id];
+$normalizeBranchList = static function ($value) {
+    if ($value === null) {
+        return [];
     }
+
+    $list = is_array($value) ? $value : explode(',', (string) $value);
+    $normalized = [];
+
+    foreach ($list as $item) {
+        if ($item === null) {
+            continue;
+        }
+        $item = (string) $item;
+        if ($item === '' || strtolower($item) === 'null') {
+            continue;
+        }
+        $decoded = rawurldecode($item);
+        $decoded = (string) $decoded;
+        if ($decoded === '' || strtolower($decoded) === 'null') {
+            continue;
+        }
+        if (is_numeric($decoded)) {
+            $normalized[] = (int) $decoded;
+        }
+    }
+
+    return array_values(array_unique($normalized));
+};
+
+$branchFilterIds = $normalizeBranchList($CI->input->post('branch_ids'));
+
+if (empty($branchFilterIds) && isset($branch_filter_ids) && is_array($branch_filter_ids)) {
+    $branchFilterIds = $normalizeBranchList($branch_filter_ids);
 }
 
-$branchFilterIds = array_values(array_unique($branchFilterIds));
+if (empty($branchFilterIds) && isset($selected_branch_id) && is_array($selected_branch_id)) {
+    $branchFilterIds = $normalizeBranchList($selected_branch_id);
+}
+
+if (empty($branchFilterIds) && isset($current_branch_id) && $current_branch_id) {
+    $branchFilterIds = $normalizeBranchList($current_branch_id);
+}
 
 $totalQuery = $CI->db;
 $totalQuery->reset_query();
@@ -412,3 +440,13 @@ foreach ($results as $row) {
 
 echo json_encode($output);
 exit;
+$postedFrom = $CI->input->post('from_date_filter');
+$postedTo = $CI->input->post('to_date_filter');
+
+if (!empty($postedFrom)) {
+    $from_date = $postedFrom;
+}
+
+if (!empty($postedTo)) {
+    $to_date = $postedTo;
+}
