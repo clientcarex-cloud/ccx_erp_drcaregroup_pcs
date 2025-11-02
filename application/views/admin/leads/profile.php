@@ -970,7 +970,7 @@ echo render_select(
 				'Paid Appointment',
 				'On Appointment',
 				'No Feedback',
-				'Call Back',
+				'Call back',
 				'No Response',
 			];
 			$selected = isset($lead_with_doctor) ? $lead_with_doctor->patient_response_id : '';
