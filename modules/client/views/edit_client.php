@@ -361,7 +361,6 @@ $fields_map['patient_source_id'] = [
     ?>
 
     <?php if ($treatments_available): ?>
-        <h4 class="customer-profile-group-heading"><?= _l('appointment_information'); ?></h4>
         <div class="row" style="padding: 15px">
             <div class="col-md-4 col-sm-12">
                 <div class="form-group mtop15">
