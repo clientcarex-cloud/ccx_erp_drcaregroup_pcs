@@ -1520,7 +1520,20 @@ $(function () {
         return;
     }
 
+    function getCurrentResponse() {
+        return $('#patient_response_id option:selected').text().toLowerCase().trim();
+    }
+
+    function shouldAutoFillLeadValue() {
+        const resp = getCurrentResponse();
+        return resp === 'on appointment' || resp === 'paid appointment';
+    }
+
     function syncLeadValue(forceUpdate) {
+        if (!shouldAutoFillLeadValue()) {
+            return;
+        }
+
         const $selected = $treatmentSelect.find('option:selected');
         const rateAttr = $selected.data('rate');
         const hasRate = typeof rateAttr !== 'undefined' && rateAttr !== null && rateAttr !== '';
@@ -1537,12 +1550,13 @@ $(function () {
     syncLeadValue(false);
 
     $treatmentSelect.on('changed.bs.select change', function () {
-        syncLeadValue(true);
+        if (shouldAutoFillLeadValue()) {
+            syncLeadValue(true);
+        }
     });
 
     $('#patient_response_id').on('changed.bs.select change', function () {
-        const response = $('#patient_response_id option:selected').text().toLowerCase().trim();
-        if (response === 'on appointment' || response === 'paid appointment') {
+        if (shouldAutoFillLeadValue()) {
             syncLeadValue(true);
         }
     });
