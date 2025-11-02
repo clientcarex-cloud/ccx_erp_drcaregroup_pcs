@@ -2516,6 +2516,7 @@ public function save_prescription()
 			}
 
 			if (empty($modal_html)) {
+				log_message('error', 'modal_only build returned empty for client ID: ' . $id);
 				$this->output->set_status_header(404);
 				echo 'Client details unavailable.';
 			} else {
@@ -2707,7 +2708,42 @@ public function save_prescription()
         ], true);
     }
 
-public function ajax_get_invoice_payment_data($id)
+    public function patient_modal($id = null)
+    {
+        if (!is_staff_logged_in()) {
+            show_404();
+        }
+
+        if (staff_cant('view', 'customers') && staff_cant('view_own', 'customers')) {
+            show_error(_l('access_denied'), 403);
+        }
+
+        $patient_id = (int) $id;
+        if ($patient_id <= 0) {
+            show_404();
+        }
+
+        $callback_url = $this->input->get('callback_url') ?: 'get_patient_list';
+
+        try {
+            $modal_html = $this->build_client_modal($patient_id, $callback_url);
+        } catch (\Throwable $exception) {
+            log_message('error', 'patient_modal exception: ' . $exception->getMessage() . ' :: ' . $exception->getTraceAsString());
+            $this->output->set_status_header(500);
+            echo 'Unable to load patient.';
+            return;
+        }
+
+        if (empty($modal_html)) {
+            $this->output->set_status_header(404);
+            echo 'Client not found.';
+            return;
+        }
+
+        $this->output->set_content_type('text/html')->set_output($modal_html);
+    }
+
+	public function ajax_get_invoice_payment_data($id)
 {
     $this->load->model('invoices_model');
     $this->load->model('payment_modes_model');
@@ -2739,7 +2775,7 @@ public function ajax_get_invoice_payment_data($id)
 }
 
 
-public function get_invoice_data($invoice_id)
+	public function get_invoice_data($invoice_id)
 {
 	$this->load->model('invoices_model');
 	$this->load->model('payment_modes_model');
