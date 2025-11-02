@@ -562,7 +562,9 @@ function buildPatientListUrl(from, to, branchParam, summaryFilter = '') {
     const safeFrom = from || '';
     const safeTo = to || '';
     const branchSegment = branchParam || '';
-    let url = '<?= admin_url("client/get_patient_list/null/") ?>' + safeFrom + '/' + safeTo + '/null/' + branchSegment;
+    const branchPath = branchSegment !== '' ? branchSegment : 'null';
+    let url = '<?= admin_url("client/get_patient_list/null/") ?>' + safeFrom + '/' + safeTo + '/' + branchPath + '/';
+    url += branchSegment;
     if (summaryFilter) {
         url += (url.indexOf('?') === -1 ? '?' : '&') + 'summary_filter=' + encodeURIComponent(summaryFilter);
     }
