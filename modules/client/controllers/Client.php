@@ -2507,7 +2507,23 @@ public function save_prescription()
 			$data['current_branch_id'] = $this->current_branch_id;
 		}
 		
-		
+		if ($id && $this->input->get('modal_only')) {
+			$modal_html = '';
+			try {
+				$modal_html = $this->build_client_modal($id, $callback_url ?? 'get_patient_list');
+			} catch (\Throwable $exception) {
+				log_message('error', 'modal_only build failed: ' . $exception->getMessage() . ' :: ' . $exception->getTraceAsString());
+			}
+
+			if (empty($modal_html)) {
+				$this->output->set_status_header(404);
+				echo 'Client details unavailable.';
+			} else {
+				$this->output->set_content_type('text/html')->set_output($modal_html);
+			}
+			return;
+		}
+
 		if ($this->input->is_ajax_request()) {
 			$this->app->get_table_data(module_views_path('client', 'tables/get_patient_list'), $data);
         }
@@ -2691,35 +2707,6 @@ public function save_prescription()
         ], true);
     }
 
-    public function patient_modal($id = null)
-    {
-        if (!$this->input->is_ajax_request()) {
-            show_404();
-        }
-
-        if (staff_cant('view', 'customers') && staff_cant('view_own', 'customers')) {
-            show_error(_l('access_denied'), 403);
-        }
-
-        $patient_id = (int) $id;
-        if ($patient_id <= 0) {
-            show_404();
-        }
-
-        $callback_url = $this->input->get('callback_url') ?: 'get_patient_list';
-        $modal_html   = $this->build_client_modal($patient_id, $callback_url);
-
-        if (empty($modal_html)) {
-            $this->output->set_status_header(404);
-            echo 'Client not found.';
-            return;
-        }
-
-        $this->output->set_content_type('text/html');
-        echo $modal_html;
-    }
-	
-	
 public function ajax_get_invoice_payment_data($id)
 {
     $this->load->model('invoices_model');

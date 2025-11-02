@@ -505,12 +505,21 @@ $(document).on('click', '.patient-modal-trigger', function (event) {
     $link.data('loading', true);
     $link.attr('aria-busy', 'true');
 
-    $.ajax({
-        url: admin_url + 'client/patient_modal/' + patientId,
-        data: { callback_url: 'get_patient_list' },
+    const requestUrl = admin_url + 'client/get_patient_list/' + patientId + '?modal_only=1';
+
+    fetch(requestUrl, {
         method: 'GET',
-        dataType: 'html',
-        success: function (html) {
+        credentials: 'same-origin'
+    })
+        .then(function (response) {
+            if (!response.ok) {
+                return response.text().then(function (text) {
+                    throw new Error(text || patientModalGenericError);
+                });
+            }
+            return response.text();
+        })
+        .then(function (html) {
             const $existingModal = $('#client-model-auto');
             if ($existingModal.length) {
                 $existingModal.modal('hide');
@@ -526,16 +535,14 @@ $(document).on('click', '.patient-modal-trigger', function (event) {
                 backdrop: 'static',
                 keyboard: false
             });
-        },
-        error: function (xhr) {
-            const message = xhr && xhr.responseText ? xhr.responseText : patientModalGenericError;
-            alert_float('danger', message);
-        },
-        complete: function () {
+        })
+        .catch(function (error) {
+            alert_float('danger', error.message || patientModalGenericError);
+        })
+        .finally(function () {
             $link.data('loading', false);
             $link.removeAttr('aria-busy');
-        }
-    });
+        });
 });
 </script>
 
