@@ -3207,9 +3207,19 @@ foreach ($items as $_group_items) {
     
 	<input type="hidden" name="invoiceid" id="invoice_id_hidden">
     <div class="row">
-      <div class="form-group col-md-4">
-        <?= render_input('amount', 'Payment Amount', '', 'number', ['required' => 'required', 'min' => '1']); ?>
-
+      <div class="form-group col-md-4" app-field-wrapper="amount">
+        <label for="invoice_payment_amount" class="control-label">
+          <span style="color: #f00">*</span><?= _l('payment_amount'); ?>
+        </label>
+        <input type="number"
+               id="invoice_payment_amount"
+               name="amount"
+               class="form-control"
+               min="1"
+               step="0.01"
+               required>
+        <small class="text-muted" id="invoice_payment_amount_hint" style="display:none;"></small>
+        <small class="text-danger" id="invoice_payment_amount_error" style="display:none;"></small>
       </div>
       <!--<div class="form-group col-md-4">
         <?= render_date_input('date', 'Payment Date', _d(date('Y-m-d'))); ?>
@@ -3313,11 +3323,104 @@ $(document).ready(function () {
 </div>
 
 <script>
-  document.getElementById('invoice_payment_form').addEventListener('submit', function () {
-    // Wait briefly to ensure the new tab opens
-    setTimeout(function () {
-      location.reload(); // Refresh current page
-    }, 500);
+  $(function () {
+    var $invoicePaymentForm = $('#invoice_payment_form');
+
+    if (!$invoicePaymentForm.length) {
+      return;
+    }
+
+    var $amountInput = $('#invoice_payment_amount');
+    var $errorMessage = $('#invoice_payment_amount_error');
+    var $hint = $('#invoice_payment_amount_hint');
+
+    function resetInvoicePaymentValidation() {
+      $amountInput.removeClass('is-invalid');
+      $errorMessage.hide().text('');
+    }
+
+    function setInvoicePaymentHint(due) {
+      if (typeof due === 'number' && !isNaN(due) && due > 0) {
+        $hint.text("<?= _l('due_amount'); ?>: " + due.toFixed(2)).show();
+      } else {
+        $hint.hide().text('');
+      }
+    }
+
+    window.updateInvoicePaymentDueAmount = function (due) {
+      if (typeof due === 'number' && !isNaN(due)) {
+        var formatted = due.toFixed(2);
+        $amountInput.attr('data-due', formatted);
+        $amountInput.attr('max', formatted);
+        setInvoicePaymentHint(due);
+      } else {
+        $amountInput.removeAttr('data-due');
+        $amountInput.removeAttr('max');
+        setInvoicePaymentHint(null);
+      }
+
+      $amountInput.val('');
+      resetInvoicePaymentValidation();
+    };
+
+    function getDueAmount() {
+      var due = parseFloat($amountInput.attr('data-due'));
+      return isNaN(due) ? null : due;
+    }
+
+    function validateInvoicePaymentAmount(showFeedback) {
+      var value = parseFloat($amountInput.val());
+
+      if (isNaN(value)) {
+        resetInvoicePaymentValidation();
+        return true;
+      }
+
+      var due = getDueAmount();
+      if (due !== null && value > due + 0.0001) {
+        if (showFeedback) {
+          $amountInput.addClass('is-invalid');
+          var message = "<?= _l('paying_amount_cannot_exceed_due_amount'); ?>";
+          message += ' (<?= _l('due_amount'); ?>: ' + due.toFixed(2) + ')';
+          $errorMessage.text(message).show();
+        }
+        return false;
+      }
+
+      resetInvoicePaymentValidation();
+      return true;
+    }
+
+    $amountInput.on('input', function () {
+      if (!$amountInput.val()) {
+        resetInvoicePaymentValidation();
+        return;
+      }
+      validateInvoicePaymentAmount(true);
+    });
+
+    $invoicePaymentForm.on('submit', function (e) {
+      if (!validateInvoicePaymentAmount(true)) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        return false;
+      }
+
+      // Wait briefly to ensure the new tab opens
+      setTimeout(function () {
+        location.reload();
+      }, 500);
+
+      return true;
+    });
+
+    $(document).on('click', '#btnBackToTable', function () {
+      $amountInput.val('');
+      $amountInput.removeAttr('data-due');
+      $amountInput.removeAttr('max');
+      setInvoicePaymentHint(null);
+      resetInvoicePaymentValidation();
+    });
   });
 </script>
 
@@ -5165,9 +5268,25 @@ function renderStars(rating) {
 
 		  // Populate form fields
 		  $('#invoice_id_hidden').val(invoiceId);
-		  $('input[name="amount"]')
-			.val('')
-			.attr('max', response.amount); // Set max allowed
+		  var dueAmount = parseFloat(response.amount);
+		  if (typeof updateInvoicePaymentDueAmount === 'function') {
+			updateInvoicePaymentDueAmount(!isNaN(dueAmount) ? dueAmount : null);
+		  } else {
+			var $amountInput = $('#invoice_payment_amount');
+			$amountInput.val('');
+			if (!isNaN(dueAmount)) {
+			  var formattedDue = dueAmount.toFixed(2);
+			  $amountInput.attr('data-due', formattedDue);
+			  $amountInput.attr('max', formattedDue);
+			  $('#invoice_payment_amount_hint').text("<?= _l('due_amount'); ?>: " + formattedDue).show();
+			} else {
+			  $amountInput.removeAttr('data-due');
+			  $amountInput.removeAttr('max');
+			  $('#invoice_payment_amount_hint').hide().text('');
+			}
+			$('#invoice_payment_amount_error').hide().text('');
+			$amountInput.removeClass('is-invalid');
+		  }
 
 		  $('input[name="date"]').val(response.date);
 
