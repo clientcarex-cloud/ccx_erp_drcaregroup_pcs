@@ -2619,6 +2619,48 @@ class Client_model extends App_Model
 					}
 				}
 
+				$new_treatment_id = $this->input->post('treatment_id');
+				if ($new_treatment_id !== null) {
+					$new_treatment_id = $new_treatment_id === '' ? null : $new_treatment_id;
+					$appointment_row = null;
+					$posted_appointment_id = $this->input->post('appointment_id');
+
+					if (!empty($posted_appointment_id)) {
+						$appointment_row = $this->db
+							->select('appointment_id, treatment_id')
+							->from(db_prefix() . 'appointment')
+							->where('appointment_id', $posted_appointment_id)
+							->get()
+							->row_array();
+					}
+
+					if (!$appointment_row) {
+						$appointment_row = $this->db
+							->select('appointment_id, treatment_id')
+							->from(db_prefix() . 'appointment')
+							->where('userid', $client_id)
+							->order_by('appointment_id', 'DESC')
+							->limit(1)
+							->get()
+							->row_array();
+					}
+
+					if ($appointment_row) {
+						$existing_treatment_id = $appointment_row['treatment_id'];
+						$target_appointment_id = $appointment_row['appointment_id'];
+
+						if ((string)($existing_treatment_id ?? '') !== (string)($new_treatment_id ?? '')) {
+							$this->db->where('appointment_id', $target_appointment_id);
+							$this->db->update(db_prefix() . 'appointment', ['treatment_id' => $new_treatment_id]);
+
+							$changed_fields['appointment_treatment_id'] = [
+								'old' => $existing_treatment_id,
+								'new' => $new_treatment_id,
+							];
+						}
+					}
+				}
+
 				 $description = "patient_data_updated";
 				 $additional_data = json_encode($changed_fields);
 

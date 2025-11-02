@@ -366,6 +366,9 @@ $fields_map['patient_source_id'] = [
             <div class="col-md-4 col-sm-12">
                 <div class="form-group mtop15">
                     <label class="form-label"><?= _l('treatment_name'); ?></label>
+                    <?php if (isset($appointment_data['appointment_id'])): ?>
+                        <input type="hidden" name="appointment_id" value="<?= htmlspecialchars($appointment_data['appointment_id']); ?>">
+                    <?php endif; ?>
                     <select
                         name="treatment_id"
                         class="form-control selectpicker"
