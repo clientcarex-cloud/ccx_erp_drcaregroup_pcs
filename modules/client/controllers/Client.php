@@ -2698,39 +2698,25 @@ public function save_prescription()
         }
 
         if (staff_cant('view', 'customers') && staff_cant('view_own', 'customers')) {
-            header('Content-Type: application/json');
-            echo json_encode(['success' => false, 'message' => _l('access_denied')]);
-            return;
+            show_error(_l('access_denied'), 403);
         }
 
         $patient_id = (int) $id;
-        $notFoundMessage = _l('client_not_found');
-        if ($notFoundMessage === 'client_not_found') {
-            $notFoundMessage = _l('no_results_found');
-        }
-        if ($notFoundMessage === 'no_results_found') {
-            $notFoundMessage = 'Client not found.';
-        }
-
         if ($patient_id <= 0) {
-            header('Content-Type: application/json');
-            echo json_encode(['success' => false, 'message' => $notFoundMessage]);
-            return;
+            show_404();
         }
 
         $callback_url = $this->input->get('callback_url') ?: 'get_patient_list';
         $modal_html   = $this->build_client_modal($patient_id, $callback_url);
 
-        header('Content-Type: application/json');
         if (empty($modal_html)) {
-            echo json_encode(['success' => false, 'message' => $notFoundMessage]);
+            $this->output->set_status_header(404);
+            echo 'Client not found.';
             return;
         }
 
-        echo json_encode([
-            'success' => true,
-            'html'    => $modal_html,
-        ]);
+        $this->output->set_content_type('text/html');
+        echo $modal_html;
     }
 	
 	

@@ -509,31 +509,27 @@ $(document).on('click', '.patient-modal-trigger', function (event) {
         url: admin_url + 'client/patient_modal/' + patientId,
         data: { callback_url: 'get_patient_list' },
         method: 'GET',
-        dataType: 'json',
-        success: function (response) {
-            if (response && response.success && response.html) {
-                const $existingModal = $('#client-model-auto');
-                if ($existingModal.length) {
-                    $existingModal.modal('hide');
-                    $existingModal.remove();
-                }
-
-                $('body').append(response.html);
-                const $modal = $('#client-model-auto');
-                $modal.on('hidden.bs.modal', function () {
-                    $(this).remove();
-                });
-                $modal.modal({
-                    backdrop: 'static',
-                    keyboard: false
-                });
-            } else {
-                const message = response && response.message ? response.message : patientModalGenericError;
-                alert_float('danger', message);
+        dataType: 'html',
+        success: function (html) {
+            const $existingModal = $('#client-model-auto');
+            if ($existingModal.length) {
+                $existingModal.modal('hide');
+                $existingModal.remove();
             }
+
+            $('body').append(html);
+            const $modal = $('#client-model-auto');
+            $modal.on('hidden.bs.modal', function () {
+                $(this).remove();
+            });
+            $modal.modal({
+                backdrop: 'static',
+                keyboard: false
+            });
         },
-        error: function () {
-            alert_float('danger', patientModalGenericError);
+        error: function (xhr) {
+            const message = xhr && xhr.responseText ? xhr.responseText : patientModalGenericError;
+            alert_float('danger', message);
         },
         complete: function () {
             $link.data('loading', false);
