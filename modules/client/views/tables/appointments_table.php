@@ -205,9 +205,9 @@ foreach ($results as $aRow) {
 	
     $row[] = get_treatments_by_userid($aRow['userid'], $aRow['appointment_id']);
     $row[] = $aRow['appointment_type_name'];
+    $row[] = !empty($aRow['branch_name']) ? ucfirst($aRow['branch_name']) : '-';
     $row[] = _d($aRow['registration_end_date']);
     //$row[] = $aRow['enquiry_type_name'];
-    $row[] = ucfirst($aRow['branch_name']);
 
     $total = $check_payment->total ?? 0;
     $paid  = $check_payment->paid_amount ?? 0;
