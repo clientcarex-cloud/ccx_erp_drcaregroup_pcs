@@ -1350,7 +1350,7 @@ function triggerCronJob(string $rootDir): array
 
     if (isFunctionAvailable('proc_open')) {
         $descriptors = [
-            0 => ['pipe', 'w'],
+            0 => ['pipe', 'r'], // child stdin so we can push commands
             1 => ['file', '/dev/null', 'a'],
             2 => ['file', '/dev/null', 'a'],
         ];
