@@ -1049,6 +1049,9 @@ function renderControlPanel(string $rootDir): void
                             if (payload.message) {
                                 log.textContent += payload.message + '\n';
                             }
+                            if (payload.reason) {
+                                log.textContent += 'Reason: ' + payload.reason + '\n';
+                            }
                             if (payload.log) {
                                 log.textContent += 'Log file: ' + payload.log + '\n';
                             }
@@ -1067,6 +1070,7 @@ function renderControlPanel(string $rootDir): void
                                 log.textContent += 'ERROR: ' + payload.error + '\n';
                             } else {
                                 log.textContent += 'ERROR: Unable to queue cron run.' + '\n';
+                                log.textContent += 'Raw response: ' + text + '\n';
                             }
                             setButtonsDisabled(false);
                         }
@@ -1116,20 +1120,23 @@ function handleCronTriggerRequest(string $rootDir): void
     $result = null;
     $inline = false;
     $logPath = null;
+    $reason = null;
 
     try {
         $result = triggerCronJob($rootDir);
         $inline = !empty($result['inline']);
         $logPath = $result['log'] ?? null;
+        $reason = $result['reason'] ?? null;
 
         echo json_encode([
             'success' => true,
             'log' => $result['log'],
             'command' => $result['command'] ?? null,
             'inline' => $inline,
+            'reason' => $reason,
             'message' => $inline
-                ? 'Background execution is disabled on this server. Running the cron task inline; follow the log file for progress.'
-                : null,
+                ? ($result['message'] ?? 'Background execution is disabled on this server. Running the cron task inline; follow the log file for progress.')
+                : ($result['message'] ?? null),
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
     } catch (Throwable $exception) {
         if (!headers_sent()) {
@@ -1150,6 +1157,7 @@ function handleCronTriggerRequest(string $rootDir): void
         }
 
         ignore_user_abort(true);
+        error_log('[replicate_database] Inline cron fallback engaged (reason: ' . ($reason ?: 'unknown') . ', log: ' . $logPath . ')');
         runCronInline($rootDir, $logPath);
         return;
     }
@@ -1263,9 +1271,10 @@ function triggerCronJob(string $rootDir): array
     ];
 
     $commandString = implode(' ', array_map('escapeshellarg', $commandParts));
+    $attempts = [];
 
     if (stripos(PHP_OS, 'WIN') === 0) {
-        if (function_exists('popen')) {
+        if (isFunctionAvailable('popen')) {
             $background = 'start /B "" ' . $commandString;
             $process = @popen($background, 'r');
             if (is_resource($process)) {
@@ -1274,20 +1283,26 @@ function triggerCronJob(string $rootDir): array
                     'command' => $commandString,
                     'log' => $logPath,
                     'inline' => false,
+                    'reason' => 'popen',
                 ];
             }
+            $attempts[] = 'popen-failed';
+        } else {
+            $attempts[] = 'popen-disabled';
         }
 
         return [
             'command' => $commandString,
             'log' => $logPath,
             'inline' => true,
+            'reason' => $attempts ? implode(',', $attempts) : 'windows-background-disabled',
+            'message' => 'Windows background execution unavailable; running inline instead.',
         ];
     }
 
     $spawned = false;
 
-    if (function_exists('proc_open')) {
+    if (isFunctionAvailable('proc_open')) {
         $descriptors = [
             0 => ['pipe', 'w'],
             1 => ['file', '/dev/null', 'a'],
@@ -1301,17 +1316,42 @@ function triggerCronJob(string $rootDir): array
             fclose($pipes[0]);
             proc_close($process);
             $spawned = true;
+            $attempts[] = 'proc_open';
+        } else {
+            $attempts[] = 'proc_open-failed';
+        }
+    } else {
+        $attempts[] = 'proc_open-disabled';
+    }
+
+    if (!$spawned) {
+        if (isFunctionAvailable('exec')) {
+            $background = sprintf('(%s) > /dev/null 2>&1 &', $commandString);
+            $result = @exec($background);
+            if ($result !== false || $result === null) {
+                $spawned = true;
+                $attempts[] = 'exec';
+            } else {
+                $attempts[] = 'exec-failed';
+            }
+        } else {
+            $attempts[] = 'exec-disabled';
         }
     }
 
-    if (!$spawned && function_exists('exec')) {
-        $background = sprintf('(%s) > /dev/null 2>&1 &', $commandString);
-        @exec($background);
-        $spawned = true;
-    } elseif (!$spawned && function_exists('shell_exec')) {
-        $background = sprintf('(%s) > /dev/null 2>&1 &', $commandString);
-        @shell_exec($background);
-        $spawned = true;
+    if (!$spawned) {
+        if (isFunctionAvailable('shell_exec')) {
+            $background = sprintf('(%s) > /dev/null 2>&1 &', $commandString);
+            $result = @shell_exec($background);
+            if ($result !== false || $result === null) {
+                $spawned = true;
+                $attempts[] = 'shell_exec';
+            } else {
+                $attempts[] = 'shell_exec-failed';
+            }
+        } else {
+            $attempts[] = 'shell_exec-disabled';
+        }
     }
 
     if (!$spawned) {
@@ -1319,6 +1359,8 @@ function triggerCronJob(string $rootDir): array
             'command' => $commandString,
             'log' => $logPath,
             'inline' => true,
+            'reason' => implode(',', array_unique(array_filter($attempts))) ?: 'background-disabled',
+            'message' => 'Background execution functions are disabled; running inline instead.',
         ];
     }
 
@@ -1326,6 +1368,7 @@ function triggerCronJob(string $rootDir): array
         'command' => $commandString,
         'log' => $logPath,
         'inline' => false,
+        'reason' => implode(',', array_unique(array_filter($attempts))) ?: 'background-spawned',
     ];
 }
 
@@ -1439,6 +1482,21 @@ function emit_log(string $message = ''): void
         @ob_flush();
         flush();
     }
+}
+
+function isFunctionAvailable(string $function): bool
+{
+    if (!function_exists($function)) {
+        return false;
+    }
+
+    $disabled = ini_get('disable_functions') ?: '';
+    if ($disabled === '') {
+        return true;
+    }
+
+    $list = array_map('trim', explode(',', strtolower($disabled)));
+    return !in_array(strtolower($function), $list, true);
 }
 
 function starts_with(string $haystack, string $needle): bool
