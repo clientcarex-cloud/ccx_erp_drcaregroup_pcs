@@ -828,6 +828,11 @@ function bootstrap(string $rootDir): void
             return;
         }
 
+        if ($mode === 'compare') {
+            handleComparisonRequest($rootDir);
+            return;
+        }
+
         prepareStreamingResponse();
         emit_log('Starting database replication...');
 
@@ -935,11 +940,17 @@ function renderControlPanel(string $rootDir): void
             button.secondary {
                 background-color: #475467;
             }
+            button.ghost {
+                background-color: #334155;
+            }
             button:hover:not(:disabled) {
                 background-color: #1d4ed8;
             }
             button.secondary:hover:not(:disabled) {
                 background-color: #334155;
+            }
+            button.ghost:hover:not(:disabled) {
+                background-color: #1f2937;
             }
             button:disabled {
                 background-color: #94a3b8;
@@ -982,6 +993,7 @@ function renderControlPanel(string $rootDir): void
             <div class="controls">
                 <button id="replicate-btn" type="button">Start Database Copy</button>
                 <button id="cron-btn" type="button" class="secondary">Queue Cron Copy</button>
+                <button id="compare-btn" type="button" class="ghost">Compare Databases</button>
                 <span id="status">Idle</span>
             </div>
             <pre id="log" aria-live="polite"></pre>
@@ -990,12 +1002,79 @@ function renderControlPanel(string $rootDir): void
             (function () {
                 const button = document.getElementById('replicate-btn');
                 const cronButton = document.getElementById('cron-btn');
+                const compareButton = document.getElementById('compare-btn');
                 const status = document.getElementById('status');
                 const log = document.getElementById('log');
 
                 function setButtonsDisabled(value) {
                     button.disabled = value;
                     cronButton.disabled = value;
+                    compareButton.disabled = value;
+                }
+
+                function formatComparisonSummary(summary) {
+                    const lines = [];
+                    lines.push(`Comparison summary (${summary.generated_at || 'unknown time'})`);
+                    lines.push(`Source DB: ${summary.source_database} (tables: ${summary.source_table_count})`);
+                    lines.push(`Target DB: ${summary.target_database} (tables: ${summary.target_table_count})`);
+                    if (typeof summary.checked_tables === 'number') {
+                        lines.push(`Checked tables: ${summary.checked_tables}`);
+                    }
+                    lines.push('');
+
+                    if (summary.missing_in_target && summary.missing_in_target.length > 0) {
+                        lines.push('Tables missing in target:');
+                        summary.missing_in_target.slice(0, 50).forEach((table) => lines.push(`  - ${table}`));
+                        if (summary.missing_in_target.length > 50) {
+                            lines.push(`  …and ${summary.missing_in_target.length - 50} more`);
+                        }
+                        lines.push('');
+                    } else {
+                        lines.push('No tables missing in target.');
+                    }
+
+                    if (summary.missing_in_source && summary.missing_in_source.length > 0) {
+                        lines.push('Tables missing in source:');
+                        summary.missing_in_source.slice(0, 50).forEach((table) => lines.push(`  - ${table}`));
+                        if (summary.missing_in_source.length > 50) {
+                            lines.push(`  …and ${summary.missing_in_source.length - 50} more`);
+                        }
+                        lines.push('');
+                    } else {
+                        lines.push('No tables missing in source.');
+                    }
+
+                    if (summary.differences && summary.differences.length > 0) {
+                        lines.push('Row / checksum differences:');
+                        summary.differences.forEach((diff) => {
+                            const srcRows = diff.source_rows ?? 'N/A';
+                            const tgtRows = diff.target_rows ?? 'N/A';
+                            const delta = diff.row_difference ?? 'N/A';
+                            const rowInfo = `rows ${srcRows} vs ${tgtRows} (Δ ${delta})`;
+                            let checksumInfo = '';
+                            if (diff.checksum_status === 'match') {
+                                checksumInfo = 'checksum: match';
+                            } else if (diff.checksum_status === 'mismatch') {
+                                checksumInfo = `checksum mismatch (${diff.checksum_source ?? 'N/A'} vs ${diff.checksum_target ?? 'N/A'})`;
+                            } else {
+                                checksumInfo = `checksum: ${diff.checksum_status}`;
+                            }
+                            lines.push(`  - ${diff.table}: ${rowInfo}; ${checksumInfo}`);
+                            if (diff.notes && diff.notes.length) {
+                                diff.notes.forEach((note) => lines.push(`      note: ${note}`));
+                            }
+                        });
+                    } else {
+                        lines.push('No row-count or checksum differences detected among shared tables.');
+                    }
+
+                    if (summary.warnings && summary.warnings.length > 0) {
+                        lines.push('');
+                        lines.push('Warnings:');
+                        summary.warnings.forEach((warn) => lines.push(`  - ${warn}`));
+                    }
+
+                    return lines.join('\n');
                 }
 
                 async function runReplication() {
@@ -1043,6 +1122,52 @@ function renderControlPanel(string $rootDir): void
                         }
                     } catch (error) {
                         log.textContent += '\nERROR: ' + error.message + '\n';
+                        status.textContent = 'Failed';
+                    } finally {
+                        setButtonsDisabled(false);
+                    }
+                }
+
+                async function runComparison() {
+                    setButtonsDisabled(true);
+                    status.textContent = 'Comparing...';
+                    log.textContent = '';
+
+                    try {
+                        const body = new URLSearchParams({mode: 'compare'});
+                        const response = await fetch(window.location.href, {
+                            method: 'POST',
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8'
+                            },
+                            body: body.toString()
+                        });
+
+                        const text = await response.text();
+                        let payload = null;
+                        try {
+                            payload = JSON.parse(text);
+                        } catch (parseError) {
+                            // ignore, handled below
+                        }
+
+                        if (response.ok && payload && payload.success && payload.summary) {
+                            status.textContent = 'Comparison done';
+                            log.textContent = formatComparisonSummary(payload.summary);
+                        } else if (response.ok && payload && payload.success) {
+                            status.textContent = 'Comparison done';
+                            log.textContent = 'Comparison completed, but no summary was returned.';
+                        } else {
+                            status.textContent = 'Failed';
+                            if (payload && payload.error) {
+                                log.textContent += 'ERROR: ' + payload.error + '\n';
+                            } else {
+                                log.textContent += 'ERROR: Comparison failed.\nRaw response: ' + text + '\n';
+                            }
+                        }
+                    } catch (error) {
+                        log.textContent += 'ERROR: ' + error.message + '\n';
                         status.textContent = 'Failed';
                     } finally {
                         setButtonsDisabled(false);
@@ -1125,6 +1250,7 @@ function renderControlPanel(string $rootDir): void
 
                 button.addEventListener('click', runReplication);
                 cronButton.addEventListener('click', triggerCron);
+                compareButton.addEventListener('click', runComparison);
             }());
         </script>
     </body>
@@ -1202,6 +1328,217 @@ function handleCronTriggerRequest(string $rootDir): void
         error_log('[replicate_database] Inline cron fallback engaged (reason: ' . ($reason ?: 'unknown') . ', log: ' . $logPath . ')');
         runCronInline($rootDir, $logPath);
         return;
+    }
+}
+
+function handleComparisonRequest(string $rootDir): void
+{
+    if (!headers_sent()) {
+        header('Content-Type: application/json; charset=utf-8');
+        header('Cache-Control: no-cache, no-store, must-revalidate');
+    }
+
+    try {
+        loadEnvFile($rootDir . DIRECTORY_SEPARATOR . '.env');
+
+        $sourceConfig = buildConnectionConfig('APP_DB_');
+        $targetConfig = buildConnectionConfig('REPL_TARGET_DB_');
+        validateDistinctDatabases($sourceConfig, $targetConfig);
+
+        $source = createPdoConnection($sourceConfig);
+        $target = createPdoConnection($targetConfig);
+
+        relaxSqlMode($source);
+        relaxSqlMode($target);
+
+        $summary = compareDatabases(
+            $source,
+            $target,
+            $sourceConfig['name'],
+            $targetConfig['name']
+        );
+
+        echo json_encode([
+            'success' => true,
+            'summary' => $summary,
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+    } catch (Throwable $exception) {
+        if (!headers_sent()) {
+            http_response_code(500);
+        }
+
+        echo json_encode([
+            'success' => false,
+            'error' => $exception->getMessage(),
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+    }
+}
+
+/**
+ * @return array{
+ *     generated_at: string,
+ *     source_database: string,
+ *     target_database: string,
+ *     source_table_count: int,
+ *     target_table_count: int,
+ *     checked_tables: int,
+ *     missing_in_target: array<int, string>,
+ *     missing_in_source: array<int, string>,
+ *     differences: array<int, array<string, mixed>>,
+ *     warnings: array<int, string>
+ * }
+ */
+function compareDatabases(PDO $source, PDO $target, string $sourceDb, string $targetDb): array
+{
+    $sourceTables = fetchBaseTables($source);
+    $targetTables = fetchBaseTables($target);
+
+    $sourceOnly = array_values(array_diff($sourceTables, $targetTables));
+    $targetOnly = array_values(array_diff($targetTables, $sourceTables));
+
+    $commonTables = array_values(array_intersect($sourceTables, $targetTables));
+
+    $differences = [];
+    $warnings = [];
+
+    foreach ($commonTables as $table) {
+        $notes = [];
+
+        $sourceRows = null;
+        $targetRows = null;
+
+        try {
+            $sourceRows = fetchRowCount($source, $table);
+        } catch (Throwable $e) {
+            $notes[] = 'Source row count error: ' . $e->getMessage();
+            $warnings[] = $table . ': source row count error (' . $e->getMessage() . ')';
+        }
+
+        try {
+            $targetRows = fetchRowCount($target, $table);
+        } catch (Throwable $e) {
+            $notes[] = 'Target row count error: ' . $e->getMessage();
+            $warnings[] = $table . ': target row count error (' . $e->getMessage() . ')';
+        }
+
+        $checksumSource = getTableChecksum($source, $table);
+        if ($checksumSource['note']) {
+            $notes[] = 'Source checksum note: ' . $checksumSource['note'];
+            $warnings[] = $table . ': source checksum note (' . $checksumSource['note'] . ')';
+        }
+
+        $checksumTarget = getTableChecksum($target, $table);
+        if ($checksumTarget['note']) {
+            $notes[] = 'Target checksum note: ' . $checksumTarget['note'];
+            $warnings[] = $table . ': target checksum note (' . $checksumTarget['note'] . ')';
+        }
+
+        $rowDifference = null;
+        if ($sourceRows !== null && $targetRows !== null) {
+            $rowDifference = $targetRows - $sourceRows;
+        }
+
+        $checksumStatus = 'unavailable';
+        if ($checksumSource['value'] !== null && $checksumTarget['value'] !== null) {
+            $checksumStatus = $checksumSource['value'] === $checksumTarget['value'] ? 'match' : 'mismatch';
+        } elseif ($checksumSource['value'] === null && $checksumTarget['value'] === null) {
+            $checksumStatus = 'unavailable';
+        } else {
+            $checksumStatus = 'partial';
+        }
+
+        $hasDifference = false;
+        if ($rowDifference !== null && $rowDifference !== 0) {
+            $hasDifference = true;
+        }
+        if ($checksumStatus === 'mismatch') {
+            $hasDifference = true;
+        }
+
+        if ($hasDifference) {
+            $diffEntry = [
+                'table' => $table,
+                'source_rows' => $sourceRows,
+                'target_rows' => $targetRows,
+                'row_difference' => $rowDifference,
+                'checksum_source' => $checksumSource['value'],
+                'checksum_target' => $checksumTarget['value'],
+                'checksum_status' => $checksumStatus,
+            ];
+            if (!empty($notes)) {
+                $diffEntry['notes'] = $notes;
+            }
+            $differences[] = $diffEntry;
+        }
+    }
+
+    return [
+        'generated_at' => date('c'),
+        'source_database' => $sourceDb,
+        'target_database' => $targetDb,
+        'source_table_count' => count($sourceTables),
+        'target_table_count' => count($targetTables),
+        'checked_tables' => count($commonTables),
+        'missing_in_target' => $sourceOnly,
+        'missing_in_source' => $targetOnly,
+        'differences' => $differences,
+        'warnings' => array_values(array_unique($warnings)),
+    ];
+}
+
+/**
+ * @return array<int, string>
+ */
+function fetchBaseTables(PDO $pdo): array
+{
+    $tables = [];
+    $stmt = $pdo->query("SHOW FULL TABLES WHERE Table_type = 'BASE TABLE'");
+    if ($stmt) {
+        while ($row = $stmt->fetch(PDO::FETCH_NUM)) {
+            if (isset($row[0])) {
+                $tables[] = $row[0];
+            }
+        }
+    }
+
+    sort($tables);
+    return $tables;
+}
+
+function fetchRowCount(PDO $pdo, string $table): int
+{
+    $sql = sprintf('SELECT COUNT(*) AS cnt FROM `%s`', $table);
+    $stmt = $pdo->query($sql);
+    if (!$stmt) {
+        throw new RuntimeException('Unable to fetch row count.');
+    }
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    return (int) ($row['cnt'] ?? 0);
+}
+
+/**
+ * @return array{value: ?int, note: ?string}
+ */
+function getTableChecksum(PDO $pdo, string $table): array
+{
+    try {
+        $stmt = $pdo->query(sprintf('CHECKSUM TABLE `%s`', $table));
+        if (!$stmt) {
+            return ['value' => null, 'note' => 'checksum query failed'];
+        }
+
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$row || !array_key_exists('Checksum', $row)) {
+            return ['value' => null, 'note' => 'checksum unavailable'];
+        }
+
+        if ($row['Checksum'] === null) {
+            return ['value' => null, 'note' => 'checksum returned NULL'];
+        }
+
+        return ['value' => (int) $row['Checksum'], 'note' => null];
+    } catch (Throwable $e) {
+        return ['value' => null, 'note' => $e->getMessage()];
     }
 }
 
