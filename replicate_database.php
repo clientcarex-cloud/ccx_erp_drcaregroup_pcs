@@ -778,6 +778,13 @@ function bootstrap(string $rootDir): void
     $requestMethod = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
     if (strtoupper($requestMethod) === 'POST') {
+        $mode = getPostMode();
+
+        if ($mode === 'cron') {
+            handleCronTriggerRequest($rootDir);
+            return;
+        }
+
         prepareStreamingResponse();
         emit_log('Starting database replication...');
 
@@ -866,6 +873,12 @@ function renderControlPanel(string $rootDir): void
                 background-color: #f1f5f9;
                 font-size: 14px;
             }
+            .controls {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                margin-bottom: 16px;
+            }
             button {
                 padding: 12px 24px;
                 font-size: 16px;
@@ -876,8 +889,14 @@ function renderControlPanel(string $rootDir): void
                 cursor: pointer;
                 transition: background-color 0.2s ease;
             }
+            button.secondary {
+                background-color: #475467;
+            }
             button:hover:not(:disabled) {
                 background-color: #1d4ed8;
+            }
+            button.secondary:hover:not(:disabled) {
+                background-color: #334155;
             }
             button:disabled {
                 background-color: #94a3b8;
@@ -910,37 +929,50 @@ function renderControlPanel(string $rootDir): void
             <h1>Database Replication Utility</h1>
             <p class="note">
                 Press the button below to overwrite the target database with a fresh copy of the source database.
-                Make sure no critical operations are running before starting the replication.
+                Make sure no critical operations are running before starting the replication. Use the
+                <em>Queue Cron Copy</em> button to launch the same process in the background (ideal for long runs).
             </p>
             <div class="env-details">
                 <div><strong>Source:</strong> <?php echo $escape($sourceHost); ?> / <?php echo $escape($sourceName); ?></div>
                 <div><strong>Target:</strong> <?php echo $escape($targetHost); ?> / <?php echo $escape($targetName); ?></div>
             </div>
-            <button id="replicate-btn" type="button">Start Database Copy</button>
-            <span id="status">Idle</span>
+            <div class="controls">
+                <button id="replicate-btn" type="button">Start Database Copy</button>
+                <button id="cron-btn" type="button" class="secondary">Queue Cron Copy</button>
+                <span id="status">Idle</span>
+            </div>
             <pre id="log" aria-live="polite"></pre>
         </div>
         <script>
             (function () {
                 const button = document.getElementById('replicate-btn');
+                const cronButton = document.getElementById('cron-btn');
                 const status = document.getElementById('status');
                 const log = document.getElementById('log');
+
+                function setButtonsDisabled(value) {
+                    button.disabled = value;
+                    cronButton.disabled = value;
+                }
 
                 async function runReplication() {
                     if (!confirm('This will overwrite the target database. Continue?')) {
                         return;
                     }
 
-                    button.disabled = true;
+                    setButtonsDisabled(true);
                     log.textContent = '';
                     status.textContent = 'Running...';
 
                     try {
+                        const body = new URLSearchParams({mode: 'web'});
                         const response = await fetch(window.location.href, {
                             method: 'POST',
                             headers: {
-                                'X-Requested-With': 'XMLHttpRequest'
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8'
                             },
+                            body: body.toString()
                         });
 
                         const reader = response.body ? response.body.getReader() : null;
@@ -970,16 +1002,114 @@ function renderControlPanel(string $rootDir): void
                         log.textContent += '\nERROR: ' + error.message + '\n';
                         status.textContent = 'Failed';
                     } finally {
-                        button.disabled = false;
+                        setButtonsDisabled(false);
+                    }
+                }
+
+                async function triggerCron() {
+                    if (!confirm('Queue the cron-style replication run in the background?')) {
+                        return;
+                    }
+
+                    setButtonsDisabled(true);
+                    status.textContent = 'Scheduling...';
+
+                    try {
+                        const body = new URLSearchParams({mode: 'cron'});
+                        const response = await fetch(window.location.href, {
+                            method: 'POST',
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8'
+                            },
+                            body: body.toString()
+                        });
+
+                        const text = await response.text();
+                        let payload = null;
+                        try {
+                            payload = JSON.parse(text);
+                        } catch (parseError) {
+                            // Ignore, handled below.
+                        }
+
+                        if (response.ok && payload && payload.success) {
+                            status.textContent = 'Cron queued';
+                            log.textContent += 'Cron run started in background.' + '\n';
+                            if (payload.log) {
+                                log.textContent += 'Log file: ' + payload.log + '\n';
+                            }
+                            if (payload.command) {
+                                log.textContent += 'Command: ' + payload.command + '\n';
+                            }
+                        } else {
+                            status.textContent = 'Failed';
+                            if (payload && payload.error) {
+                                log.textContent += 'ERROR: ' + payload.error + '\n';
+                            } else {
+                                log.textContent += 'ERROR: Unable to queue cron run.' + '\n';
+                            }
+                        }
+                    } catch (error) {
+                        log.textContent += 'ERROR: ' + error.message + '\n';
+                        status.textContent = 'Failed';
+                    } finally {
+                        setButtonsDisabled(false);
                     }
                 }
 
                 button.addEventListener('click', runReplication);
+                cronButton.addEventListener('click', triggerCron);
             }());
         </script>
     </body>
     </html>
     <?php
+}
+
+function getPostMode(): string
+{
+    if (!empty($_POST['mode'])) {
+        return (string) $_POST['mode'];
+    }
+
+    $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
+    if (stripos($contentType, 'application/json') !== false) {
+        $raw = file_get_contents('php://input');
+        if ($raw !== false) {
+            $decoded = json_decode($raw, true);
+            if (is_array($decoded) && isset($decoded['mode'])) {
+                return (string) $decoded['mode'];
+            }
+        }
+    }
+
+    return 'web';
+}
+
+function handleCronTriggerRequest(string $rootDir): void
+{
+    if (!headers_sent()) {
+        header('Content-Type: application/json; charset=utf-8');
+        header('Cache-Control: no-cache, no-store, must-revalidate');
+    }
+
+    try {
+        $result = triggerCronJob($rootDir);
+        echo json_encode([
+            'success' => true,
+            'log' => $result['log'],
+            'command' => $result['command'],
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+    } catch (Throwable $exception) {
+        if (!headers_sent()) {
+            http_response_code(500);
+        }
+        echo json_encode([
+            'success' => false,
+            'error' => $exception->getMessage(),
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+    }
 }
 
 function runCli(string $rootDir, array $argv): void
@@ -1072,6 +1202,49 @@ function buildDefaultCronLogPath(string $rootDir): string
     }
 
     return $logsDir . DIRECTORY_SEPARATOR . 'replicate-' . date('Ymd-His') . '.log';
+}
+
+/**
+ * @return array{command: string, log: string}
+ */
+function triggerCronJob(string $rootDir): array
+{
+    $phpBinary = PHP_BINARY ?: 'php';
+    $logPath = buildDefaultCronLogPath($rootDir);
+
+    $command = sprintf(
+        '%s %s --cron --log=%s',
+        escapeshellarg($phpBinary),
+        escapeshellarg(__FILE__),
+        escapeshellarg($logPath)
+    );
+
+    if (stripos(PHP_OS, 'WIN') === 0) {
+        if (!function_exists('popen')) {
+            throw new RuntimeException('Unable to spawn background process: popen() is disabled.');
+        }
+
+        $background = 'start /B "" ' . $command;
+        $process = @popen($background, 'r');
+        if (!is_resource($process)) {
+            throw new RuntimeException('Failed to launch background process.');
+        }
+        pclose($process);
+    } else {
+        $background = sprintf('(%s) > /dev/null 2>&1 &', $command);
+        if (function_exists('exec')) {
+            exec($background);
+        } elseif (function_exists('shell_exec')) {
+            shell_exec($background);
+        } else {
+            throw new RuntimeException('Unable to spawn background process: exec() and shell_exec() are disabled.');
+        }
+    }
+
+    return [
+        'command' => $command,
+        'log' => $logPath,
+    ];
 }
 
 function configureLogFile(string $path): void
