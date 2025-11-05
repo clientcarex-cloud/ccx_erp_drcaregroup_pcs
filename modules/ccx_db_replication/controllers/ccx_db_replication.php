@@ -12,6 +12,6 @@ class ccx_db_replication extends AdminController
     public function index()
     {
         $data['title'] = 'CCX • Hello World';
-        $this->load->view('ccx/hello', $data); // loads the admin-themed view
+        $this->load->view('ccx_db_replication/hello', $data); // loads the admin-themed view
     }
 }
