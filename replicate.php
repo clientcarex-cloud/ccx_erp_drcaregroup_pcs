@@ -213,11 +213,8 @@ function replicateDatabase(PDO $source, PDO $target, bool $fullSync, string $sou
                 $result['table'] = $tableName;
                 $report[] = $result;
             } catch (Throwable $tableException) {
-                $message = trim((string) $tableException->getMessage());
-                if ($message === '') {
-                    $message = get_class($tableException);
-                }
-
+                $message = formatException($tableException);
+                error_log(sprintf('[replicate.php] Replication failed for table %s: %s', $tableName, $message));
                 $report[] = [
                     'table' => $tableName,
                     'status' => 'error',
@@ -396,6 +393,33 @@ function tableExists(PDO $pdo, string $table): bool
 function quoteIdentifier(string $identifier): string
 {
     return '`' . str_replace('`', '``', $identifier) . '`';
+}
+
+function formatException(Throwable $exception): string
+{
+    $parts = [];
+    $message = trim($exception->getMessage());
+    if ($message !== '') {
+        $parts[] = $message;
+    }
+
+    if ($exception instanceof PDOException) {
+        $info = $exception->errorInfo ?? null;
+        if (is_array($info) && !empty($info)) {
+            $parts[] = 'errorInfo=' . json_encode($info);
+        }
+    }
+
+    $code = $exception->getCode();
+    if ($code !== 0 && $code !== '' && $code !== null) {
+        $parts[] = 'code=' . (string) $code;
+    }
+
+    if (empty($parts)) {
+        $parts[] = get_class($exception);
+    }
+
+    return implode(' | ', $parts);
 }
 
 $env = loadEnv(__DIR__ . DIRECTORY_SEPARATOR . '.env');
