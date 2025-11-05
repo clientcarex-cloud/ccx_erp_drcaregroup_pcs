@@ -4,6 +4,15 @@ declare(strict_types=1);
 ini_set('max_execution_time', '0');
 ini_set('memory_limit', '-1');
 
+if (!defined('REPL_LOG_FILE')) {
+    define('REPL_LOG_FILE', __DIR__ . DIRECTORY_SEPARATOR . 'temp' . DIRECTORY_SEPARATOR . 'replicate.log');
+}
+
+$logDir = dirname(REPL_LOG_FILE);
+if (!is_dir($logDir)) {
+    @mkdir($logDir, 0775, true);
+}
+
 /**
  * Load configuration values from .env, $_ENV, $_SERVER, and getenv().
  */
@@ -145,6 +154,65 @@ function firstEnvValue(array $env, array $candidates, bool $required, string $ro
     return null;
 }
 
+function appendLog(string $message): void
+{
+    if (!defined('REPL_LOG_FILE') || REPL_LOG_FILE === '') {
+        return;
+    }
+
+    $timestamp = date('Y-m-d H:i:s');
+    $line = sprintf('[%s] %s%s', $timestamp, $message, PHP_EOL);
+    file_put_contents(REPL_LOG_FILE, $line, FILE_APPEND);
+}
+
+function markLogBoundary(string $label): void
+{
+    appendLog(str_repeat('-', 20) . ' ' . $label . ' ' . str_repeat('-', 20));
+}
+
+function readLogTail(int $maxBytes = 262144): string
+{
+    if (!defined('REPL_LOG_FILE') || !is_readable(REPL_LOG_FILE)) {
+        return '';
+    }
+
+    $fileSize = filesize(REPL_LOG_FILE);
+    if ($fileSize === false) {
+        return '';
+    }
+
+    $start = 0;
+    if ($fileSize > $maxBytes) {
+        $start = $fileSize - $maxBytes;
+    }
+
+    $handle = fopen(REPL_LOG_FILE, 'rb');
+    if ($handle === false) {
+        return '';
+    }
+
+    try {
+        if ($start > 0) {
+            fseek($handle, $start);
+        }
+        $content = stream_get_contents($handle);
+        if ($content === false) {
+            return '';
+        }
+
+        if ($start > 0) {
+            $newlinePos = strpos($content, PHP_EOL);
+            if ($newlinePos !== false) {
+                $content = substr($content, $newlinePos + strlen(PHP_EOL));
+            }
+        }
+
+        return trim($content);
+    } finally {
+        fclose($handle);
+    }
+}
+
 /**
  * Create a PDO connection using the provided configuration.
  *
@@ -209,12 +277,24 @@ function replicateDatabase(PDO $source, PDO $target, bool $fullSync, string $sou
             }
 
             try {
+                appendLog(sprintf('Replicating table %s (%s sync)', $tableName, $fullSync ? 'full' : 'incremental'));
                 $result = replicateTable($source, $target, $tableName, $fullSync, $batchSize);
                 $result['table'] = $tableName;
                 $report[] = $result;
+                appendLog(sprintf(
+                    'Table %s replicated successfully: rows=%d batches=%d duration=%dms',
+                    $tableName,
+                    $result['processed_rows'],
+                    $result['batches'],
+                    $result['duration_ms']
+                ));
             } catch (Throwable $tableException) {
                 $message = formatException($tableException);
+                if ($message === '') {
+                    $message = '[no message captured]';
+                }
                 error_log(sprintf('[replicate.php] Replication failed for table %s: %s', $tableName, $message));
+                appendLog(sprintf('ERROR table %s: %s', $tableName, $message));
                 $report[] = [
                     'table' => $tableName,
                     'status' => 'error',
@@ -429,10 +509,13 @@ $status = null;
 $message = '';
 $report = [];
 $durationMs = null;
+$logContent = '';
 
 if ($mode !== '') {
     $started = microtime(true);
     try {
+        markLogBoundary(strtoupper($mode) . ' SYNC');
+        appendLog(sprintf('Starting %s sync', $mode));
         $sourceConfig = getDbConfig($env, 'source');
         $targetConfig = getDbConfig($env, 'target');
 
@@ -443,6 +526,14 @@ if ($mode !== '') {
         ) {
             throw new RuntimeException('Source and target database configurations are identical. Adjust .env to point target to the replica database.');
         }
+
+        appendLog(sprintf(
+            'Source: %s/%s | Target: %s/%s',
+            $sourceConfig['host'],
+            $sourceConfig['name'],
+            $targetConfig['host'],
+            $targetConfig['name']
+        ));
 
         $source = createConnection($sourceConfig);
         $target = createConnection($targetConfig);
@@ -456,11 +547,15 @@ if ($mode !== '') {
             $mode,
             count($report)
         );
+        appendLog(sprintf('Completed %s sync successfully in %d ms for %d tables', $mode, $durationMs, count($report)));
     } catch (Throwable $exception) {
         $status = 'error';
         $message = $exception->getMessage();
+        appendLog(sprintf('FAILED %s sync: %s', $mode, formatException($exception)));
     }
 }
+
+$logContent = readLogTail();
 
 function h(?string $value): string
 {
@@ -475,6 +570,7 @@ if (PHP_SAPI === 'cli') {
             'mode' => $mode,
             'duration_ms' => $durationMs,
             'report' => $report,
+            'log_tail' => $logContent,
         ];
         fwrite(STDOUT, json_encode($output, JSON_PRETTY_PRINT) . PHP_EOL);
     }
@@ -504,6 +600,7 @@ if (PHP_SAPI === 'cli') {
         .status-error { color: #bd2130; font-weight: bold; }
         .notes { font-size: 13px; color: #444; margin-top: 24px; line-height: 1.5; }
         .duration { font-size: 14px; color: #555; margin-top: -8px; margin-bottom: 16px; }
+        pre.log-output { background: #0d0d0d; color: #d1d1d1; padding: 16px; border-radius: 6px; margin-top: 24px; max-height: 320px; overflow: auto; font-family: Consolas, Monaco, monospace; font-size: 13px; }
     </style>
 </head>
 <body>
@@ -550,6 +647,11 @@ if (PHP_SAPI === 'cli') {
                     <?php endforeach; ?>
                 </tbody>
             </table>
+        <?php endif; ?>
+
+        <?php if ($logContent !== ''): ?>
+            <h2>Execution Log</h2>
+            <pre class="log-output"><?php echo h($logContent); ?></pre>
         <?php endif; ?>
 
         <div class="notes">
