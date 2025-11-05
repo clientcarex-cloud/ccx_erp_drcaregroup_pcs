@@ -8,6 +8,8 @@
  * Web UI:
  *   Open replicate_database.php in your browser to access a simple control
  *   panel with a button that streams real-time logs while the copy runs.
+ *   Progress is tracked in replicate_state.json so retries resume where they
+ *   left off. Delete that file to force a full rebuild.
  *
  * The script expects the following variables to be available either in the environment
  * or in the local .env file located next to this script:
@@ -63,8 +65,18 @@ function main(string $rootDir): void
     $sourcePdo = createPdoConnection($source);
     $targetPdo = createPdoConnection($target);
 
-    $copier = new DatabaseCopier($sourcePdo, $targetPdo);
+    $progress = new ReplicationProgress($rootDir . DIRECTORY_SEPARATOR . 'replicate_state.json');
+
+    $copier = new DatabaseCopier(
+        $sourcePdo,
+        $targetPdo,
+        $progress,
+        $source['name'],
+        $target['name']
+    );
     $copier->run();
+
+    $progress->clear();
 
     emit_log();
     emit_log('Database copy completed successfully.');
@@ -210,13 +222,159 @@ function createPdoConnection(array $config): PDO
 /**
  * Handles the replication process.
  */
+final class ReplicationProgress
+{
+    private array $state = [
+        'tables_completed' => [],
+        'views_completed' => [],
+        'triggers_completed' => [],
+    ];
+
+    public function __construct(private readonly string $path)
+    {
+        $this->load();
+    }
+
+    public function isTableCompleted(string $name): bool
+    {
+        return !empty($this->state['tables_completed'][$name]);
+    }
+
+    public function markTableCompleted(string $name): void
+    {
+        if ($this->isTableCompleted($name)) {
+            return;
+        }
+
+        $this->state['tables_completed'][$name] = true;
+        $this->save();
+    }
+
+    public function forgetTable(string $name): void
+    {
+        if (!empty($this->state['tables_completed'][$name])) {
+            unset($this->state['tables_completed'][$name]);
+            $this->save();
+        }
+    }
+
+    public function isViewCompleted(string $name): bool
+    {
+        return !empty($this->state['views_completed'][$name]);
+    }
+
+    public function markViewCompleted(string $name): void
+    {
+        if ($this->isViewCompleted($name)) {
+            return;
+        }
+
+        $this->state['views_completed'][$name] = true;
+        $this->save();
+    }
+
+    public function forgetView(string $name): void
+    {
+        if (!empty($this->state['views_completed'][$name])) {
+            unset($this->state['views_completed'][$name]);
+            $this->save();
+        }
+    }
+
+    public function isTriggerCompleted(string $name): bool
+    {
+        return !empty($this->state['triggers_completed'][$name]);
+    }
+
+    public function markTriggerCompleted(string $name): void
+    {
+        if ($this->isTriggerCompleted($name)) {
+            return;
+        }
+
+        $this->state['triggers_completed'][$name] = true;
+        $this->save();
+    }
+
+    public function forgetTrigger(string $name): void
+    {
+        if (!empty($this->state['triggers_completed'][$name])) {
+            unset($this->state['triggers_completed'][$name]);
+            $this->save();
+        }
+    }
+
+    public function clear(): void
+    {
+        $this->state = [
+            'tables_completed' => [],
+            'views_completed' => [],
+            'triggers_completed' => [],
+        ];
+
+        if (is_file($this->path)) {
+            @unlink($this->path);
+        }
+    }
+
+    private function load(): void
+    {
+        if (!is_file($this->path) || !is_readable($this->path)) {
+            return;
+        }
+
+        $raw = file_get_contents($this->path);
+        if ($raw === false || trim($raw) === '') {
+            return;
+        }
+
+        $decoded = json_decode($raw, true);
+        if (!is_array($decoded)) {
+            return;
+        }
+
+        foreach (['tables_completed', 'views_completed', 'triggers_completed'] as $key) {
+            if (isset($decoded[$key]) && is_array($decoded[$key])) {
+                // Normalize to associative array for quick lookups.
+                $this->state[$key] = [];
+                foreach ($decoded[$key] as $name => $value) {
+                    if (is_string($name)) {
+                        $this->state[$key][$name] = (bool) $value;
+                    } elseif (is_string($value)) {
+                        $this->state[$key][$value] = true;
+                    }
+                }
+            }
+        }
+    }
+
+    private function save(): void
+    {
+        $json = json_encode(
+            $this->state,
+            JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES
+        );
+
+        if ($json === false) {
+            throw new RuntimeException('Unable to encode replication progress to JSON.');
+        }
+
+        if (file_put_contents($this->path, $json, LOCK_EX) === false) {
+            throw new RuntimeException('Unable to write replication progress file.');
+        }
+    }
+}
+
 final class DatabaseCopier
 {
     private const CHUNK_SIZE = 500;
 
     public function __construct(
         private readonly PDO $source,
-        private readonly PDO $target
+        private readonly PDO $target,
+        private readonly ReplicationProgress $progress,
+        private readonly string $sourceDatabase,
+        private readonly string $targetDatabase
     ) {
     }
 
@@ -228,7 +386,6 @@ final class DatabaseCopier
             $tables = $this->getTables('BASE TABLE');
             $views = $this->getTables('VIEW');
 
-            $this->resetTargetTables($tables);
             $this->copyTables($tables);
             $this->copyViews($views);
             $this->copyTriggers();
@@ -255,29 +412,26 @@ final class DatabaseCopier
     }
 
     /**
-     * Drops matching tables in target before copying over the new definition.
-     *
-     * @param array<int, string> $tables
-     */
-    private function resetTargetTables(array $tables): void
-    {
-        if (empty($tables)) {
-            return;
-        }
-
-        foreach ($tables as $table) {
-            $this->target->exec(sprintf('DROP TABLE IF EXISTS `%s`', $table));
-        }
-    }
-
-    /**
      * @param array<int, string> $tables
      */
     private function copyTables(array $tables): void
     {
         foreach ($tables as $table) {
+            $hasTarget = $this->targetHasBaseTable($table);
+
+            if ($this->progress->isTableCompleted($table) && $hasTarget) {
+                emit_log("Skipping table {$table} (already replicated).");
+                continue;
+            }
+
+            if ($this->progress->isTableCompleted($table) && !$hasTarget) {
+                $this->progress->forgetTable($table);
+            }
+
             $totalRows = $this->countRows($table);
             emit_log("Copying table {$table} ({$totalRows} rows)...");
+
+            $this->target->exec(sprintf('DROP TABLE IF EXISTS `%s`', $table));
 
             $createSql = $this->getCreateStatement($table, false);
             $this->target->exec($createSql);
@@ -285,6 +439,7 @@ final class DatabaseCopier
             $columns = $this->getColumnNames($table);
             if (empty($columns)) {
                 emit_log("Finished table {$table} (no columns detected).");
+                 $this->progress->markTableCompleted($table);
                 continue;
             }
 
@@ -321,6 +476,7 @@ final class DatabaseCopier
             }
 
             emit_log("Finished table {$table} ({$processed} rows copied).");
+            $this->progress->markTableCompleted($table);
         }
     }
 
@@ -367,34 +523,152 @@ final class DatabaseCopier
         }
     }
 
+    private function targetHasBaseTable(string $table): bool
+    {
+        $sql = 'SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = :schema AND TABLE_NAME = :table AND TABLE_TYPE = :type';
+        $stmt = $this->target->prepare($sql);
+        $stmt->execute([
+            'schema' => $this->targetDatabase,
+            'table' => $table,
+            'type' => 'BASE TABLE',
+        ]);
+
+        return (int) $stmt->fetchColumn() > 0;
+    }
+
+    private function targetHasView(string $view): bool
+    {
+        $sql = 'SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = :schema AND TABLE_NAME = :table AND TABLE_TYPE = :type';
+        $stmt = $this->target->prepare($sql);
+        $stmt->execute([
+            'schema' => $this->targetDatabase,
+            'table' => $view,
+            'type' => 'VIEW',
+        ]);
+
+        return (int) $stmt->fetchColumn() > 0;
+    }
+
+    private function targetHasTrigger(string $trigger): bool
+    {
+        $sql = 'SELECT COUNT(*) FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA = :schema AND TRIGGER_NAME = :trigger';
+        $stmt = $this->target->prepare($sql);
+        $stmt->execute([
+            'schema' => $this->targetDatabase,
+            'trigger' => $trigger,
+        ]);
+
+        return (int) $stmt->fetchColumn() > 0;
+    }
+
+    /**
+     * @return array<string, bool>
+     */
+    private function getTargetViews(): array
+    {
+        $sql = 'SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = :schema AND TABLE_TYPE = :type';
+        $stmt = $this->target->prepare($sql);
+        $stmt->execute([
+            'schema' => $this->targetDatabase,
+            'type' => 'VIEW',
+        ]);
+
+        $views = [];
+        while ($name = $stmt->fetchColumn()) {
+            if (is_string($name)) {
+                $views[$name] = true;
+            }
+        }
+
+        return $views;
+    }
+
+    /**
+     * @return array<string, bool>
+     */
+    private function getTargetTriggers(): array
+    {
+        $sql = 'SELECT TRIGGER_NAME FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA = :schema';
+        $stmt = $this->target->prepare($sql);
+        $stmt->execute([
+            'schema' => $this->targetDatabase,
+        ]);
+
+        $triggers = [];
+        while ($name = $stmt->fetchColumn()) {
+            if (is_string($name)) {
+                $triggers[$name] = true;
+            }
+        }
+
+        return $triggers;
+    }
+
     /**
      * @param array<int, string> $views
      */
     private function copyViews(array $views): void
     {
-        if (empty($views)) {
-            return;
+        $existingTargetViews = $this->getTargetViews();
+        $existingNames = array_keys($existingTargetViews);
+
+        $obsolete = array_diff($existingNames, $views);
+        foreach ($obsolete as $view) {
+            emit_log("Dropping target-only view {$view}...");
+            $this->target->exec(sprintf('DROP VIEW IF EXISTS `%s`', $view));
+            $this->progress->forgetView($view);
+            unset($existingTargetViews[$view]);
         }
 
         foreach ($views as $view) {
+            $hasTarget = isset($existingTargetViews[$view]) && $this->targetHasView($view);
+
+            if ($this->progress->isViewCompleted($view) && $hasTarget) {
+                emit_log("Skipping view {$view} (already replicated).");
+                continue;
+            }
+
+            if ($this->progress->isViewCompleted($view) && !$hasTarget) {
+                $this->progress->forgetView($view);
+            }
+
             emit_log("Copying view {$view}...");
             $this->target->exec(sprintf('DROP VIEW IF EXISTS `%s`', $view));
 
             $createSql = $this->getCreateStatement($view, true);
             $this->target->exec($createSql);
+            $this->progress->markViewCompleted($view);
+            $existingTargetViews[$view] = true;
+            emit_log("Finished view {$view}.");
         }
     }
 
     private function copyTriggers(): void
     {
-        $this->dropExistingTriggers();
+        $triggerNames = $this->source->query('SHOW TRIGGERS')->fetchAll(PDO::FETCH_COLUMN, 0) ?: [];
+        $existingTargetTriggers = $this->getTargetTriggers();
+        $targetTriggerNames = array_keys($existingTargetTriggers);
 
-        $triggerNames = $this->source->query('SHOW TRIGGERS')->fetchAll(PDO::FETCH_COLUMN, 0);
-        if (empty($triggerNames)) {
-            return;
+        $obsolete = array_diff($targetTriggerNames, $triggerNames);
+        foreach ($obsolete as $trigger) {
+            emit_log("Dropping target-only trigger {$trigger}...");
+            $this->target->exec(sprintf('DROP TRIGGER IF EXISTS `%s`', $trigger));
+            $this->progress->forgetTrigger($trigger);
+            unset($existingTargetTriggers[$trigger]);
         }
 
         foreach ($triggerNames as $trigger) {
+            $hasTarget = isset($existingTargetTriggers[$trigger]) && $this->targetHasTrigger($trigger);
+
+            if ($this->progress->isTriggerCompleted($trigger) && $hasTarget) {
+                emit_log("Skipping trigger {$trigger} (already replicated).");
+                continue;
+            }
+
+            if ($this->progress->isTriggerCompleted($trigger) && !$hasTarget) {
+                $this->progress->forgetTrigger($trigger);
+            }
+
             emit_log("Copying trigger {$trigger}...");
             $createStmt = $this->source->query(sprintf('SHOW CREATE TRIGGER `%s`', $trigger));
             $row = $createStmt->fetch(PDO::FETCH_ASSOC);
@@ -403,20 +677,11 @@ final class DatabaseCopier
             }
 
             $createSql = $this->stripDefiner($row['SQL Original Statement']);
-            $this->target->exec($createSql);
-        }
-    }
-
-    private function dropExistingTriggers(): void
-    {
-        $existing = $this->target->query('SHOW TRIGGERS');
-        if ($existing === false) {
-            return;
-        }
-
-        $triggers = $existing->fetchAll(PDO::FETCH_COLUMN, 0);
-        foreach ($triggers as $trigger) {
             $this->target->exec(sprintf('DROP TRIGGER IF EXISTS `%s`', $trigger));
+            $this->target->exec($createSql);
+            $this->progress->markTriggerCompleted($trigger);
+            $existingTargetTriggers[$trigger] = true;
+            emit_log("Finished trigger {$trigger}.");
         }
     }
 
