@@ -3,12 +3,9 @@ defined('BASEPATH') or exit('No direct script access allowed');
 
 /*
 Module Name: CCX Reports
-Module URI: https://example.com/perfex-ccx
-Description: Custom cross-table reporting with templates and sections for Perfex CRM.
+Description: Custom cross-table reporting with templates and sections.
 Version: 1.0.0
-Requires at least: 3.4.0
 Author: CCX Team
-Author URI: https://example.com
 */
 
 define('CCX_MODULE_NAME', 'ccx');
