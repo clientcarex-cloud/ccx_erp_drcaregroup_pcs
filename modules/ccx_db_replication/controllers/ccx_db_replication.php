@@ -2,7 +2,7 @@
 
 defined('BASEPATH') or exit('No direct script access allowed');
 
-class Ccx extends AdminController
+class ccx_db_replication extends AdminController
 {
     public function __construct()
     {
