@@ -1357,10 +1357,14 @@ function triggerCronJob(string $rootDir): array
 
         $process = @proc_open('/bin/sh', $descriptors, $pipes);
         if (is_resource($process)) {
-            fwrite($pipes[0], $commandString . " > /dev/null 2>&1 &\n");
-            fwrite($pipes[0], "exit\n");
-            fclose($pipes[0]);
-            proc_close($process);
+            $stdin = $pipes[0] ?? null;
+            if (is_resource($stdin)) {
+                @fwrite($stdin, $commandString . " > /dev/null 2>&1 &\n");
+                @fwrite($stdin, "exit\n");
+                @fflush($stdin);
+                @fclose($stdin);
+            }
+            @proc_close($process);
             $spawned = true;
             $attempts[] = 'proc_open';
         } else {
