@@ -5,6 +5,10 @@
  * Usage:
  *   php replicate_database.php
  *
+ * Web UI:
+ *   Open replicate_database.php in your browser to access a simple control
+ *   panel with a button that streams real-time logs while the copy runs.
+ *
  * The script expects the following variables to be available either in the environment
  * or in the local .env file located next to this script:
  *
@@ -32,6 +36,7 @@ declare(strict_types=1);
 ini_set('memory_limit', '-1');
 error_reporting(E_ALL);
 ini_set('display_errors', '1');
+set_time_limit(0);
 
 if (!defined('STDOUT')) {
     $stdout = fopen('php://output', 'w');
@@ -41,7 +46,7 @@ if (!defined('STDOUT')) {
     define('STDOUT', $stdout);
 }
 
-main(__DIR__);
+bootstrap(__DIR__);
 
 /**
  * Application entry point.
@@ -61,7 +66,8 @@ function main(string $rootDir): void
     $copier = new DatabaseCopier($sourcePdo, $targetPdo);
     $copier->run();
 
-    fwrite(STDOUT, PHP_EOL . "Database copy completed successfully." . PHP_EOL);
+    emit_log();
+    emit_log('Database copy completed successfully.');
 }
 
 /**
@@ -270,7 +276,7 @@ final class DatabaseCopier
     private function copyTables(array $tables): void
     {
         foreach ($tables as $table) {
-            fwrite(STDOUT, "Copying table {$table}..." . PHP_EOL);
+            emit_log("Copying table {$table}...");
 
             $createSql = $this->getCreateStatement($table, false);
             $this->target->exec($createSql);
@@ -339,7 +345,7 @@ final class DatabaseCopier
         }
 
         foreach ($views as $view) {
-            fwrite(STDOUT, "Copying view {$view}..." . PHP_EOL);
+            emit_log("Copying view {$view}...");
             $this->target->exec(sprintf('DROP VIEW IF EXISTS `%s`', $view));
 
             $createSql = $this->getCreateStatement($view, true);
@@ -357,7 +363,7 @@ final class DatabaseCopier
         }
 
         foreach ($triggerNames as $trigger) {
-            fwrite(STDOUT, "Copying trigger {$trigger}..." . PHP_EOL);
+            emit_log("Copying trigger {$trigger}...");
             $createStmt = $this->source->query(sprintf('SHOW CREATE TRIGGER `%s`', $trigger));
             $row = $createStmt->fetch(PDO::FETCH_ASSOC);
             if (!$row || !isset($row['SQL Original Statement'])) {
@@ -422,6 +428,232 @@ final class DatabaseCopier
     private function stripDefiner(string $sql): string
     {
         return preg_replace('/\sDEFINER=`[^`]+`@`[^`]+`\s/', ' ', $sql) ?? $sql;
+    }
+}
+
+function bootstrap(string $rootDir): void
+{
+    if (PHP_SAPI === 'cli') {
+        main($rootDir);
+        return;
+    }
+
+    $requestMethod = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+
+    if (strtoupper($requestMethod) === 'POST') {
+        prepareStreamingResponse();
+        emit_log('Starting database replication...');
+
+        try {
+            main($rootDir);
+        } catch (Throwable $exception) {
+            http_response_code(500);
+            emit_log('ERROR: ' . $exception->getMessage());
+            emit_log(sprintf('Location: %s:%d', $exception->getFile(), $exception->getLine()));
+        }
+
+        return;
+    }
+
+    renderControlPanel($rootDir);
+}
+
+function prepareStreamingResponse(): void
+{
+    if (!headers_sent()) {
+        header('Content-Type: text/plain; charset=utf-8');
+        header('Cache-Control: no-cache, no-store, must-revalidate');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+        header('X-Accel-Buffering: no');
+        header('Connection: keep-alive');
+    }
+
+    @ini_set('output_buffering', 'off');
+    @ini_set('zlib.output_compression', '0');
+
+    while (ob_get_level() > 0) {
+        ob_end_flush();
+    }
+
+    ob_implicit_flush(true);
+}
+
+function renderControlPanel(string $rootDir): void
+{
+    loadEnvFile($rootDir . DIRECTORY_SEPARATOR . '.env');
+
+    $sourceName = getenv('APP_DB_NAME') ?: 'Not configured';
+    $sourceHost = getenv('APP_DB_HOSTNAME') ?: 'Not configured';
+    $targetName = getenv('REPL_TARGET_DB_NAME') ?: 'Not configured';
+    $targetHost = getenv('REPL_TARGET_DB_HOSTNAME') ?: 'Not configured';
+
+    $escape = static function (?string $value): string {
+        return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+    };
+
+    if (!headers_sent()) {
+        header('Content-Type: text/html; charset=utf-8');
+    }
+    ?>
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>Database Replication Utility</title>
+        <style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                margin: 40px;
+                color: #1f2933;
+                background-color: #f8f9fb;
+            }
+            h1 {
+                margin-top: 0;
+            }
+            .panel {
+                background: #fff;
+                border-radius: 8px;
+                padding: 24px;
+                box-shadow: 0 10px 30px rgba(15, 23, 42, 0.1);
+            }
+            .env-details {
+                margin-bottom: 20px;
+                padding: 16px;
+                border: 1px solid #d2d6dc;
+                border-radius: 6px;
+                background-color: #f1f5f9;
+                font-size: 14px;
+            }
+            button {
+                padding: 12px 24px;
+                font-size: 16px;
+                border: none;
+                border-radius: 6px;
+                background-color: #2563eb;
+                color: #fff;
+                cursor: pointer;
+                transition: background-color 0.2s ease;
+            }
+            button:hover:not(:disabled) {
+                background-color: #1d4ed8;
+            }
+            button:disabled {
+                background-color: #94a3b8;
+                cursor: not-allowed;
+            }
+            #status {
+                margin-left: 12px;
+                font-weight: 600;
+            }
+            pre {
+                margin-top: 24px;
+                padding: 16px;
+                background: #0f172a;
+                color: #e2e8f0;
+                max-height: 480px;
+                overflow-y: auto;
+                border-radius: 6px;
+                font-size: 13px;
+                line-height: 1.5;
+            }
+            .note {
+                margin-top: 16px;
+                font-size: 14px;
+                color: #475467;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="panel">
+            <h1>Database Replication Utility</h1>
+            <p class="note">
+                Press the button below to overwrite the target database with a fresh copy of the source database.
+                Make sure no critical operations are running before starting the replication.
+            </p>
+            <div class="env-details">
+                <div><strong>Source:</strong> <?php echo $escape($sourceHost); ?> / <?php echo $escape($sourceName); ?></div>
+                <div><strong>Target:</strong> <?php echo $escape($targetHost); ?> / <?php echo $escape($targetName); ?></div>
+            </div>
+            <button id="replicate-btn" type="button">Start Database Copy</button>
+            <span id="status">Idle</span>
+            <pre id="log" aria-live="polite"></pre>
+        </div>
+        <script>
+            (function () {
+                const button = document.getElementById('replicate-btn');
+                const status = document.getElementById('status');
+                const log = document.getElementById('log');
+
+                async function runReplication() {
+                    if (!confirm('This will overwrite the target database. Continue?')) {
+                        return;
+                    }
+
+                    button.disabled = true;
+                    log.textContent = '';
+                    status.textContent = 'Running...';
+
+                    try {
+                        const response = await fetch(window.location.href, {
+                            method: 'POST',
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest'
+                            },
+                        });
+
+                        const reader = response.body ? response.body.getReader() : null;
+                        const decoder = new TextDecoder();
+
+                        if (reader) {
+                            let done = false;
+                            while (!done) {
+                                const result = await reader.read();
+                                done = result.done;
+                                if (result.value) {
+                                    log.textContent += decoder.decode(result.value, {stream: !done});
+                                    log.scrollTop = log.scrollHeight;
+                                }
+                            }
+                        } else {
+                            const text = await response.text();
+                            log.textContent += text;
+                        }
+
+                        if (response.ok) {
+                            status.textContent = 'Completed';
+                        } else {
+                            status.textContent = 'Failed';
+                        }
+                    } catch (error) {
+                        log.textContent += '\nERROR: ' + error.message + '\n';
+                        status.textContent = 'Failed';
+                    } finally {
+                        button.disabled = false;
+                    }
+                }
+
+                button.addEventListener('click', runReplication);
+            }());
+        </script>
+    </body>
+    </html>
+    <?php
+}
+
+function emit_log(string $message = ''): void
+{
+    $output = $message;
+
+    if ($output === '' || !preg_match('/\r?\n$/', $output)) {
+        $output .= PHP_EOL;
+    }
+
+    fwrite(STDOUT, $output);
+
+    if (PHP_SAPI !== 'cli') {
+        @ob_flush();
+        flush();
     }
 }
 
