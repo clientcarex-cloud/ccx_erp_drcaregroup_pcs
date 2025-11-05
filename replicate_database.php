@@ -564,6 +564,20 @@ final class DatabaseCopier
             return;
         }
 
+        $columnCount = count($columns);
+        if ($columnCount === 0) {
+            return;
+        }
+
+        $maxPlaceholders = 60000;
+        $maxRowsPerInsert = max(1, intdiv($maxPlaceholders, $columnCount));
+        if (count($rows) > $maxRowsPerInsert) {
+            foreach (array_chunk($rows, $maxRowsPerInsert) as $chunk) {
+                $this->bulkInsert($table, $columns, $chunk);
+            }
+            return;
+        }
+
         $columnList = implode(',', array_map(static fn ($col) => "`{$col}`", $columns));
         $rowPlaceholder = '(' . implode(',', array_fill(0, count($columns), '?')) . ')';
         $placeholderGroups = implode(',', array_fill(0, count($rows), $rowPlaceholder));
