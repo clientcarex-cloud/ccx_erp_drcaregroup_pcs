@@ -53,6 +53,7 @@ if (!defined('STDOUT')) {
 }
 
 $GLOBALS['REPL_LOG_HANDLE'] = null;
+$GLOBALS['REPL_SUPPRESS_STDOUT'] = false;
 
 bootstrap(__DIR__);
 
@@ -1033,15 +1034,33 @@ function renderControlPanel(string $rootDir): void
                             // Ignore, handled below.
                         }
 
+                        let inlineFallback = false;
+
                         if (response.ok && payload && payload.success) {
-                            status.textContent = 'Cron queued';
-                            log.textContent += 'Cron run started in background.' + '\n';
+                            if (payload.inline) {
+                                inlineFallback = true;
+                                status.textContent = 'Running (inline)';
+                                log.textContent += 'Background execution not available; running job inline within this request.' + '\n';
+                            } else {
+                                status.textContent = 'Cron queued';
+                                log.textContent += 'Cron run started in background.' + '\n';
+                            }
+
+                            if (payload.message) {
+                                log.textContent += payload.message + '\n';
+                            }
                             if (payload.log) {
                                 log.textContent += 'Log file: ' + payload.log + '\n';
                             }
                             if (payload.command) {
                                 log.textContent += 'Command: ' + payload.command + '\n';
                             }
+
+                            if (inlineFallback) {
+                                log.textContent += 'The process will continue server-side; refresh the log file to monitor progress.' + '\n';
+                            }
+
+                            setTimeout(() => setButtonsDisabled(false), inlineFallback ? 2000 : 0);
                         } else {
                             status.textContent = 'Failed';
                             if (payload && payload.error) {
@@ -1049,11 +1068,11 @@ function renderControlPanel(string $rootDir): void
                             } else {
                                 log.textContent += 'ERROR: Unable to queue cron run.' + '\n';
                             }
+                            setButtonsDisabled(false);
                         }
                     } catch (error) {
                         log.textContent += 'ERROR: ' + error.message + '\n';
                         status.textContent = 'Failed';
-                    } finally {
                         setButtonsDisabled(false);
                     }
                 }
@@ -1094,12 +1113,23 @@ function handleCronTriggerRequest(string $rootDir): void
         header('Cache-Control: no-cache, no-store, must-revalidate');
     }
 
+    $result = null;
+    $inline = false;
+    $logPath = null;
+
     try {
         $result = triggerCronJob($rootDir);
+        $inline = !empty($result['inline']);
+        $logPath = $result['log'] ?? null;
+
         echo json_encode([
             'success' => true,
             'log' => $result['log'],
-            'command' => $result['command'],
+            'command' => $result['command'] ?? null,
+            'inline' => $inline,
+            'message' => $inline
+                ? 'Background execution is disabled on this server. Running the cron task inline; follow the log file for progress.'
+                : null,
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
     } catch (Throwable $exception) {
         if (!headers_sent()) {
@@ -1109,6 +1139,19 @@ function handleCronTriggerRequest(string $rootDir): void
             'success' => false,
             'error' => $exception->getMessage(),
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+    }
+
+    if ($inline && $logPath !== null) {
+        if (function_exists('fastcgi_finish_request')) {
+            fastcgi_finish_request();
+        } else {
+            @ob_end_flush();
+            flush();
+        }
+
+        ignore_user_abort(true);
+        runCronInline($rootDir, $logPath);
+        return;
     }
 }
 
@@ -1212,39 +1255,103 @@ function triggerCronJob(string $rootDir): array
     $phpBinary = PHP_BINARY ?: 'php';
     $logPath = buildDefaultCronLogPath($rootDir);
 
-    $command = sprintf(
-        '%s %s --cron --log=%s',
-        escapeshellarg($phpBinary),
-        escapeshellarg(__FILE__),
-        escapeshellarg($logPath)
-    );
+    $commandParts = [
+        $phpBinary,
+        __FILE__,
+        '--cron',
+        '--log=' . $logPath,
+    ];
+
+    $commandString = implode(' ', array_map('escapeshellarg', $commandParts));
 
     if (stripos(PHP_OS, 'WIN') === 0) {
-        if (!function_exists('popen')) {
-            throw new RuntimeException('Unable to spawn background process: popen() is disabled.');
+        if (function_exists('popen')) {
+            $background = 'start /B "" ' . $commandString;
+            $process = @popen($background, 'r');
+            if (is_resource($process)) {
+                pclose($process);
+                return [
+                    'command' => $commandString,
+                    'log' => $logPath,
+                    'inline' => false,
+                ];
+            }
         }
 
-        $background = 'start /B "" ' . $command;
-        $process = @popen($background, 'r');
-        if (!is_resource($process)) {
-            throw new RuntimeException('Failed to launch background process.');
-        }
-        pclose($process);
-    } else {
-        $background = sprintf('(%s) > /dev/null 2>&1 &', $command);
-        if (function_exists('exec')) {
-            exec($background);
-        } elseif (function_exists('shell_exec')) {
-            shell_exec($background);
-        } else {
-            throw new RuntimeException('Unable to spawn background process: exec() and shell_exec() are disabled.');
+        return [
+            'command' => $commandString,
+            'log' => $logPath,
+            'inline' => true,
+        ];
+    }
+
+    $spawned = false;
+
+    if (function_exists('proc_open')) {
+        $descriptors = [
+            0 => ['pipe', 'w'],
+            1 => ['file', '/dev/null', 'a'],
+            2 => ['file', '/dev/null', 'a'],
+        ];
+
+        $process = @proc_open('/bin/sh', $descriptors, $pipes);
+        if (is_resource($process)) {
+            fwrite($pipes[0], $commandString . " > /dev/null 2>&1 &\n");
+            fwrite($pipes[0], "exit\n");
+            fclose($pipes[0]);
+            proc_close($process);
+            $spawned = true;
         }
     }
 
+    if (!$spawned && function_exists('exec')) {
+        $background = sprintf('(%s) > /dev/null 2>&1 &', $commandString);
+        @exec($background);
+        $spawned = true;
+    } elseif (!$spawned && function_exists('shell_exec')) {
+        $background = sprintf('(%s) > /dev/null 2>&1 &', $commandString);
+        @shell_exec($background);
+        $spawned = true;
+    }
+
+    if (!$spawned) {
+        return [
+            'command' => $commandString,
+            'log' => $logPath,
+            'inline' => true,
+        ];
+    }
+
     return [
-        'command' => $command,
+        'command' => $commandString,
         'log' => $logPath,
+        'inline' => false,
     ];
+}
+
+function runCronInline(string $rootDir, string $logPath): void
+{
+    global $REPL_SUPPRESS_STDOUT;
+
+    $previousSuppress = $REPL_SUPPRESS_STDOUT;
+    $REPL_SUPPRESS_STDOUT = true;
+
+    $lockHandle = null;
+    try {
+        $lockHandle = acquireLock($rootDir . DIRECTORY_SEPARATOR . 'replicate.lock');
+        configureLogFile($logPath);
+        emit_log('Starting database replication (inline fallback)...');
+        main($rootDir);
+        emit_log('Database replication completed (inline fallback).');
+    } catch (Throwable $exception) {
+        emit_log('ERROR: ' . $exception->getMessage());
+        emit_log(sprintf('Location: %s:%d', $exception->getFile(), $exception->getLine()));
+        error_log('[replicate_database] Inline cron error: ' . $exception->getMessage());
+    } finally {
+        closeConfiguredLogFile();
+        releaseLock($lockHandle);
+        $REPL_SUPPRESS_STDOUT = $previousSuppress;
+    }
 }
 
 function configureLogFile(string $path): void
@@ -1317,15 +1424,18 @@ function emit_log(string $message = ''): void
         $output .= PHP_EOL;
     }
 
-    fwrite(STDOUT, $output);
+    global $REPL_LOG_HANDLE, $REPL_SUPPRESS_STDOUT;
 
-    global $REPL_LOG_HANDLE;
+    if (!$REPL_SUPPRESS_STDOUT) {
+        fwrite(STDOUT, $output);
+    }
+
     if (isset($REPL_LOG_HANDLE) && is_resource($REPL_LOG_HANDLE)) {
         fwrite($REPL_LOG_HANDLE, $output);
         fflush($REPL_LOG_HANDLE);
     }
 
-    if (PHP_SAPI !== 'cli') {
+    if (!$REPL_SUPPRESS_STDOUT && PHP_SAPI !== 'cli') {
         @ob_flush();
         flush();
     }
