@@ -286,9 +286,7 @@ final class DatabaseCopier
             $insertStmt = $this->target->prepare($insertSql);
 
             $selectStmt = $this->source->prepare(sprintf('SELECT * FROM `%s`', $table));
-            if (defined('PDO::MYSQL_ATTR_USE_BUFFERED_QUERY')) {
-                $selectStmt->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, false);
-            }
+            $this->disableBufferedQuery($selectStmt);
             $selectStmt->execute();
 
             $batch = [];
@@ -304,6 +302,19 @@ final class DatabaseCopier
             if (!empty($batch)) {
                 $this->insertBatch($insertStmt, $batch);
             }
+        }
+    }
+
+    private function disableBufferedQuery(PDOStatement $stmt): void
+    {
+        if (!defined('PDO::MYSQL_ATTR_USE_BUFFERED_QUERY')) {
+            return;
+        }
+
+        try {
+            $stmt->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, false);
+        } catch (PDOException $e) {
+            // Some drivers (e.g., mysqlnd on older PHP builds) do not support toggling this attribute.
         }
     }
 
