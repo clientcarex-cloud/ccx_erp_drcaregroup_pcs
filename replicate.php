@@ -213,6 +213,11 @@ function replicateDatabase(PDO $source, PDO $target, bool $fullSync, string $sou
                 $result['table'] = $tableName;
                 $report[] = $result;
             } catch (Throwable $tableException) {
+                $message = trim((string) $tableException->getMessage());
+                if ($message === '') {
+                    $message = get_class($tableException);
+                }
+
                 $report[] = [
                     'table' => $tableName,
                     'status' => 'error',
@@ -220,7 +225,7 @@ function replicateDatabase(PDO $source, PDO $target, bool $fullSync, string $sou
                     'batches' => 0,
                     'mode' => $fullSync ? 'full' : 'incremental',
                     'duration_ms' => 0,
-                    'message' => $tableException->getMessage(),
+                    'message' => $message,
                 ];
             }
         }
@@ -249,9 +254,14 @@ function replicateTable(PDO $source, PDO $target, string $table, bool $fullSync,
 
     $columns = [];
     while ($column = $columnStmt->fetch(PDO::FETCH_ASSOC)) {
-        if (isset($column['Field'])) {
-            $columns[] = $column['Field'];
+        if (!isset($column['Field'])) {
+            continue;
         }
+        $extra = isset($column['Extra']) ? strtoupper((string) $column['Extra']) : '';
+        if (strpos($extra, 'GENERATED') !== false) {
+            continue;
+        }
+        $columns[] = $column['Field'];
     }
 
     if (empty($columns)) {
@@ -431,6 +441,20 @@ if ($mode !== '') {
 function h(?string $value): string
 {
     return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+}
+
+if (PHP_SAPI === 'cli') {
+    if ($status !== null) {
+        $output = [
+            'status' => $status,
+            'message' => $message,
+            'mode' => $mode,
+            'duration_ms' => $durationMs,
+            'report' => $report,
+        ];
+        fwrite(STDOUT, json_encode($output, JSON_PRETTY_PRINT) . PHP_EOL);
+    }
+    return;
 }
 ?>
 <!DOCTYPE html>
