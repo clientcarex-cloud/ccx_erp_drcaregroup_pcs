@@ -11,6 +11,10 @@
  *   Progress is tracked in replicate_state.json so retries resume where they
  *   left off. Delete that file to force a full rebuild.
  *
+ * Cron usage:
+ *   php replicate_database.php --cron
+ *   (Optionally add --log=/path/to/file.log to control log location.)
+ *
  * The script expects the following variables to be available either in the environment
  * or in the local .env file located next to this script:
  *
@@ -47,6 +51,8 @@ if (!defined('STDOUT')) {
     }
     define('STDOUT', $stdout);
 }
+
+$GLOBALS['REPL_LOG_HANDLE'] = null;
 
 bootstrap(__DIR__);
 
@@ -765,7 +771,7 @@ final class DatabaseCopier
 function bootstrap(string $rootDir): void
 {
     if (PHP_SAPI === 'cli') {
-        main($rootDir);
+        runCli($rootDir, $GLOBALS['argv'] ?? []);
         return;
     }
 
@@ -976,6 +982,160 @@ function renderControlPanel(string $rootDir): void
     <?php
 }
 
+function runCli(string $rootDir, array $argv): void
+{
+    $options = parseCliArguments($argv);
+    $lockHandle = null;
+    $exitCode = 0;
+
+    try {
+        if (!$options['no_lock']) {
+            $lockHandle = acquireLock($rootDir . DIRECTORY_SEPARATOR . 'replicate.lock');
+            emit_log('Acquired replication lock.');
+        }
+
+        if ($options['cron'] && $options['log_file'] === null) {
+            $options['log_file'] = buildDefaultCronLogPath($rootDir);
+        }
+
+        if ($options['log_file'] !== null) {
+            configureLogFile($options['log_file']);
+            emit_log('Logging additional output to ' . $options['log_file']);
+        }
+
+        emit_log('Starting database replication (CLI mode)...');
+        main($rootDir);
+    } catch (Throwable $exception) {
+        $exitCode = 1;
+        emit_log('ERROR: ' . $exception->getMessage());
+        emit_log(sprintf('Location: %s:%d', $exception->getFile(), $exception->getLine()));
+    } finally {
+        closeConfiguredLogFile();
+        releaseLock($lockHandle);
+    }
+
+    exit($exitCode);
+}
+
+/**
+ * @param array<int, string> $argv
+ * @return array{cron: bool, log_file: ?string, no_lock: bool}
+ */
+function parseCliArguments(array $argv): array
+{
+    $options = [
+        'cron' => false,
+        'log_file' => null,
+        'no_lock' => false,
+    ];
+
+    $count = count($argv);
+    for ($i = 1; $i < $count; $i++) {
+        $arg = $argv[$i];
+
+        if ($arg === '--cron') {
+            $options['cron'] = true;
+            continue;
+        }
+
+        if ($arg === '--no-lock') {
+            $options['no_lock'] = true;
+            continue;
+        }
+
+        if (starts_with($arg, '--log=')) {
+            $options['log_file'] = substr($arg, 6);
+            continue;
+        }
+
+        if ($arg === '--log') {
+            if ($i + 1 >= $count) {
+                emit_log('ERROR: --log option requires a file path.');
+                exit(1);
+            }
+            $options['log_file'] = $argv[++$i];
+            continue;
+        }
+
+        emit_log('ERROR: Unknown option ' . $arg);
+        exit(1);
+    }
+
+    return $options;
+}
+
+function buildDefaultCronLogPath(string $rootDir): string
+{
+    $logsDir = $rootDir . DIRECTORY_SEPARATOR . 'temp' . DIRECTORY_SEPARATOR . 'replication_logs';
+    if (!is_dir($logsDir) && !mkdir($logsDir, 0755, true) && !is_dir($logsDir)) {
+        throw new RuntimeException('Unable to create logs directory: ' . $logsDir);
+    }
+
+    return $logsDir . DIRECTORY_SEPARATOR . 'replicate-' . date('Ymd-His') . '.log';
+}
+
+function configureLogFile(string $path): void
+{
+    global $REPL_LOG_HANDLE;
+
+    $directory = dirname($path);
+    if (!is_dir($directory) && !mkdir($directory, 0755, true) && !is_dir($directory)) {
+        throw new RuntimeException('Unable to create log directory: ' . $directory);
+    }
+
+    $handle = fopen($path, 'ab');
+    if ($handle === false) {
+        throw new RuntimeException('Unable to open log file for writing: ' . $path);
+    }
+
+    $REPL_LOG_HANDLE = $handle;
+}
+
+function closeConfiguredLogFile(): void
+{
+    global $REPL_LOG_HANDLE;
+
+    if (isset($REPL_LOG_HANDLE) && is_resource($REPL_LOG_HANDLE)) {
+        fclose($REPL_LOG_HANDLE);
+    }
+
+    $REPL_LOG_HANDLE = null;
+}
+
+/**
+ * @param resource|null $handle
+ */
+function releaseLock($handle): void
+{
+    if (is_resource($handle)) {
+        flock($handle, LOCK_UN);
+        fclose($handle);
+    }
+}
+
+/**
+ * @return resource
+ */
+function acquireLock(string $path)
+{
+    $directory = dirname($path);
+    if (!is_dir($directory) && !mkdir($directory, 0755, true) && !is_dir($directory)) {
+        throw new RuntimeException('Unable to create lock directory: ' . $directory);
+    }
+
+    $handle = fopen($path, 'c');
+    if ($handle === false) {
+        throw new RuntimeException('Unable to open lock file: ' . $path);
+    }
+
+    if (!flock($handle, LOCK_EX | LOCK_NB)) {
+        fclose($handle);
+        throw new RuntimeException('Another replication process appears to be running (lock not acquired).');
+    }
+
+    return $handle;
+}
+
 function emit_log(string $message = ''): void
 {
     $output = $message;
@@ -985,6 +1145,12 @@ function emit_log(string $message = ''): void
     }
 
     fwrite(STDOUT, $output);
+
+    global $REPL_LOG_HANDLE;
+    if (isset($REPL_LOG_HANDLE) && is_resource($REPL_LOG_HANDLE)) {
+        fwrite($REPL_LOG_HANDLE, $output);
+        fflush($REPL_LOG_HANDLE);
+    }
 
     if (PHP_SAPI !== 'cli') {
         @ob_flush();
