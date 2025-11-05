@@ -408,7 +408,7 @@ final class ReplicationProgress
 
 final class DatabaseCopier
 {
-    private const CHUNK_SIZE = 500;
+    private const CHUNK_SIZE = 2000;
 
     public function __construct(
         private readonly PDO $source,
@@ -484,36 +484,49 @@ final class DatabaseCopier
                 continue;
             }
 
-            $columnList = implode(',', array_map(static fn ($col) => "`{$col}`", $columns));
-            $placeholders = implode(',', array_fill(0, count($columns), '?'));
-            $insertSql = sprintf('INSERT INTO `%s` (%s) VALUES (%s)', $table, $columnList, $placeholders);
-            $insertStmt = $this->target->prepare($insertSql);
-
             $selectStmt = $this->source->prepare(sprintf('SELECT * FROM `%s`', $table));
             $this->disableBufferedQuery($selectStmt);
             $selectStmt->execute();
 
             $batch = [];
             $processed = 0;
-            while ($row = $selectStmt->fetch(PDO::FETCH_ASSOC)) {
-                $batch[] = array_values($row);
+            $inTransaction = false;
 
-                if (count($batch) >= self::CHUNK_SIZE) {
-                    $this->insertBatch($insertStmt, $batch);
+            try {
+                if (!$this->target->inTransaction()) {
+                    $this->target->beginTransaction();
+                    $inTransaction = true;
+                }
+
+                while ($row = $selectStmt->fetch(PDO::FETCH_ASSOC)) {
+                    $batch[] = array_values($row);
+
+                    if (count($batch) >= self::CHUNK_SIZE) {
+                        $this->bulkInsert($table, $columns, $batch);
+                        $processed += count($batch);
+                        $this->emitProgress($table, $processed, $totalRows);
+                        $batch = [];
+                    }
+                }
+
+                if (!empty($batch)) {
+                    $this->bulkInsert($table, $columns, $batch);
                     $processed += count($batch);
                     $this->emitProgress($table, $processed, $totalRows);
-                    $batch = [];
                 }
-            }
 
-            if (!empty($batch)) {
-                $this->insertBatch($insertStmt, $batch);
-                $processed += count($batch);
-                $this->emitProgress($table, $processed, $totalRows);
-            }
+                if ($processed < $totalRows) {
+                    $this->emitProgress($table, $totalRows, $totalRows);
+                }
 
-            if ($processed < $totalRows) {
-                $this->emitProgress($table, $totalRows, $totalRows);
+                if ($inTransaction) {
+                    $this->target->commit();
+                }
+            } catch (Throwable $exception) {
+                if ($inTransaction && $this->target->inTransaction()) {
+                    $this->target->rollBack();
+                }
+                throw $exception;
             }
 
             emit_log("Finished table {$table} ({$processed} rows copied).");
@@ -534,22 +547,37 @@ final class DatabaseCopier
         }
     }
 
-    /**
-     * @param PDOStatement $stmt
-     * @param array<int, array<int|null|string>> $batch
-     */
-    private function insertBatch(PDOStatement $stmt, array $batch): void
-    {
-        foreach ($batch as $row) {
-            $stmt->execute($row);
-        }
-    }
-
     private function countRows(string $table): int
     {
         $stmt = $this->source->query(sprintf('SELECT COUNT(*) AS total FROM `%s`', $table));
         $result = $stmt ? $stmt->fetch(PDO::FETCH_ASSOC) : null;
         return (int) ($result['total'] ?? 0);
+    }
+
+    /**
+     * @param array<int, string> $columns
+     * @param array<int, array<int|null|string>> $rows
+     */
+    private function bulkInsert(string $table, array $columns, array $rows): void
+    {
+        if (empty($rows)) {
+            return;
+        }
+
+        $columnList = implode(',', array_map(static fn ($col) => "`{$col}`", $columns));
+        $rowPlaceholder = '(' . implode(',', array_fill(0, count($columns), '?')) . ')';
+        $placeholderGroups = implode(',', array_fill(0, count($rows), $rowPlaceholder));
+
+        $flattened = [];
+        foreach ($rows as $row) {
+            foreach ($row as $value) {
+                $flattened[] = $value;
+            }
+        }
+
+        $sql = sprintf('INSERT INTO `%s` (%s) VALUES %s', $table, $columnList, $placeholderGroups);
+        $stmt = $this->target->prepare($sql);
+        $stmt->execute($flattened);
     }
 
     private function emitProgress(string $table, int $processed, int $total): void
@@ -1261,6 +1289,25 @@ function buildDefaultCronLogPath(string $rootDir): string
 function triggerCronJob(string $rootDir): array
 {
     $phpBinary = PHP_BINARY ?: 'php';
+    $attempts = [];
+
+    if (str_contains($phpBinary, 'php-fpm')) {
+        $attempts[] = 'php-fpm-detected';
+        $cliCandidates = [
+            '/usr/local/bin/php',
+            '/usr/bin/php',
+            '/bin/php',
+            PHP_BINDIR . '/php',
+        ];
+        foreach ($cliCandidates as $candidate) {
+            if ($candidate && is_file($candidate) && is_executable($candidate)) {
+                $phpBinary = $candidate;
+                $attempts[] = 'php-cli-fallback';
+                break;
+            }
+        }
+    }
+
     $logPath = buildDefaultCronLogPath($rootDir);
 
     $commandParts = [
@@ -1271,7 +1318,6 @@ function triggerCronJob(string $rootDir): array
     ];
 
     $commandString = implode(' ', array_map('escapeshellarg', $commandParts));
-    $attempts = [];
 
     if (stripos(PHP_OS, 'WIN') === 0) {
         if (isFunctionAvailable('popen')) {
