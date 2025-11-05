@@ -33,6 +33,14 @@ ini_set('memory_limit', '-1');
 error_reporting(E_ALL);
 ini_set('display_errors', '1');
 
+if (!defined('STDOUT')) {
+    $stdout = fopen('php://output', 'w');
+    if ($stdout === false) {
+        throw new RuntimeException('Unable to open stdout stream.');
+    }
+    define('STDOUT', $stdout);
+}
+
 main(__DIR__);
 
 /**
@@ -423,4 +431,3 @@ function ends_with(string $haystack, string $needle): bool
 
     return substr($haystack, -strlen($needle)) === $needle;
 }
-
