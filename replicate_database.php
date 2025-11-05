@@ -276,13 +276,15 @@ final class DatabaseCopier
     private function copyTables(array $tables): void
     {
         foreach ($tables as $table) {
-            emit_log("Copying table {$table}...");
+            $totalRows = $this->countRows($table);
+            emit_log("Copying table {$table} ({$totalRows} rows)...");
 
             $createSql = $this->getCreateStatement($table, false);
             $this->target->exec($createSql);
 
             $columns = $this->getColumnNames($table);
             if (empty($columns)) {
+                emit_log("Finished table {$table} (no columns detected).");
                 continue;
             }
 
@@ -296,18 +298,29 @@ final class DatabaseCopier
             $selectStmt->execute();
 
             $batch = [];
+            $processed = 0;
             while ($row = $selectStmt->fetch(PDO::FETCH_ASSOC)) {
                 $batch[] = array_values($row);
 
                 if (count($batch) >= self::CHUNK_SIZE) {
                     $this->insertBatch($insertStmt, $batch);
+                    $processed += count($batch);
+                    $this->emitProgress($table, $processed, $totalRows);
                     $batch = [];
                 }
             }
 
             if (!empty($batch)) {
                 $this->insertBatch($insertStmt, $batch);
+                $processed += count($batch);
+                $this->emitProgress($table, $processed, $totalRows);
             }
+
+            if ($processed < $totalRows) {
+                $this->emitProgress($table, $totalRows, $totalRows);
+            }
+
+            emit_log("Finished table {$table} ({$processed} rows copied).");
         }
     }
 
@@ -332,6 +345,25 @@ final class DatabaseCopier
     {
         foreach ($batch as $row) {
             $stmt->execute($row);
+        }
+    }
+
+    private function countRows(string $table): int
+    {
+        $stmt = $this->source->query(sprintf('SELECT COUNT(*) AS total FROM `%s`', $table));
+        $result = $stmt ? $stmt->fetch(PDO::FETCH_ASSOC) : null;
+        return (int) ($result['total'] ?? 0);
+    }
+
+    private function emitProgress(string $table, int $processed, int $total): void
+    {
+        if ($total > 0) {
+            $clamped = min($processed, $total);
+            $percent = number_format(($clamped / $total) * 100, 2);
+            $remaining = max($total - $clamped, 0);
+            emit_log(sprintf('[%s] %d / %d rows (%s%%, %d remaining)', $table, $clamped, $total, $percent, $remaining));
+        } else {
+            emit_log(sprintf('[%s] %d rows copied', $table, $processed));
         }
     }
 
@@ -473,10 +505,12 @@ function prepareStreamingResponse(): void
     @ini_set('zlib.output_compression', '0');
 
     while (ob_get_level() > 0) {
-        ob_end_flush();
+        @ob_end_flush();
     }
 
     ob_implicit_flush(true);
+    echo str_repeat(' ', 2048);
+    flush();
 }
 
 function renderControlPanel(string $rootDir): void
