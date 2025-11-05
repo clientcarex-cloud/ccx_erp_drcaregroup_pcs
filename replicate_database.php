@@ -65,6 +65,9 @@ function main(string $rootDir): void
     $sourcePdo = createPdoConnection($source);
     $targetPdo = createPdoConnection($target);
 
+    relaxSqlMode($sourcePdo);
+    relaxSqlMode($targetPdo);
+
     $progress = new ReplicationProgress($rootDir . DIRECTORY_SEPARATOR . 'replicate_state.json');
 
     $copier = new DatabaseCopier(
@@ -217,6 +220,37 @@ function createPdoConnection(array $config): PDO
     }
 
     return new PDO($dsn, $config['username'], $config['password'], $options);
+}
+
+function relaxSqlMode(PDO $pdo): void
+{
+    try {
+        $result = $pdo->query('SELECT @@SESSION.sql_mode');
+        if ($result === false) {
+            return;
+        }
+
+        $current = (string) $result->fetchColumn();
+        if ($current === '') {
+            return;
+        }
+
+        $modes = array_filter(array_map('trim', explode(',', $current)));
+        $blocked = [
+            'STRICT_TRANS_TABLES',
+            'STRICT_ALL_TABLES',
+            'NO_ZERO_DATE',
+            'NO_ZERO_IN_DATE',
+        ];
+
+        $filtered = array_values(array_diff($modes, $blocked));
+        $newMode = implode(',', $filtered);
+        $escaped = str_replace("'", "''", $newMode);
+
+        $pdo->exec("SET SESSION sql_mode='{$escaped}'");
+    } catch (Throwable $exception) {
+        emit_log('Warning: Unable to adjust SQL mode - ' . $exception->getMessage());
+    }
 }
 
 /**
@@ -439,7 +473,7 @@ final class DatabaseCopier
             $columns = $this->getColumnNames($table);
             if (empty($columns)) {
                 emit_log("Finished table {$table} (no columns detected).");
-                 $this->progress->markTableCompleted($table);
+                $this->progress->markTableCompleted($table);
                 continue;
             }
 
@@ -744,7 +778,9 @@ function bootstrap(string $rootDir): void
         try {
             main($rootDir);
         } catch (Throwable $exception) {
-            http_response_code(500);
+            if (!headers_sent()) {
+                http_response_code(500);
+            }
             emit_log('ERROR: ' . $exception->getMessage());
             emit_log(sprintf('Location: %s:%d', $exception->getFile(), $exception->getLine()));
         }
