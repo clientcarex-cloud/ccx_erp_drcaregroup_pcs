@@ -73,7 +73,12 @@ $normalizeBranchList = static function ($value) {
     return array_values(array_unique($normalized));
 };
 
-$branchFilterIds = $normalizeBranchList($CI->input->post('branch_ids'));
+$branchInputValue = $CI->input->post('branch_ids');
+if ($branchInputValue === null) {
+    $branchInputValue = $CI->input->get('branch_ids');
+}
+
+$branchFilterIds = $normalizeBranchList($branchInputValue);
 
 $allowedBranchIds = $normalizeBranchList($accessible_branch_ids ?? []);
 $restrictToAllowedBranches = static function ($ids) use ($allowedBranchIds) {
