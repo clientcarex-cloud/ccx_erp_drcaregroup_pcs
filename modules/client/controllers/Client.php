@@ -2513,29 +2513,67 @@ public function save_prescription()
 		$current_branch_id = $decodeParam($current_branch_id, null);
 		$selected_branch_id = $decodeParam($selected_branch_id, '');
 
-		$selected_branch_ids = array_filter(array_map('intval', array_filter(explode(',', $selected_branch_id), function ($value) {
-			return $value !== '' && is_numeric($value);
-		}))); 
+		$normalizeBranchIds = static function ($value) {
+			if ($value === null || $value === '') {
+				return [];
+			}
 
-		if (empty($selected_branch_ids) && $current_branch_id !== null) {
-			$current_branch_ids = array_filter(array_map('intval', array_filter(explode(',', $current_branch_id), function ($value) {
-				return $value !== '' && is_numeric($value);
-			})));
+			if (is_array($value)) {
+				$list = $value;
+			} else {
+				$list = explode(',', (string) $value);
+			}
+
+			$normalized = [];
+			foreach ($list as $item) {
+				if ($item === null) {
+					continue;
+				}
+				$item = (string) $item;
+				if ($item === '' || strtolower($item) === 'null' || !is_numeric($item)) {
+					continue;
+				}
+				$normalized[] = (int) $item;
+			}
+
+			return array_values(array_unique($normalized));
+		};
+
+		$selected_branch_ids = $normalizeBranchIds($selected_branch_id);
+		$current_branch_ids = $normalizeBranchIds($current_branch_id);
+		$staff_branch_ids   = $normalizeBranchIds($this->current_branch_id);
+
+		if (empty($selected_branch_ids) && !empty($current_branch_ids)) {
 			$selected_branch_ids = $current_branch_ids;
 		}
 
-		if (empty($selected_branch_ids) && !empty($this->current_branch_id)) {
-			$internalBranchIds = array_filter(array_map('intval', array_filter(explode(',', (string) $this->current_branch_id), function ($value) {
-				return $value !== '' && is_numeric($value);
-			})));
+		if (empty($selected_branch_ids) && !empty($staff_branch_ids)) {
+			$selected_branch_ids = $staff_branch_ids;
+		}
 
-			if (!empty($internalBranchIds)) {
-				$selected_branch_ids = $internalBranchIds;
+		if (!empty($staff_branch_ids)) {
+			$selected_branch_ids = array_values(array_intersect($selected_branch_ids, $staff_branch_ids));
+			if (empty($selected_branch_ids)) {
+				$selected_branch_ids = $staff_branch_ids;
 			}
 		}
 
+		$all_branches = $this->client_model->get_branch();
+		$visible_branches = $all_branches;
+		if (!empty($staff_branch_ids)) {
+			$visible_branches = array_values(array_filter($all_branches, function ($branch) use ($staff_branch_ids) {
+				return in_array((int) $branch['id'], $staff_branch_ids, true);
+			}));
+
+			if (empty($visible_branches)) {
+				$visible_branches = $all_branches;
+			}
+		}
+
+		$data['branch'] = $visible_branches;
 		$data['selected_branch_id'] = $selected_branch_ids;
 		$data['branch_filter_ids'] = $selected_branch_ids;
+		$data['accessible_branch_ids'] = $staff_branch_ids;
 		
 		if ($current_branch_id !== null && $current_branch_id !== '') {
 			$data['current_branch_id'] = $current_branch_id;

@@ -75,16 +75,42 @@ $normalizeBranchList = static function ($value) {
 
 $branchFilterIds = $normalizeBranchList($CI->input->post('branch_ids'));
 
+$allowedBranchIds = $normalizeBranchList($accessible_branch_ids ?? []);
+$restrictToAllowedBranches = static function ($ids) use ($allowedBranchIds) {
+    if (empty($allowedBranchIds)) {
+        return $ids;
+    }
+    if (empty($ids)) {
+        return [];
+    }
+
+    $filtered = [];
+    foreach ($ids as $id) {
+        $intId = (int) $id;
+        if (in_array($intId, $allowedBranchIds, true)) {
+            $filtered[] = $intId;
+        }
+    }
+
+    return array_values(array_unique($filtered));
+};
+
+$branchFilterIds = $restrictToAllowedBranches($branchFilterIds);
+
 if (empty($branchFilterIds) && isset($branch_filter_ids) && is_array($branch_filter_ids)) {
-    $branchFilterIds = $normalizeBranchList($branch_filter_ids);
+    $branchFilterIds = $restrictToAllowedBranches($normalizeBranchList($branch_filter_ids));
 }
 
 if (empty($branchFilterIds) && isset($selected_branch_id) && is_array($selected_branch_id)) {
-    $branchFilterIds = $normalizeBranchList($selected_branch_id);
+    $branchFilterIds = $restrictToAllowedBranches($normalizeBranchList($selected_branch_id));
 }
 
 if (empty($branchFilterIds) && isset($current_branch_id) && $current_branch_id) {
-    $branchFilterIds = $normalizeBranchList($current_branch_id);
+    $branchFilterIds = $restrictToAllowedBranches($normalizeBranchList($current_branch_id));
+}
+
+if (empty($branchFilterIds) && !empty($allowedBranchIds)) {
+    $branchFilterIds = $allowedBranchIds;
 }
 
 $applyBranchFilter = static function ($query) use ($branchFilterIds) {
