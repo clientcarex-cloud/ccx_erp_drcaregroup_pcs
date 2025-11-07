@@ -126,13 +126,20 @@ if($master_data){
                                
                                 <hr class="hr-panel-heading" />
 								<div class="row align-items-end">
-								<?php
+							 <?php
 								if (staff_can('branch_filter', 'customers')) {
+									$branchOptions = $branch ?? [];
+									if (!empty($accessible_branch_ids ?? [])) {
+										$allowedIds = array_map('intval', (array) $accessible_branch_ids);
+										$branchOptions = array_values(array_filter($branchOptions, static function ($branchItem) use ($allowedIds) {
+											return isset($branchItem['id']) && in_array((int) $branchItem['id'], $allowedIds, true);
+										}));
+									}
 								?>
 							  <div class="col-md-3">
 							 <?= render_select(
 									'groupid[]', // name
-									$branch,   // options array
+									$branchOptions,   // options array
 									['id', 'name'], // option keys
 									_l('branch') . '*', // label
 									isset($selected_branch_id) && !empty($selected_branch_id) ? $selected_branch_id : (isset($current_branch_id) ? [$current_branch_id] : []), // selected
