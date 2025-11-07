@@ -79,6 +79,8 @@ if ($branchInputValue === null) {
 }
 
 $branchFilterIds = $normalizeBranchList($branchInputValue);
+$session = $CI->session ?? null;
+$sessionFilterKey = 'patient_branch_filter';
 
 $allowedBranchIds = $normalizeBranchList($accessible_branch_ids ?? []);
 $restrictToAllowedBranches = static function ($ids) use ($allowedBranchIds) {
@@ -102,6 +104,10 @@ $restrictToAllowedBranches = static function ($ids) use ($allowedBranchIds) {
 
 $branchFilterIds = $restrictToAllowedBranches($branchFilterIds);
 
+if (!empty($branchFilterIds) && $session) {
+    $session->set_userdata([$sessionFilterKey => implode(',', $branchFilterIds)]);
+}
+
 if (empty($branchFilterIds) && isset($branch_filter_ids) && is_array($branch_filter_ids)) {
     $branchFilterIds = $restrictToAllowedBranches($normalizeBranchList($branch_filter_ids));
 }
@@ -112,6 +118,13 @@ if (empty($branchFilterIds) && isset($selected_branch_id) && is_array($selected_
 
 if (empty($branchFilterIds) && isset($current_branch_id) && $current_branch_id) {
     $branchFilterIds = $restrictToAllowedBranches($normalizeBranchList($current_branch_id));
+}
+
+if (empty($branchFilterIds) && $session) {
+    $savedFilter = $restrictToAllowedBranches($normalizeBranchList($session->userdata($sessionFilterKey)));
+    if (!empty($savedFilter)) {
+        $branchFilterIds = $savedFilter;
+    }
 }
 
 if (empty($branchFilterIds) && !empty($allowedBranchIds)) {
