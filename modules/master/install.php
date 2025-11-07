@@ -241,12 +241,23 @@ function master_install()
 		');
 	}
 	
-	if (!$CI->db->field_exists('branch_id', db_prefix() . 'staff')) {
+if (!$CI->db->field_exists('branch_id', db_prefix() . 'staff')) {
+	$CI->db->query('
+		ALTER TABLE `' . db_prefix() . 'staff` 
+		ADD COLUMN `branch_id` INT NULL AFTER `is_logged_in`;
+	');
+}
+
+$staffBranchColumn = $CI->db->query('SHOW COLUMNS FROM `' . db_prefix() . 'staff` LIKE "branch_id"')->row();
+if ($staffBranchColumn) {
+	$type = isset($staffBranchColumn->Type) ? strtolower($staffBranchColumn->Type) : '';
+	if (strpos($type, 'int') !== false) {
 		$CI->db->query('
-			ALTER TABLE `' . db_prefix() . 'staff` 
-			ADD COLUMN `branch_id` INT NULL AFTER `is_logged_in`;
+			ALTER TABLE `' . db_prefix() . 'staff`
+			MODIFY COLUMN `branch_id` VARCHAR(255) NULL DEFAULT NULL;
 		');
 	}
+}
 
 	
 	if (!$CI->db->table_exists(db_prefix() . 'state')) {
