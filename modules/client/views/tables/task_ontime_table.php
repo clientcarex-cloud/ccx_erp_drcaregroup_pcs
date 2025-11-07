@@ -9,6 +9,35 @@ $selected_roles  = $doctor_id;
 $from_date = $consulted_from_date;
 $to_date = $consulted_to_date;
 
+$normalizeBranchIds = static function ($value) {
+    if (empty($value)) {
+        return [];
+    }
+    if (!is_array($value)) {
+        $value = explode(',', (string) $value);
+    }
+    $value = array_map('intval', array_filter($value, function ($item) {
+        return $item !== '' && $item !== null;
+    }));
+    return array_values(array_filter($value, function ($item) {
+        return $item > 0;
+    }));
+};
+
+$selectedBranchIds = $normalizeBranchIds(isset($selected_branch_id) ? $selected_branch_id : []);
+$branchFilterSql   = '';
+if (!empty($selectedBranchIds)) {
+    $clauses = array_map(function ($branchId) {
+        return 'FIND_IN_SET(' . $branchId . ', s.branch_id)';
+    }, $selectedBranchIds);
+    $branchFilterSql = '(' . implode(' OR ', $clauses) . ')';
+}
+
+$branchNameSelect = '(SELECT GROUP_CONCAT(name ORDER BY name SEPARATOR ", ")
+    FROM ' . db_prefix() . 'customers_groups
+    WHERE FIND_IN_SET(' . db_prefix() . 'customers_groups.id, s.branch_id)
+)';
+
 // -----------------------------
 // Subquery: Aggregate tasks per staff
 // The date filter for tasks is applied here,
@@ -37,7 +66,7 @@ $subquery = $CI->db
 $CI->db->select("
     s.staffid,
     CONCAT(s.firstname, ' ', s.lastname) AS assignee,
-    b.name AS branch,
+    " . $branchNameSelect . " AS branch,
     r.name AS role,
     IFNULL(t.tasks_delayed,0) AS tasks_delayed,
     IFNULL(t.tasks_ontime,0) AS tasks_ontime,
@@ -46,12 +75,11 @@ $CI->db->select("
 ", false);
 
 $CI->db->from(db_prefix().'staff s');
-$CI->db->join(db_prefix().'customers_groups b', 'b.id = s.branch_id', 'left');
 $CI->db->join(db_prefix().'roles r', 'r.roleid = s.role', 'left');
 
 $CI->db->join("($subquery) t", "t.staffid = s.staffid", "left");
-if (!empty($selected_branch_id)) {
-    $CI->db->where_in('s.branch_id', $selected_branch_id);
+if (!empty($branchFilterSql)) {
+    $CI->db->where($branchFilterSql, null, false);
 }
 if (!empty($selected_roles)) {
     $CI->db->where_in('s.role', $selected_roles);
@@ -63,7 +91,8 @@ if (isset($_POST['search']['value']) && $_POST['search']['value'] != '') {
     $search = $_POST['search']['value'];
     $CI->db->group_start();
     $CI->db->like("CONCAT(s.firstname, ' ', s.lastname)", $search);
-    $CI->db->or_like("b.name", $search);
+    $escapedSearch = $CI->db->escape_like_str($search);
+    $CI->db->or_where($branchNameSelect . " LIKE '%" . $escapedSearch . "%'", null, false);
     $CI->db->or_like("r.name", $search);
     $CI->db->group_end();
 }
@@ -119,8 +148,8 @@ $CI->db->from(db_prefix().'staff s');
 if (!empty($selected_roles)) {
     $CI->db->where_in('s.role', $selected_roles);
 }
-if (!empty($selected_branch_id)) {
-    $CI->db->where_in('s.branch_id', $selected_branch_id);
+if (!empty($branchFilterSql)) {
+    $CI->db->where($branchFilterSql, null, false);
 }
 $recordsTotal = $CI->db->count_all_results();
 

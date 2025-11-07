@@ -242,17 +242,27 @@
                                         <?php } ?>
                                     </div>
 									<div class="form-group">
+										<?php
+											$selectedBranchIds = [];
+											if (isset($member) && !empty($member->branch_id)) {
+												$selectedBranchIds = array_values(array_filter(array_map('intval', explode(',', $member->branch_id))));
+											}
+										?>
 										<?= render_select(
-										'branch_id',
-										$branch,
-										['id', 'name'],
-										_l('branch') . '*',
-										$member->branch_id ?? '', // Selected value
-										[
-											'data-none-selected-text' => _l('dropdown_non_selected_tex'),
-											'required' => 'required'
-										]
-									) ?>
+											'branch_id[]',
+											$branch,
+											['id', 'name'],
+											_l('branch') . '*',
+											$selectedBranchIds,
+											[
+												'multiple' => 'true',
+												'data-actions-box' => 'true',
+												'data-live-search' => 'true',
+												'data-selected-text-format' => 'count > 2',
+												'data-none-selected-text' => _l('dropdown_non_selected_tex'),
+												'required' => 'required'
+											]
+										) ?>
 
 									</div>
                                     <?php $rel_id = (isset($member) ? $member->staffid : false); ?>

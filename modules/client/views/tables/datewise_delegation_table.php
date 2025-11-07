@@ -15,6 +15,36 @@ $selected_roles     = $doctor_id;
 $order_column_index = $CI->input->post('order')[0]['column'] ?? 0;
 $order_dir          = $CI->input->post('order')[0]['dir'] ?? 'asc';
 
+// Normalize branch filters for CSV stored branch IDs
+$normalizeBranchIds = static function ($value) {
+    if (empty($value)) {
+        return [];
+    }
+    if (!is_array($value)) {
+        $value = explode(',', (string) $value);
+    }
+    $value = array_map('intval', array_filter($value, function ($item) {
+        return $item !== '' && $item !== null;
+    }));
+    return array_values(array_filter($value, function ($item) {
+        return $item > 0;
+    }));
+};
+
+$selectedBranchIds = $normalizeBranchIds(isset($selected_branch_id) ? $selected_branch_id : []);
+$branchFilterSql   = '';
+if (!empty($selectedBranchIds)) {
+    $clauses = array_map(function ($branchId) {
+        return 'FIND_IN_SET(' . $branchId . ', s.branch_id)';
+    }, $selectedBranchIds);
+    $branchFilterSql = '(' . implode(' OR ', $clauses) . ')';
+}
+
+$branchNameSelect = '(SELECT GROUP_CONCAT(name ORDER BY name SEPARATOR ", ")
+    FROM ' . db_prefix() . 'customers_groups
+    WHERE FIND_IN_SET(' . db_prefix() . 'customers_groups.id, s.branch_id)
+)';
+
 // ====================
 // Base columns + last 7 days
 // ====================
@@ -38,8 +68,8 @@ $totalRecords = $CI->db->count_all(db_prefix().'staff');
 $CI->db->reset_query();
 $CI->db->select('s.staffid');
 $CI->db->from(db_prefix().'staff s');
-if (!empty($selected_branch_id)) {
-    $CI->db->where_in('s.branch_id', $selected_branch_id);
+if (!empty($branchFilterSql)) {
+    $CI->db->where($branchFilterSql, null, false);
 }
 if (!empty($selected_roles)) {
     $CI->db->where_in('s.role', $selected_roles);
@@ -57,13 +87,12 @@ $filteredRecords = $CI->db->count_all_results();
 // Main staff query
 // ====================
 $CI->db->reset_query();
-$CI->db->select('s.staffid, s.firstname, s.lastname, s.branch_id, s.role, b.name as branch_name, r.name as role_name');
+$CI->db->select('s.staffid, s.firstname, s.lastname, s.branch_id, s.role, ' . $branchNameSelect . ' as branch_name, r.name as role_name', false);
 $CI->db->from(db_prefix().'staff s');
-$CI->db->join(db_prefix().'customers_groups b', 'b.id = s.branch_id', 'left');
 $CI->db->join(db_prefix().'roles r', 'r.roleid = s.role', 'left');
 
-if (!empty($selected_branch_id)) {
-    $CI->db->where_in('s.branch_id', $selected_branch_id);
+if (!empty($branchFilterSql)) {
+    $CI->db->where($branchFilterSql, null, false);
 }
 if (!empty($selected_roles)) {
     $CI->db->where_in('s.role', $selected_roles);

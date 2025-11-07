@@ -33,6 +33,19 @@ class Staff extends AdminController
         $this->load->model('departments_model');
         if ($this->input->post()) {
             $data = $this->input->post();
+
+            if (isset($data['branch_id'])) {
+                $branchIds = $data['branch_id'];
+                if (is_array($branchIds)) {
+                    $branchIds = array_values(array_filter(array_map('intval', $branchIds), function ($value) {
+                        return $value > 0;
+                    }));
+                    $data['branch_id'] = implode(',', $branchIds);
+                } else {
+                    $data['branch_id'] = trim((string) $branchIds);
+                }
+            }
+
             // Don't do XSS clean here.
             $data['email_signature'] = $this->input->post('email_signature', false);
             $data['email_signature'] = html_entity_decode($data['email_signature']);

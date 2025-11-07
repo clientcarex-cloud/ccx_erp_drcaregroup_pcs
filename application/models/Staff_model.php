@@ -404,6 +404,12 @@ class Staff_model extends App_Model
         // First check for all cases if the email exists.
         $data = hooks()->apply_filters('before_create_staff_member', $data);
 
+        if (isset($data['branch_id']) && is_array($data['branch_id'])) {
+            $data['branch_id'] = implode(',', array_values(array_filter(array_map('intval', $data['branch_id']), function ($value) {
+                return $value > 0;
+            })));
+        }
+
         $this->db->where('email', $data['email']);
         $email = $this->db->get(db_prefix() . 'staff')->row();
 
@@ -521,6 +527,12 @@ class Staff_model extends App_Model
         }
 
         $data = hooks()->apply_filters('before_update_staff_member', $data, $id);
+
+        if (isset($data['branch_id']) && is_array($data['branch_id'])) {
+            $data['branch_id'] = implode(',', array_values(array_filter(array_map('intval', $data['branch_id']), function ($value) {
+                return $value > 0;
+            })));
+        }
 
         if (is_admin()) {
             if (isset($data['administrator'])) {
