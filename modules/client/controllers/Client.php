@@ -2525,7 +2525,13 @@ public function save_prescription()
 		}
 
 		if (empty($selected_branch_ids) && !empty($this->current_branch_id)) {
-			$selected_branch_ids = [(int) $this->current_branch_id];
+			$internalBranchIds = array_filter(array_map('intval', array_filter(explode(',', (string) $this->current_branch_id), function ($value) {
+				return $value !== '' && is_numeric($value);
+			})));
+
+			if (!empty($internalBranchIds)) {
+				$selected_branch_ids = $internalBranchIds;
+			}
 		}
 
 		$data['selected_branch_id'] = $selected_branch_ids;
