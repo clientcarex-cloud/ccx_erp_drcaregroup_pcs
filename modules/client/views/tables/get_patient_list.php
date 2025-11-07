@@ -87,6 +87,28 @@ if (empty($branchFilterIds) && isset($current_branch_id) && $current_branch_id) 
     $branchFilterIds = $normalizeBranchList($current_branch_id);
 }
 
+$applyBranchFilter = static function ($query) use ($branchFilterIds) {
+    if (empty($branchFilterIds)) {
+        return;
+    }
+
+    $cleanIds = array_map('intval', $branchFilterIds);
+    $cleanIds = array_filter($cleanIds, function ($value) {
+        return $value > 0;
+    });
+
+    if (empty($cleanIds)) {
+        return;
+    }
+
+    $query->where('EXISTS (
+        SELECT 1
+        FROM ' . db_prefix() . 'customer_groups cg_filter
+        WHERE cg_filter.customer_id = c.userid
+        AND cg_filter.groupid IN (' . implode(',', $cleanIds) . ')
+    )', null, false);
+};
+
 $totalQuery = $CI->db;
 $totalQuery->reset_query();
 $totalQuery->select('COUNT(DISTINCT c.userid) as total');
@@ -94,9 +116,7 @@ $totalQuery->from(db_prefix() . 'clients c');
 $totalQuery->join(db_prefix() . 'clients_new_fields new', 'new.userid = c.userid', 'left');
 $totalQuery->join(db_prefix() . 'customer_groups group', 'group.customer_id = c.userid', 'left');
 
-if (!empty($branchFilterIds)) {
-    $totalQuery->where_in('group.groupid', $branchFilterIds);
-}
+$applyBranchFilter($totalQuery);
 if ($from_date && $to_date && $summary_filter != 'not_registered') {
     $totalQuery->where("DATE(new.registration_start_date) BETWEEN '$from_date' AND '$to_date'");
 }
@@ -159,9 +179,7 @@ $filterQuery->join(db_prefix() . 'clients_new_fields new', 'new.userid = c.useri
 $filterQuery->join(db_prefix() . 'customer_groups group', 'group.customer_id = c.userid', 'left');
 $filterQuery->join(db_prefix() . 'leads_sources source', 'source.id = new.patient_source_id', 'left');
 
-if (!empty($branchFilterIds)) {
-    $filterQuery->where_in('group.groupid', $branchFilterIds);
-}
+$applyBranchFilter($filterQuery);
 if ($from_date && $to_date && $summary_filter != 'not_registered') {
     $filterQuery->where("DATE(new.registration_start_date) BETWEEN '$from_date' AND '$to_date'");
 }
@@ -241,9 +259,7 @@ $CI->db->from(db_prefix() . 'clients c');
 $CI->db->join(db_prefix() . 'clients_new_fields new', 'new.userid = c.userid', 'left');
 $CI->db->join(db_prefix() . 'customer_groups group', 'group.customer_id = c.userid', 'left');
 $CI->db->join(db_prefix() . 'leads_sources source', 'source.id = new.patient_source_id', 'left');
-if (!empty($branchFilterIds)) {
-    $CI->db->where_in('group.groupid', $branchFilterIds);
-}
+$applyBranchFilter($CI->db);
 if ($from_date && $to_date && $summary_filter != 'not_registered') {
     $CI->db->where("DATE(new.registration_start_date) BETWEEN '$from_date' AND '$to_date'");
 }
