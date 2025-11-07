@@ -12,16 +12,37 @@ $search = $CI->input->post('search')['value'] ?? '';
 $from_date = $consulted_from_date;
 $to_date = $consulted_to_date;
 
-$order_column_index = $CI->input->post('order')[0]['column'] ?? 0;
-$order_dir = 'desc';
-
-
+$order_column_index = (int) ($CI->input->post('order')[0]['column'] ?? 0);
+$incoming_order_dir = strtolower($CI->input->post('order')[0]['dir'] ?? 'desc');
+$order_dir = $incoming_order_dir === 'asc' ? 'asc' : 'desc';
 
 $summary_filter = $CI->input->get('summary_filter');
 
-// Replace with your column order
-$columns = ['c.userid', 'c.company', 'new.mr_no', 'new.age', 'new.gender', 'c.phonenumber'];
-$order_column = $columns[$order_column_index] ?? 'c.userid';
+// Map DataTable columns to actual SQL columns/aliases (null means fallback to default)
+$columns = [
+    'c.userid',                   // 0 - S.No.
+    'c.company',                  // 1 - Patient name
+    'new.mr_no',                  // 2 - MR No
+    'new.age',                    // 3 - Age
+    'new.gender',                 // 4 - Gender
+    'c.phonenumber',              // 5 - Mobile number
+    null,                         // 6 - Treatment (calculated separately)
+    null,                         // 7 - Assigned doctor (calculated separately)
+    'patient_source_name',        // 8 - Source alias
+    'branch_names',               // 9 - Branch names alias
+    null,                         // 10 - Last calling date (calculated separately)
+    null,                         // 11 - Next calling date (calculated separately)
+    null,                         // 12 - Current status (calculated separately)
+    'new.patient_status',         // 13 - Patient status
+    'new.registration_start_date',// 14 - Registration start date
+    'new.registration_end_date',  // 15 - Registration end date
+    null                          // 16 - Status badge (calculated separately)
+];
+
+$order_column = $columns[$order_column_index] ?? null;
+if (empty($order_column)) {
+    $order_column = 'c.userid';
+}
 // Total count
 $normalizeBranchList = static function ($value) {
     if ($value === null) {
