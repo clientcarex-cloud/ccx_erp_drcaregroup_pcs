@@ -403,6 +403,55 @@ if ($canExport) {
         }).join('/');
     }
 
+    function transformPatientTokens() {
+        var $cells = $(ccxTableSelector).find('tbody td');
+        if (!$cells.length) {
+            return;
+        }
+
+        $cells.each(function () {
+            var $cell = $(this);
+            if ($cell.find('.ccx-patient-link').length) {
+                return;
+            }
+            var token = $.trim($cell.text());
+            if (token.indexOf('||') === -1) {
+                return;
+            }
+            var parts = token.split('||');
+            if (parts.length < 2) {
+                return;
+            }
+            var patientId = parts[0];
+            var patientName = parts[1] || ('Patient #' + patientId);
+            var branchId = parts[2] || '';
+            var dateFrom = parts[3] || '';
+            var dateTo = parts[4] || '';
+
+            if (!patientId || isNaN(patientId)) {
+                return;
+            }
+
+            var $link = $('<a>', {
+                href: '#',
+                text: patientName,
+                class: 'ccx-patient-link',
+                'data-patient-id': patientId,
+                'data-branch-filter': branchId,
+                'data-date-from': dateFrom,
+                'data-date-to': dateTo
+            });
+
+            $cell.empty().append($link);
+        });
+    }
+
+    $(ccxTableSelector).on('draw.dt', function () {
+        transformPatientTokens();
+    });
+
+    transformPatientTokens();
+
     $('body').on('click', '.ccx-patient-link', function (e) {
         var $link = $(this);
         var patientId = $link.data('patient-id');
