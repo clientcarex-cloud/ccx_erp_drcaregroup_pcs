@@ -55,6 +55,46 @@ class Clients extends AdminController
         App_table::find('clients')->output();
     }
 
+    public function get_patient_list_modal($branch_id)
+    {
+        if (!$this->input->is_ajax_request()) {
+            show_404();
+        }
+
+        if (staff_cant('view', 'customers')) {
+            if (!have_assigned_customers() && staff_cant('create', 'customers')) {
+                ajax_access_denied();
+            }
+        }
+
+        $branch_id = (int) $branch_id;
+
+        if ($branch_id <= 0) {
+            $this->output->set_content_type('application/json')
+                         ->set_output(json_encode([
+                             'success' => false,
+                             'message' => 'Invalid branch identifier.',
+                         ]));
+
+            return;
+        }
+
+        $this->load->model('patient_model');
+
+        $data = [
+            'branch_id' => $branch_id,
+            'patients'  => $this->patient_model->get_patients_by_branch($branch_id),
+        ];
+
+        $html = $this->load->view('admin/clients/patient_list_modal', $data, true);
+
+        $this->output->set_content_type('application/json')
+                     ->set_output(json_encode([
+                         'success' => true,
+                         'html'    => $html,
+                     ]));
+    }
+
     public function all_contacts()
     {
         if ($this->input->is_ajax_request()) {

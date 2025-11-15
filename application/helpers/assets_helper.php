@@ -69,6 +69,13 @@ function _init_admin_assets()
         ['vendor-js', 'datatables-js', 'bootstrap-select-js', 'tinymce-js', 'jquery-migrate-js', 'jquery-validation-js', 'moment-js', 'common-js']
     );
 
+    $CI->app_scripts->add(
+        'patient-modal-js',
+        base_url('assets/js/patient_modal.js') . '?v=' . $CI->app_css->core_version(),
+        'admin',
+        ['app-js']
+    );
+
     $CI->app_scripts->add('app-v3', 'assets/builds/app.js');
 
     // CSS
