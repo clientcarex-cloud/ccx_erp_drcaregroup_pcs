@@ -131,6 +131,13 @@
         font-weight: 600;
         color: #0f172a;
     }
+    .ccx-patient-frame-loader {
+        text-align: center;
+        padding: 30px 0;
+    }
+    .ccx-patient-frame-loader.hide {
+        display: none;
+    }
 </style>
 <?php
 $canExport = is_admin() || staff_can('export', 'ccx_reports');
@@ -335,6 +342,94 @@ if ($canExport) {
     $('#ccx-date-clear').on('click', function() {
         $('[name="ccx_date_from"], [name="ccx_date_to"]').val('');
         $(ccxTableSelector).DataTable().ajax.reload(null, false);
+    });
+
+    function sanitizePatientSegment(value, allowNullKeyword) {
+        if (typeof value === 'undefined' || value === null) {
+            return 'null';
+        }
+
+        var normalized = $.trim(String(value));
+
+        if (normalized === '' || normalized.toLowerCase() === 'null') {
+            return allowNullKeyword ? 'null' : '';
+        }
+
+        return normalized;
+    }
+
+    function ensurePatientProfileModal() {
+        var $modal = $('#ccx-patient-profile-modal');
+
+        if (!$modal.length) {
+            var modalHtml = ''
+                + '<div class="modal fade" id="ccx-patient-profile-modal" tabindex="-1" role="dialog" aria-hidden="true">'
+                + '  <div class="modal-dialog modal-xl" role="document">'
+                + '    <div class="modal-content">'
+                + '      <div class="modal-header">'
+                + '        <h4 class="modal-title"><?= html_escape(_l('client')); ?> Details</h4>'
+                + '        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>'
+                + '      </div>'
+                + '      <div class="modal-body">'
+                + '        <div class="ccx-patient-frame-loader hide"><i class="fa fa-spinner fa-pulse fa-2x fa-fw"></i></div>'
+                + '        <iframe src="about:blank" style="width:100%;height:70vh;border:0;" loading="lazy"></iframe>'
+                + '      </div>'
+                + '    </div>'
+                + '  </div>'
+                + '</div>';
+            $('body').append(modalHtml);
+            $modal = $('#ccx-patient-profile-modal');
+            $modal.on('hidden.bs.modal', function () {
+                $(this).find('iframe').attr('src', 'about:blank');
+                $(this).find('.ccx-patient-frame-loader').addClass('hide');
+            });
+        }
+
+        return $modal;
+    }
+
+    function buildPatientProfileUrl(patientId, dateFrom, dateTo, branchFilter) {
+        var branchSegment = branchFilter && branchFilter !== 'all' ? branchFilter : 'null';
+        var segments = [
+            sanitizePatientSegment(patientId, false),
+            sanitizePatientSegment(dateFrom, true),
+            sanitizePatientSegment(dateTo, true),
+            sanitizePatientSegment(branchSegment, true),
+            sanitizePatientSegment(branchSegment, true)
+        ];
+
+        return admin_url + 'client/get_patient_list/' + segments.map(function (segment) {
+            return encodeURIComponent(segment);
+        }).join('/');
+    }
+
+    $('body').on('click', '.ccx-patient-link', function (e) {
+        var $link = $(this);
+        var patientId = $link.data('patient-id');
+
+        if (!patientId) {
+            return true;
+        }
+
+        e.preventDefault();
+
+        var dateFrom = $link.data('date-from') || '';
+        var dateTo = $link.data('date-to') || '';
+        var branchFilter = $link.data('branch-filter') || '';
+
+        var url = buildPatientProfileUrl(patientId, dateFrom, dateTo, branchFilter);
+        var $modal = ensurePatientProfileModal();
+        var $iframe = $modal.find('iframe');
+        var $loader = $modal.find('.ccx-patient-frame-loader');
+
+        $loader.removeClass('hide');
+        $iframe.one('load', function () {
+            $loader.addClass('hide');
+        });
+        $iframe.attr('src', url);
+        $modal.modal('show');
+
+        return false;
     });
 })(jQuery);
 </script>
