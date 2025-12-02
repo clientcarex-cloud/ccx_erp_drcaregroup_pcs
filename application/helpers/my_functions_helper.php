@@ -1,22 +1,41 @@
 <?php
 
-hooks()->add_action('app_init','my_change_default_url_to_admin');
+hooks()->add_action('app_init', 'my_change_default_url_to_admin');
 
-function my_change_default_url_to_admin(){
+function my_change_default_url_to_admin()
+{
     $CI = &get_instance();
 
-    if(!is_client_logged_in() && !$CI->uri->segment(1)){
+    if (!is_client_logged_in() && !$CI->uri->segment(1)) {
         redirect(site_url('admin/authentication'));
     }
 }
 
-hooks()->add_filter('settings_tabs', 'my_filter_settings_tabs');
+hooks()->add_action('admin_init', 'my_filter_settings_sections', 999);
 
-function my_filter_settings_tabs($tabs){
-    foreach($tabs as $key => $tab){
-        if($key != 'general'){
-            unset($tabs[$key]);
-        }
+function my_filter_settings_sections()
+{
+    $CI = &get_instance();
+    // Check if app library is loaded
+    if (!isset($CI->app)) {
+        return;
     }
-    return $tabs;
+
+    $app = $CI->app;
+
+    try {
+        $reflection = new ReflectionClass($app);
+        $property = $reflection->getProperty('settingsSections');
+        $property->setAccessible(true);
+        $sections = $property->getValue($app);
+
+        $newSections = [];
+        if (isset($sections['general'])) {
+            $newSections['general'] = $sections['general'];
+        }
+
+        $property->setValue($app, $newSections);
+    } catch (Exception $e) {
+        log_message('error', 'Failed to filter settings sections: ' . $e->getMessage());
+    }
 }
