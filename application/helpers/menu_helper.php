@@ -132,25 +132,29 @@ function app_init_admin_sidebar_menu_items()
         ]);
     }
 
-    if (staff_can('view', 'contracts') || staff_can('view_own', 'contracts')) {
+    /*
+    if (staff_can('view',  'contracts') || staff_can('view_own',  'contracts')) {
         $CI->app_menu->add_sidebar_menu_item('contracts', [
-            'name' => _l('contracts'),
-            'href' => admin_url('contracts'),
-            'icon' => 'fa-regular fa-note-sticky',
+            'name'     => _l('contracts'),
+            'href'     => admin_url('contracts'),
+            'icon'     => 'fa-regular fa-note-sticky',
             'position' => 25,
-            'badge' => [],
+            'badge'    => [],
         ]);
     }
+    */
 
+    /*
     if (staff_can('view', 'projects')) {
         $CI->app_menu->add_sidebar_menu_item('projects', [
-            'name' => _l('projects'),
-            'href' => admin_url('projects'),
-            'icon' => 'fa-solid fa-chart-gantt',
+            'name'     => _l('projects'),
+            'href'     => admin_url('projects'),
+            'icon'     => 'fa-solid fa-chart-gantt',
             'position' => 30,
-            'badge' => [],
+            'badge'    => [],
         ]);
     }
+    */
 
     $CI->app_menu->add_sidebar_menu_item('tasks', [
         'name' => _l('als_tasks'),
@@ -160,6 +164,7 @@ function app_init_admin_sidebar_menu_items()
         'badge' => [],
     ]);
 
+    /*
     if ((!is_staff_member() && get_option('access_tickets_to_none_staff_members') == 1) || is_staff_member()) {
         $enable_badge = get_option('enable_support_menu_badges');
 
@@ -192,6 +197,7 @@ function app_init_admin_sidebar_menu_items()
             }
         }
     }
+    */
 
     if (is_staff_member()) {
         if (staff_can('view', 'leads') || staff_can('view_own', 'leads')) {
@@ -205,89 +211,95 @@ function app_init_admin_sidebar_menu_items()
         }
     }
 
-    if ((staff_can('view', 'estimate_request') || staff_can('view_own', 'estimate_request'))) {
+    /*
+    if ((staff_can('view',  'estimate_request') || staff_can('view_own',  'estimate_request'))) {
         $CI->app_menu->add_sidebar_menu_item('estimate_request', [
-            'name' => _l('estimate_request'),
-            'href' => admin_url('estimate_request'),
+            'name'     => _l('estimate_request'),
+            'href'     => admin_url('estimate_request'),
             'position' => 46,
-            'icon' => 'fa-regular fa-file',
-            'badge' => [],
+            'icon'     => 'fa-regular fa-file',
+            'badge'    => [],
         ]);
     }
+    */
 
-    if (staff_can('view', 'knowledge_base')) {
+    /*
+    if (staff_can('view',  'knowledge_base')) {
         $CI->app_menu->add_sidebar_menu_item('knowledge-base', [
-            'name' => _l('als_kb'),
-            'href' => admin_url('knowledge_base'),
-            'icon' => 'fa-regular fa-question-circle',
+            'name'     => _l('als_kb'),
+            'href'     => admin_url('knowledge_base'),
+            'icon'     => 'fa-regular fa-question-circle',
             'position' => 50,
-            'badge' => [],
+            'badge'    => [],
         ]);
     }
+    */
 
+    /*
     // Utilities
     if (staff_can('view_own', 'utilities') || staff_can('view', 'utilities')) {
         $CI->app_menu->add_sidebar_menu_item('utilities', [
             'collapse' => true,
-            'name' => _l('als_utilities'),
+            'name'     => _l('als_utilities'),
             'position' => 55,
-            'icon' => 'fa-regular fa-circle-dot',
-            'badge' => [],
+            'icon'     => 'fa-regular fa-circle-dot',
+            'badge'    => [],
         ]);
     }
 
     $CI->app_menu->add_sidebar_children_item('utilities', [
-        'slug' => 'media',
-        'name' => _l('als_media'),
-        'href' => admin_url('utilities/media'),
+        'slug'     => 'media',
+        'name'     => _l('als_media'),
+        'href'     => admin_url('utilities/media'),
         'position' => 5,
-        'badge' => [],
+        'badge'    => [],
     ]);
 
-    if (staff_can('view', 'bulk_pdf_exporter')) {
+    if (staff_can('view',  'bulk_pdf_exporter')) {
         $CI->app_menu->add_sidebar_children_item('utilities', [
-            'slug' => 'bulk-pdf-exporter',
-            'name' => _l('bulk_pdf_exporter'),
-            'href' => admin_url('utilities/bulk_pdf_exporter'),
+            'slug'     => 'bulk-pdf-exporter',
+            'name'     => _l('bulk_pdf_exporter'),
+            'href'     => admin_url('utilities/bulk_pdf_exporter'),
             'position' => 10,
-            'badge' => [],
+            'badge'    => [],
         ]);
     }
 
     $CI->app_menu->add_sidebar_children_item('utilities', [
-        'slug' => 'calendar',
-        'name' => _l('als_calendar_submenu'),
-        'href' => admin_url('utilities/calendar'),
+        'slug'     => 'calendar',
+        'name'     => _l('als_calendar_submenu'),
+        'href'     => admin_url('utilities/calendar'),
         'position' => 15,
-        'badge' => [],
+        'badge'    => [],
     ]);
 
 
     if (is_admin()) {
         $CI->app_menu->add_sidebar_children_item('utilities', [
-            'slug' => 'announcements',
-            'name' => _l('als_announcements_submenu'),
-            'href' => admin_url('announcements'),
+            'slug'     => 'announcements',
+            'name'     => _l('als_announcements_submenu'),
+            'href'     => admin_url('announcements'),
             'position' => 20,
-            'badge' => [],
+            'badge'    => [],
         ]);
 
         $CI->app_menu->add_sidebar_children_item('utilities', [
-            'slug' => 'activity-log',
-            'name' => _l('als_activity_log_submenu'),
-            'href' => admin_url('utilities/activity_log'),
+            'slug'     => 'activity-log',
+            'name'     => _l('als_activity_log_submenu'),
+            'href'     => admin_url('utilities/activity_log'),
             'position' => 25,
-            'badge' => [],
+            'badge'    => [],
         ]);
 
         $CI->app_menu->add_sidebar_children_item('utilities', [
-            'slug' => 'ticket-pipe-log',
-            'name' => _l('ticket_pipe_log'),
-            'href' => admin_url('utilities/pipe_log'),
+            'slug'     => 'ticket-pipe-log',
+            'name'     => _l('ticket_pipe_log'),
+            'href'     => admin_url('utilities/pipe_log'),
             'position' => 30,
-            'badge' => [],
+            'badge'    => [],
         ]);
     }
+    */
 
     if (staff_can('view-timesheets', 'reports') || staff_can('view', 'reports')) {
         $CI->app_menu->add_sidebar_menu_item('reports', [
