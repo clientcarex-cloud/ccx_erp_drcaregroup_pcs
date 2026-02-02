@@ -75,20 +75,44 @@
                         </form>
 
                         <br>
-                        <?= render_datatable([
-                            _l('branch_name'),
-                            _l('total_renewals_done'),
-                            //_l('expected_active_renewals'),
-                            _l('active_renewals_done'),
-                            _l('inactive_renewals_done'),
-                            //_l('visited'),
-                            //_l('Reg'),
-                            _l('package_amount'),
-                            _l('paid_amount'),
-                            _l('due_amount'),
-                            _l('conversion'),
 
-                        ], 'master_renewal_report'); ?>
+                        <!-- Custom Table with Grouped Headers -->
+                        <div class="table-responsive">
+                            <table class="table table-striped table-master_renewal_report">
+                                <thead>
+                                    <tr>
+                                        <th rowspan="2"><?= _l('Branch Name'); ?></th>
+                                        <th rowspan="2"><?= _l('Total Renewals'); ?></th>
+                                        <th rowspan="2"><?= _l('Active Renewals'); ?></th>
+                                        <th rowspan="2"><?= _l('Inactive Renewals'); ?></th>
+                                        <th rowspan="2"><?= _l('Acute Renewals'); ?></th>
+                                        <th rowspan="2"><?= _l('Package Amount'); ?></th>
+                                        <th rowspan="2"><?= _l('Visited'); ?></th>
+                                        <th rowspan="2"><?= _l('Visited(%)'); ?></th>
+                                        <th rowspan="2"><?= _l('Reg'); ?></th>
+                                        <th rowspan="2"><?= _l('Reg(%)'); ?></th>
+                                        <th colspan="5" class="text-center" style="background-color: #333; color: white;">RY(Renewal)</th>
+                                        <th rowspan="2"><?= _l('Pending(%)'); ?></th>
+                                        <th colspan="3" class="text-center" style="background-color: #333; color: white;">RY Due(To Be Renewal)</th>
+                                    </tr>
+                                    <tr>
+                                        <!-- RY Subcols -->
+                                        <th><?= _l('Package Amount'); ?></th>
+                                        <th><?= _l('Paid Amount'); ?></th>
+                                        <th><?= _l('Due Amount'); ?></th>
+                                        <th><?= _l('TV'); ?></th>
+                                        <th><?= _l('Reg'); ?></th>
+                                        
+                                        <!-- RY Due Subcols -->
+                                        <th><?= _l('Package Amount'); ?></th>
+                                        <th><?= _l('Paid Amount'); ?></th>
+                                        <th><?= _l('Due Amount'); ?></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                </tbody>
+                            </table>
+                        </div>
 
                     </div>
 
