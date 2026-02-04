@@ -34,6 +34,9 @@ $totals = [
 
 // Get all branches
 $CI->db->select('id, name');
+if (!empty($selected_branch_id)) {
+    $CI->db->where_in('id', $selected_branch_id);
+}
 $branches = $CI->db->get(db_prefix() . 'customers_groups')->result_array();
 
 foreach ($branches as $branch) {
@@ -91,6 +94,10 @@ foreach ($branches as $branch) {
             ->where('item.description !=', 'Consultation Fee')
             ->where_in('inv.clientid', $customer_ids);
 
+        if (!empty($doctor_id)) {
+            $CI->db->where_in('inv.sale_agent', $doctor_id);
+        }
+
         // Include previous duedate in selection for active/inactive calc
         $CI->db->select('T_prev.previous_duedate');
 
@@ -117,14 +124,19 @@ foreach ($branches as $branch) {
         // Visited: Has appointment visit_status=1 in range
         $visited_client_ids = [];
         if (!empty($renewal_client_ids)) {
-            $visit_query = $CI->db->select('userid')
+            $CI->db->select('userid')
                 ->from(db_prefix() . 'appointment')
                 ->where('visit_status', 1)
                 ->where_in('userid', $renewal_client_ids)
                 ->where('branch_id', $branch_id)
                 ->where('appointment_date >=', $from_date . ' 00:00:00')
-                ->where('appointment_date <=', $to_date . ' 23:59:00')
-                ->get();
+                ->where('appointment_date <=', $to_date . ' 23:59:00');
+
+            if (!empty($doctor_id)) {
+                $CI->db->where_in('enquiry_doctor_id', $doctor_id);
+            }
+
+            $visit_query = $CI->db->get();
             $visited_client_ids = array_column($visit_query->result_array(), 'userid');
         }
         $b_visited_clients = count($visited_client_ids);

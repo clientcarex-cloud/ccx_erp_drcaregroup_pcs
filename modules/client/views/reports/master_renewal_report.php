@@ -35,7 +35,7 @@
 
 
                                 <!-- From Date -->
-                                <div class="col-md-3">
+                                <div class="col-md-2">
                                     <?php
                                     $posted_date = $this->input->post('consulted_date');
                                     $default_date = date('Y-m-d');
@@ -49,7 +49,7 @@
                                 </div>
 
                                 <!-- To Date -->
-                                <div class="col-md-3">
+                                <div class="col-md-2">
                                     <?php
                                     $posted_date = $this->input->post('consulted_to_date');
                                     $consulted_to_date_value = $posted_date ? $posted_date : $default_date;
@@ -61,8 +61,38 @@
                                         name="consulted_to_date" value="<?= html_escape($consulted_to_date_value) ?>">
                                 </div>
 
-                                <!-- Submit -->
+                                <!-- Branch -->
                                 <div class="col-md-3">
+                                    <label for="branch" class="control-label"><?= _l('Branch'); ?></label>
+                                    <select name="branch" id="branch" class="selectpicker" multiple
+                                        data-width="100%" data-none-selected-text="<?= _l('Select Branch'); ?>">
+                                        <?php foreach ($branch as $b) { ?>
+                                            <option value="<?= $b['value']; ?>" <?php if (isset($selected_branch_id) && in_array($b['value'], $selected_branch_id)) {
+                                                  echo 'selected';
+                                              } ?>>
+                                                <?= $b['name']; ?>
+                                            </option>
+                                        <?php } ?>
+                                    </select>
+                                </div>
+
+                                <!-- Doctor -->
+                                <div class="col-md-3">
+                                    <label for="doctor_id" class="control-label"><?= _l('Doctor'); ?></label>
+                                    <select name="doctor_id" id="doctor_id" class="selectpicker" multiple
+                                        data-width="100%" data-none-selected-text="<?= _l('Select Doctor'); ?>">
+                                        <?php foreach ($doctors as $d) { ?>
+                                            <option value="<?= $d['staffid']; ?>" <?php if (isset($doctor_id) && in_array($d['staffid'], $doctor_id)) {
+                                                  echo 'selected';
+                                              } ?>>
+                                                <?= $d['firstname'] . ' ' . $d['lastname']; ?>
+                                            </option>
+                                        <?php } ?>
+                                    </select>
+                                </div>
+
+                                <!-- Submit -->
+                                <div class="col-md-2">
                                     <input type="hidden" name="<?= $this->security->get_csrf_token_name(); ?>"
                                         value="<?= $this->security->get_csrf_hash(); ?>" />
                                     <br>
