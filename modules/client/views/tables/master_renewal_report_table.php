@@ -34,6 +34,9 @@ $totals = [
 
 // Get all branches
 $CI->db->select('id, name');
+if (!empty($selected_branch_id)) {
+    $CI->db->where_in('id', $selected_branch_id);
+}
 $branches = $CI->db->get(db_prefix() . 'customers_groups')->result_array();
 
 foreach ($branches as $branch) {
@@ -90,6 +93,10 @@ foreach ($branches as $branch) {
             ->where('inv.date <=', $to_date)
             ->where('item.description !=', 'Consultation Fee')
             ->where_in('inv.clientid', $customer_ids);
+
+        if (!empty($staff_id_filter)) {
+            $CI->db->where_in('inv.sale_agent', $staff_id_filter);
+        }
 
         // Include previous duedate in selection for active/inactive calc
         $CI->db->select('T_prev.previous_duedate');

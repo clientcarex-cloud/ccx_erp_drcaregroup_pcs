@@ -31,42 +31,60 @@
                         <hr class="hr-panel-heading" />
                         <div class="clearfix"></div>
                         <form method="post" action="<?= admin_url('client/reports/' . $type); ?>">
-                            <div class="row align-items-end">
-
-
+                            <div class="row">
                                 <!-- From Date -->
-                                <div class="col-md-3">
+                                <div class="col-md-2">
                                     <?php
                                     $posted_date = $this->input->post('consulted_date');
                                     $default_date = date('Y-m-d');
                                     $consulted_date_value = $posted_date ? $posted_date : $default_date;
                                     ?>
-                                    <label for="consulted_date" class="control-label">
-                                        <?= _l('from_date'); ?>
-                                    </label>
+                                    <label for="consulted_date" class="control-label"><?= _l('from_date'); ?></label>
                                     <input class="form-control" type="date" id="consulted_date" name="consulted_date"
                                         value="<?= html_escape($consulted_date_value) ?>">
                                 </div>
 
                                 <!-- To Date -->
-                                <div class="col-md-3">
+                                <div class="col-md-2">
                                     <?php
                                     $posted_date = $this->input->post('consulted_to_date');
                                     $consulted_to_date_value = $posted_date ? $posted_date : $default_date;
                                     ?>
-                                    <label for="consulted_to_date" class="control-label">
-                                        <?= _l('to_date'); ?>
-                                    </label>
+                                    <label for="consulted_to_date" class="control-label"><?= _l('to_date'); ?></label>
                                     <input class="form-control" type="date" id="consulted_to_date"
                                         name="consulted_to_date" value="<?= html_escape($consulted_to_date_value) ?>">
                                 </div>
 
-                                <!-- Submit -->
+                                <!-- Branch -->
                                 <div class="col-md-3">
+                                    <label for="branch" class="control-label"><?= _l('branch'); ?></label>
+                                    <select name="branch" id="branch" class="selectpicker" multiple data-width="100%"
+                                        data-none-selected-text="<?= _l('all_branches'); ?>">
+                                        <?php foreach ($branch as $b) { ?>
+                                            <option value="<?= $b['id']; ?>" <?= (in_array($b['id'], $selected_branch_id) ? 'selected' : ''); ?>><?= $b['name']; ?></option>
+                                        <?php } ?>
+                                    </select>
+                                </div>
+
+                                <!-- Staff -->
+                                <div class="col-md-3">
+                                    <label for="staff_id" class="control-label"><?= _l('staff'); ?></label>
+                                    <select name="staff_id" id="staff_id" class="selectpicker" multiple
+                                        data-width="100%" data-none-selected-text="<?= _l('all_staff'); ?>">
+                                        <?php foreach ($staff as $s) { ?>
+                                            <option value="<?= $s['staffid']; ?>" <?= (isset($staff_id_filter) && in_array($s['staffid'], $staff_id_filter) ? 'selected' : ''); ?>>
+                                                <?= $s['firstname'] . ' ' . $s['lastname']; ?></option>
+                                        <?php } ?>
+                                    </select>
+                                </div>
+
+                                <!-- Submit -->
+                                <div class="col-md-2">
                                     <input type="hidden" name="<?= $this->security->get_csrf_token_name(); ?>"
                                         value="<?= $this->security->get_csrf_hash(); ?>" />
                                     <br>
-                                    <button type="submit" class="btn btn-success" style="width: 100%; margin-top: 5px;">
+                                    <button type="button" id="searchAppointmentsBtn" class="btn btn-success"
+                                        style="width: 100%; margin-top: 5px;">
                                         <?= _l('search'); ?>
                                     </button>
                                 </div>
@@ -91,9 +109,11 @@
                                         <th rowspan="2"><?= _l('Visited(%)'); ?></th>
                                         <th rowspan="2"><?= _l('Reg'); ?></th>
                                         <th rowspan="2"><?= _l('Reg(%)'); ?></th>
-                                        <th colspan="5" class="text-center" style="background-color: #333; color: white;">RY(Renewal)</th>
+                                        <th colspan="5" class="text-center"
+                                            style="background-color: #333; color: white;">RY(Renewal)</th>
                                         <th rowspan="2"><?= _l('Pending(%)'); ?></th>
-                                        <th colspan="3" class="text-center" style="background-color: #333; color: white;">RY Due(To Be Renewal)</th>
+                                        <th colspan="3" class="text-center"
+                                            style="background-color: #333; color: white;">RY Due(To Be Renewal)</th>
                                     </tr>
                                     <tr>
                                         <!-- RY Subcols -->
@@ -102,7 +122,7 @@
                                         <th><?= _l('Due Amount'); ?></th>
                                         <th><?= _l('TV'); ?></th>
                                         <th><?= _l('Reg'); ?></th>
-                                        
+
                                         <!-- RY Due Subcols -->
                                         <th><?= _l('Package Amount'); ?></th>
                                         <th><?= _l('Paid Amount'); ?></th>
@@ -136,15 +156,26 @@
         let fromDate = $('#consulted_date').val() || 'null';
         let toDate = $('#consulted_to_date').val() || 'null';
         let appointmentType = $('#appointment_type').val() || 'null';
-        let branchId = $('#branch').val() || 'null';
+
+        // Branch
+        let branchId = $('#branch').val();
+        if (Array.isArray(branchId)) branchId = branchId.join(',');
+        if (!branchId) branchId = 'null';
+
         let doctorId = $('#doctor_id').val() || 'null';
+
+        // Staff
+        let staffId = $('#staff_id').val();
+        if (Array.isArray(staffId)) staffId = staffId.join(',');
+        if (!staffId) staffId = 'null';
 
         let url = '<?= admin_url("client/reports/$type/1/") ?>'
             + fromDate + '/'
             + toDate + '/'
             + appointmentType + '/'
             + branchId + '/'
-            + doctorId;
+            + doctorId + '/'
+            + staffId;
 
         initDataTable('.table-master_renewal_report', url, [1], [1]);
     });
@@ -157,15 +188,31 @@
 
 
         // Search Button Click
-        $('#searchAppointmentsBtn').on('click', function () {
+        $('#searchAppointmentsBtn').on('click', function (e) {
+            e.preventDefault(); // Prevent default form submission
             let from = $('#consulted_date').val();
             let to = $('#consulted_to_date').val();
-            let appointmentType = $('#appointment_type').val(); // use correct ID
+            let appointmentType = $('#appointment_type').val() || 'null';
+
             let branchId = $('#branch').val();
-            let doctorId = $('#doctor_id').val();
-            if ($.fn.DataTable.isDataTable('.table-appointments')) {
-                $('.table-appointments').DataTable().ajax.url(
-                    '<?= admin_url("client/reports/$type/1/") ?>' + from + '/' + to + '/' + appointmentType + '/' + branchId + '/' + doctorId
+            if (Array.isArray(branchId)) branchId = branchId.join(',');
+            if (!branchId) branchId = 'null';
+
+            let doctorId = $('#doctor_id').val() || 'null';
+
+            let staffId = $('#staff_id').val();
+            if (Array.isArray(staffId)) staffId = staffId.join(',');
+            if (!staffId) staffId = 'null';
+
+            if ($.fn.DataTable.isDataTable('.table-master_renewal_report')) {
+                $('.table-master_renewal_report').DataTable().ajax.url(
+                    '<?= admin_url("client/reports/$type/1/") ?>'
+                    + from + '/'
+                    + to + '/'
+                    + appointmentType + '/'
+                    + branchId + '/'
+                    + doctorId + '/'
+                    + staffId
                 ).load();
             }
         });
@@ -176,13 +223,13 @@
 
 <script>
     $(function () {
-    <?php if (isset($clientid) && $clientid): ?>
-                $('#client-model-auto').modal({
-                    backdrop: 'static',  // disables click outside to close
-                    keyboard: false      // disables ESC key to close
-                });
-    <?php endif; ?>
-});
+        <?php if (isset($clientid) && $clientid): ?>
+            $('#client-model-auto').modal({
+                backdrop: 'static',  // disables click outside to close
+                keyboard: false      // disables ESC key to close
+            });
+        <?php endif; ?>
+    });
 </script>
 
 </body>
