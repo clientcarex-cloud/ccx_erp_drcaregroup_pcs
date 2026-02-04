@@ -3298,7 +3298,15 @@ class Client extends AdminController
 		$data['payment_modes'] = $payment_modes;
 		$data['master_settings'] = $this->master_model->get_all('master_settings');
 		$data['branch'] = $this->client_model->get_branch();
-		$data['staff'] = $this->staff_model->get('', ['active' => 1]);
+
+		// Filter staff by specific roles
+		$this->db->select('s.staffid, s.firstname, s.lastname');
+		$this->db->from(db_prefix() . 'staff s');
+		$this->db->join(db_prefix() . 'roles r', 'r.roleid = s.role', 'left');
+		$this->db->where('s.active', 1);
+		$this->db->where_in('r.name', ['Doctor', 'Emergency Doctor', 'FDO', 'Service Doctor']);
+		$data['staff'] = $this->db->get()->result_array();
+
 		$data['roles'] = $this->client_model->get_roles();
 		$data['leads_sources'] = $this->client_model->get_leads_sources();
 		$data['appointment_type'] = $this->master_model->get_all('appointment_type');
