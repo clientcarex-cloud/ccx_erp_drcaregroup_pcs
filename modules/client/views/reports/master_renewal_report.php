@@ -68,7 +68,9 @@
                                         data-none-selected-text="<?= _l('Select Branch'); ?>">
                                         <?php
                                         $selected_branches = $this->input->post('branch') ? $this->input->post('branch') : (isset($selected_branch_id) ? $selected_branch_id : []);
-                                        foreach ($branch as $b) { ?>
+                                        foreach ($branch as $b) {
+                                            $b = (array) $b; // Ensure array
+                                            ?>
                                             <option value="<?= $b['value']; ?>" <?php if (in_array($b['value'], $selected_branches)) {
                                                   echo 'selected';
                                               } ?>>
@@ -85,7 +87,9 @@
                                         data-width="100%" data-none-selected-text="<?= _l('Select Doctor'); ?>">
                                         <?php
                                         $selected_doctors = $this->input->post('doctor_id') ? $this->input->post('doctor_id') : (isset($doctor_id) ? $doctor_id : []);
-                                        foreach ($doctors as $d) { ?>
+                                        foreach ($doctors as $d) {
+                                            $d = (array) $d; // Ensure array
+                                            ?>
                                             <option value="<?= $d['staffid']; ?>" <?php if (in_array($d['staffid'], $selected_doctors)) {
                                                   echo 'selected';
                                               } ?>>
