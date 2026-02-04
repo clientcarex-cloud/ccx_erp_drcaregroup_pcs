@@ -64,10 +64,12 @@
                                 <!-- Branch -->
                                 <div class="col-md-3">
                                     <label for="branch" class="control-label"><?= _l('Branch'); ?></label>
-                                    <select name="branch" id="branch" class="selectpicker" multiple
-                                        data-width="100%" data-none-selected-text="<?= _l('Select Branch'); ?>">
-                                        <?php foreach ($branch as $b) { ?>
-                                            <option value="<?= $b['value']; ?>" <?php if (isset($selected_branch_id) && in_array($b['value'], $selected_branch_id)) {
+                                    <select name="branch[]" id="branch" class="selectpicker" multiple data-width="100%"
+                                        data-none-selected-text="<?= _l('Select Branch'); ?>">
+                                        <?php
+                                        $selected_branches = $this->input->post('branch') ? $this->input->post('branch') : (isset($selected_branch_id) ? $selected_branch_id : []);
+                                        foreach ($branch as $b) { ?>
+                                            <option value="<?= $b['value']; ?>" <?php if (in_array($b['value'], $selected_branches)) {
                                                   echo 'selected';
                                               } ?>>
                                                 <?= $b['name']; ?>
@@ -79,10 +81,12 @@
                                 <!-- Doctor -->
                                 <div class="col-md-3">
                                     <label for="doctor_id" class="control-label"><?= _l('Doctor'); ?></label>
-                                    <select name="doctor_id" id="doctor_id" class="selectpicker" multiple
+                                    <select name="doctor_id[]" id="doctor_id" class="selectpicker" multiple
                                         data-width="100%" data-none-selected-text="<?= _l('Select Doctor'); ?>">
-                                        <?php foreach ($doctors as $d) { ?>
-                                            <option value="<?= $d['staffid']; ?>" <?php if (isset($doctor_id) && in_array($d['staffid'], $doctor_id)) {
+                                        <?php
+                                        $selected_doctors = $this->input->post('doctor_id') ? $this->input->post('doctor_id') : (isset($doctor_id) ? $doctor_id : []);
+                                        foreach ($doctors as $d) { ?>
+                                            <option value="<?= $d['staffid']; ?>" <?php if (in_array($d['staffid'], $selected_doctors)) {
                                                   echo 'selected';
                                               } ?>>
                                                 <?= $d['firstname'] . ' ' . $d['lastname']; ?>
@@ -96,7 +100,8 @@
                                     <input type="hidden" name="<?= $this->security->get_csrf_token_name(); ?>"
                                         value="<?= $this->security->get_csrf_hash(); ?>" />
                                     <br>
-                                    <button type="submit" class="btn btn-success" style="width: 100%; margin-top: 5px;">
+                                    <button type="button" id="searchAppointmentsBtn" class="btn btn-success"
+                                        style="width: 100%; margin-top: 5px;">
                                         <?= _l('search'); ?>
                                     </button>
                                 </div>
@@ -121,9 +126,11 @@
                                         <th rowspan="2"><?= _l('Visited(%)'); ?></th>
                                         <th rowspan="2"><?= _l('Reg'); ?></th>
                                         <th rowspan="2"><?= _l('Reg(%)'); ?></th>
-                                        <th colspan="5" class="text-center" style="background-color: #333; color: white;">RY(Renewal)</th>
+                                        <th colspan="5" class="text-center"
+                                            style="background-color: #333; color: white;">RY(Renewal)</th>
                                         <th rowspan="2"><?= _l('Pending(%)'); ?></th>
-                                        <th colspan="3" class="text-center" style="background-color: #333; color: white;">RY Due(To Be Renewal)</th>
+                                        <th colspan="3" class="text-center"
+                                            style="background-color: #333; color: white;">RY Due(To Be Renewal)</th>
                                     </tr>
                                     <tr>
                                         <!-- RY Subcols -->
@@ -132,7 +139,7 @@
                                         <th><?= _l('Due Amount'); ?></th>
                                         <th><?= _l('TV'); ?></th>
                                         <th><?= _l('Reg'); ?></th>
-                                        
+
                                         <!-- RY Due Subcols -->
                                         <th><?= _l('Package Amount'); ?></th>
                                         <th><?= _l('Paid Amount'); ?></th>
@@ -190,11 +197,11 @@
         $('#searchAppointmentsBtn').on('click', function () {
             let from = $('#consulted_date').val();
             let to = $('#consulted_to_date').val();
-            let appointmentType = $('#appointment_type').val(); // use correct ID
-            let branchId = $('#branch').val();
-            let doctorId = $('#doctor_id').val();
-            if ($.fn.DataTable.isDataTable('.table-appointments')) {
-                $('.table-appointments').DataTable().ajax.url(
+            let appointmentType = $('#appointment_type').val() || 'null'; // use correct ID
+            let branchId = $('#branch').val() || 'null';
+            let doctorId = $('#doctor_id').val() || 'null';
+            if ($.fn.DataTable.isDataTable('.table-master_renewal_report')) {
+                $('.table-master_renewal_report').DataTable().ajax.url(
                     '<?= admin_url("client/reports/$type/1/") ?>' + from + '/' + to + '/' + appointmentType + '/' + branchId + '/' + doctorId
                 ).load();
             }
@@ -206,13 +213,13 @@
 
 <script>
     $(function () {
-    <?php if (isset($clientid) && $clientid): ?>
-                $('#client-model-auto').modal({
-                    backdrop: 'static',  // disables click outside to close
-                    keyboard: false      // disables ESC key to close
-                });
-    <?php endif; ?>
-});
+        <?php if (isset($clientid) && $clientid): ?>
+            $('#client-model-auto').modal({
+                backdrop: 'static',  // disables click outside to close
+                keyboard: false      // disables ESC key to close
+            });
+        <?php endif; ?>
+    });
 </script>
 
 </body>
