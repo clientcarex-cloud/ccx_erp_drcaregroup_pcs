@@ -71,7 +71,7 @@
                                         foreach ($branch as $b) {
                                             $b = (array) $b; // Ensure array
                                             ?>
-                                            <option value="<?= $b['value']; ?>" <?php if (in_array($b['value'], $selected_branches)) {
+                                            <option value="<?= $b['id']; ?>" <?php if (in_array($b['id'], $selected_branches)) {
                                                   echo 'selected';
                                               } ?>>
                                                 <?= $b['name']; ?>
