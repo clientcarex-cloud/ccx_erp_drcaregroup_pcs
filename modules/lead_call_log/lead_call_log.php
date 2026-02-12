@@ -145,6 +145,8 @@ function message_log_add_custom_lead_tab_content($lead)
 	}
 	$data['title'] = "Message Log";
 	$CI = &get_instance();
+	$CI->load->model('lead_call_log/lead_call_log_model');
+	$data['patient_response_setting']  = $CI->lead_call_log_model->get_patient_response_setting();
 	echo $CI->load->view('lead_call_log/tab_message_log', $data, true);
 }
 
