@@ -50,10 +50,11 @@ function ip_access_init_menu_items()
 {
     $CI = &get_instance();
     if (staff_can('view', 'ip_access')) {
-        $CI->app_menu->add_setup_menu_item('ip_access', [
+        $CI->app_menu->add_sidebar_menu_item('ip_access', [
             'name' => 'IP Access',
             'href' => admin_url('ip_access'),
             'position' => 60,
+            'icon' => 'fa fa-shield-alt',
         ]);
     }
 }
