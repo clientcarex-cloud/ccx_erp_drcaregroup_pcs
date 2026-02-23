@@ -134,9 +134,17 @@
 
 <?php init_tail(); ?>
 
-<script>
+<?php if (isset($client_modal)) echo $client_modal; ?>
 
+<script>
     $(document).ready(function () {
+        <?php if (isset($clientid) && $clientid): ?>
+            // If clientid is set, show patient modal popup
+            $('#client-model-auto').modal({
+                backdrop: 'static',  // disables click outside to close
+                keyboard: false      // disables ESC key to close
+            });
+        <?php endif; ?>
 
         let from = $('#consulted_date').val();
         let to = $('#consulted_to_date').val();

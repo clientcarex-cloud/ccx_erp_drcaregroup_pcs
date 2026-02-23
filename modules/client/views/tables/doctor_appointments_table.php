@@ -8,10 +8,10 @@ $output['aaData'] = [];
 $output['draw'] = intval($CI->input->post('draw'));
 
 $search_value = $CI->input->post('search')['value'] ?? '';
-$start  = $CI->input->post('start');
+$start = $CI->input->post('start');
 $length = $CI->input->post('length');
 
-$start  = is_numeric($start) ? (int) $start : 0;
+$start = is_numeric($start) ? (int) $start : 0;
 $length = is_numeric($length) ? (int) $length : 10;
 
 $CI->db->start_cache();
@@ -45,28 +45,28 @@ $CI->db->join(db_prefix() . 'customers_groups branch', 'branch.id = appointments
 $CI->db->join(db_prefix() . 'staff staff', 'staff.staffid = appointments.enquiry_doctor_id', 'left');
 
 if (!staff_can('view_global_appointments', 'customers')) {
-	// Filter by doctor
-	if (!empty($staff_data) && in_array(strtolower($staff_data->role_name), ['doctor', 'service doctor'])) {
-		
-		//if(staff_cant('view_global_appointments', 'customers')){
-			$CI->db->where('appointments.enquiry_doctor_id', $staff_data->staffid);	
-			//$CI->db->where('appointments.branch_id', $branch_id);	
-		//}
-	} elseif (isset($enquiry_doctor_id) && is_numeric($enquiry_doctor_id) && intval($enquiry_doctor_id) > 0) {
-		$CI->db->where('appointments.enquiry_doctor_id', intval($enquiry_doctor_id));
-		//$CI->db->where('appointments.branch_id', $branch_id);	
-	}
+    // Filter by doctor
+    if (!empty($staff_data) && in_array(strtolower($staff_data->role_name), ['doctor', 'service doctor'])) {
+
+        //if(staff_cant('view_global_appointments', 'customers')){
+        $CI->db->where('appointments.enquiry_doctor_id', $staff_data->staffid);
+        //$CI->db->where('appointments.branch_id', $branch_id);	
+        //}
+    } elseif (isset($enquiry_doctor_id) && is_numeric($enquiry_doctor_id) && intval($enquiry_doctor_id) > 0) {
+        $CI->db->where('appointments.enquiry_doctor_id', intval($enquiry_doctor_id));
+        //$CI->db->where('appointments.branch_id', $branch_id);	
+    }
 }
 
 
 $summary_filter = $CI->input->post('summary_filter');
 
 if ($summary_filter == 'missed') {
-	$CI->db->where('appointments.visit_status', 0);
-	$CI->db->where('appointments.appointment_date <', date('Y-m-d'));
+    $CI->db->where('appointments.visit_status', 0);
+    $CI->db->where('appointments.appointment_date <', date('Y-m-d'));
 } elseif ($summary_filter == 'consulted') {
-	$CI->db->where('appointments.visit_status', 1);
-	$CI->db->where('appointments.consulted_date IS NOT NULL', null, false);
+    $CI->db->where('appointments.visit_status', 1);
+    $CI->db->where('appointments.consulted_date IS NOT NULL', null, false);
 }
 // 'all' — no additional filter
 
@@ -78,24 +78,24 @@ if ($branch_id > 0) {
 
 
 if (!empty($visit_status)) {
-	if (strcasecmp($visit_status, 'Visited') == 0) {
-		$CI->db->where('visit_status', 1);
-	}
-	if (strcasecmp($visit_status, 'Only Consulted') == 0) {
-		 $CI->db->where('consulted_date IS NOT NULL');
-	}
- 
+    if (strcasecmp($visit_status, 'Visited') == 0) {
+        $CI->db->where('visit_status', 1);
+    }
+    if (strcasecmp($visit_status, 'Only Consulted') == 0) {
+        $CI->db->where('consulted_date IS NOT NULL');
+    }
+
 }
 
 if (!empty($appointment_type_id)) {
-		$CI->db->where('appointments.appointment_type_id', $appointment_type_id);
-	
+    $CI->db->where('appointments.appointment_type_id', $appointment_type_id);
+
 }
 
 // Filter by date
 if (!empty($consulted_from_date) && !empty($consulted_to_date)) {
     $from_date = to_sql_date($consulted_from_date);
-    $to_date   = to_sql_date($consulted_to_date);
+    $to_date = to_sql_date($consulted_to_date);
 
     $CI->db->group_start();
     $period = new DatePeriod(
@@ -137,7 +137,7 @@ if (!empty($search_value)) {
     $CI->db->or_like('appointment_type.appointment_type_name', $search_value);
     $CI->db->or_like('enquiry_type.enquiry_type_name', $search_value);
     $CI->db->or_like('new.mr_no', $search_value);
-	$CI->db->or_like('staff.firstname', $search_value); // 👈 First name
+    $CI->db->or_like('staff.firstname', $search_value); // 👈 First name
     $CI->db->or_like('staff.lastname', $search_value);  // 👈 Last name
     $CI->db->group_end();
 }
@@ -169,7 +169,7 @@ foreach ($results as $aRow) {
     $CI->db->where([
         'ap.appointment_id' => $aRow['appointment_id'],
         'item.description' => 'Consultation Fee',
-        'i.clientid'       => $aRow['userid']
+        'i.clientid' => $aRow['userid']
     ]);
     $check_payment = $CI->db->get()->row();
 
@@ -183,7 +183,7 @@ foreach ($results as $aRow) {
         : '<span class="label label-success">Follow up Appointment (' . $total_appointments . ')</span>';
 
     $row = [];
-    $url = admin_url('client/get_patient_list/' . $aRow['userid']);
+    $url = admin_url('client/reports/doctor_appointments/' . $aRow['userid']);
     //$row[] = $aRow['mr_no'];
     //$row[] = $aRow['visit_id'];
     $row[] = '<b><a href="' . $url . '">' . $aRow['patient_name'] . '</a></b>';
@@ -193,16 +193,16 @@ foreach ($results as $aRow) {
     $row[] = get_staff_full_name($aRow['enquiry_doctor_id']);
     $row[] = _d($aRow['appointment_date']);
     $row[] = _d($aRow['consulted_date']);
-	
-	$duration = (int) $aRow['consultation_duration'];
-	$minutes = floor($duration / 60);
-	$seconds = $duration % 60;
-	if($duration>0){
-		$row[] = $minutes . ' min ' . $seconds . ' sec';
-	}else{
-		$row[] = '-';
-	}
-	
+
+    $duration = (int) $aRow['consultation_duration'];
+    $minutes = floor($duration / 60);
+    $seconds = $duration % 60;
+    if ($duration > 0) {
+        $row[] = $minutes . ' min ' . $seconds . ' sec';
+    } else {
+        $row[] = '-';
+    }
+
     $row[] = get_treatments_by_userid($aRow['userid'], $aRow['appointment_id']);
     $row[] = $aRow['appointment_type_name'];
     $row[] = !empty($aRow['branch_name']) ? ucfirst($aRow['branch_name']) : '-';
