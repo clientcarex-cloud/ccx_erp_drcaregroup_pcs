@@ -111,7 +111,7 @@ if ($page === 'sub') {
             c.userid,
             CONCAT(
                 '<a href=\"https://pcs.amrautism.com/admin/client/get_patient_list/', c.userid,
-                '\" target=\"_blank\" class=\"ccx-patient-link\" data-patient-id=\"', c.userid,
+                '\" target=\"_blank\" style=\"color:blue;\" class=\"ccx-patient-link\" data-patient-id=\"', c.userid,
                 '\" data-branch-filter=\"', COALESCE($sub_branch_id_val, ''),
                 '\" data-date-from=\"', COALESCE($sub_date_from, ''),
                 '\" data-date-to=\"', COALESCE($sub_date_to, ''),
@@ -168,9 +168,8 @@ if ($page === 'sub') {
                 OR ($metric_val = 'enq_due'         AND inv.total > IFNULL(pay.amount, 0))
             )
         GROUP BY c.userid, c.firstname, c.phonenumber
-    ) AS detail
-    CROSS JOIN (SELECT @rownum := 0) AS seq
-    WHERE detail.amount IS NOT NULL
+    ) AS detail, (SELECT @rownum := 0) AS seq
+    WHERE detail.amount IS NOT NULL AND detail.amount > 0
     ORDER BY detail.amount DESC;
     ";
 
