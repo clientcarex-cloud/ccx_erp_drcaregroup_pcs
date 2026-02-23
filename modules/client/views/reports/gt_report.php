@@ -145,35 +145,37 @@
 
 <script>
     $(function () {
-        function reloadUnitGTReport() {
-            const from = $('#consulted_date').val();
-            const to = $('#consulted_to_date').val();
+        var gtTableInitialized = false;
 
-            let base_url = '<?= admin_url("client/reports/$type/1/") ?>';
-            let url = base_url + from + '/' + to;
+        function reloadUnitGTReport() {
+            var url = '<?= admin_url("client/reports/gt_report") ?>';
 
             // Check if we are in sub-report mode
-            const urlParams = new URLSearchParams(window.location.search);
+            var urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('page') === 'sub') {
-                // Append existing query parameters (filters_sub, page, etc)
-                // We need to ensure we don't double ? if it's already there (though admin_url likely doesn't have it here)
-                // The constructed URL is path based. We can append ?... from window.location.search
                 url += window.location.search;
             }
 
-            if ($.fn.DataTable.isDataTable('.table-unit-gt-report')) {
-                $('.table-unit-gt-report').DataTable().ajax.url(url).load();
+            var formData = $('#unitGTForm').serialize();
+
+            if (gtTableInitialized && $.fn.DataTable.isDataTable('.table-unit-gt-report')) {
+                var dt = $('.table-unit-gt-report').DataTable();
+                dt.ajax.url(url + (url.indexOf('?') !== -1 ? '&' : '?') + formData).load();
             } else {
-                initDataTable('.table-unit-gt-report', url, [0], [0]);
+                initDataTable('.table-unit-gt-report', url + (url.indexOf('?') !== -1 ? '&' : '?') + formData, [0], [0]);
+                gtTableInitialized = true;
             }
         }
 
-        // Initial load
-        reloadUnitGTReport();
-
-        // On form submit
+        // On form submit only — no auto-load
         $('#unitGTForm').on('submit', function (e) {
             e.preventDefault();
+            // Require at least one branch selected
+            var branches = $('[name="branch[]"]').val();
+            if (!branches || branches.length === 0) {
+                alert_float('warning', 'Please select at least one branch.');
+                return;
+            }
             reloadUnitGTReport();
         });
     });

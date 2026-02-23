@@ -4,74 +4,60 @@ defined('BASEPATH') or exit('No direct script access allowed');
 
 $CI = &get_instance();
 
-// ---- Filters ----
-$from_date = $CI->input->post('consulted_date');
-$to_date = $CI->input->post('consulted_to_date');
-$branch_id = $CI->input->post('branch'); // Array or value
-$currency = $CI->input->post('currency');
+// ---- Filters (support both GET and POST since form serialize sends as GET) ----
+$from_date = $CI->input->get_post('consulted_date');
+$to_date = $CI->input->get_post('consulted_to_date');
+$branch_id = $CI->input->get_post('branch'); // Array of branch IDs from multi-select
+$currency = $CI->input->get_post('currency');
 
 // Clean and sanitize filters
 if (!$from_date)
-    $from_date = date('Y-m-01');
+  $from_date = date('Y-m-01');
 if (!$to_date)
-    $to_date = date('Y-m-t');
+  $to_date = date('Y-m-t');
 
 $from_date_sql = "'" . $CI->db->escape_str($from_date) . "'";
 $to_date_sql = "'" . $CI->db->escape_str($to_date) . "'";
 
-// Handle Branch Filter
-// If branch filter is an array (from multiple select), implode it.
-// However, the SQL provided uses {{filter:branch_id}} inside the query, sometimes inside specific checking logic.
-// The main query seems to group by branch or check specific branches. 
-// The main query provided by user DOES NOT seem to have a variable for branch_id in the WHERE clause of the outer wrapper,
-// but rather checks `AND ({{filter:date_from}} IS NULL ...)` mostly.
-// Wait, looking at the User's Main Query: I see `AND ({{filter:date_from}} IS NULL ...)` but I don't see `{{filter:branch_id}}` used in the main query's WHERE clause heavily, 
-// EXCEPT maybe it's missing from the snippet or I need to check if the user *wants* to filter the main report by branch.
-// The original code filtered by branch. The NEW SQL has `LEFT JOIN ... gt_table` etc.
-// The new SQL has `metrics.branch_id`.
-// Actually, the main query provided by the user does NOT have a `{{filter:branch_id}}` placeholder. It lists ALL branches (from `tblcustomers_groups`).
-// But the View has a Branch filter.
-// The user might expect the report to filter by branch if selected.
-// I will inspect the main query again.
-// The main query starts with `SELECT * FROM ( SELECT final.branch_label ...`.
-// It selects from `tblcustomers_groups cg`.
-// If I need to filter by branch, I should probably add a WHERE clause to the outer query or filter `tblcustomers_groups`.
-// BUT, the user's prompt said "replace with below report". I should stick to their SQL. 
-// If their SQL doesn't have the filter, maybe they want it that way, or I should inject it.
-// The prompt says: "Hi, kindly in this same report first delete or replace with below report ... SELECT * FROM ..."
-// I will use their SQL exactly as provided, replacing the specific placeholders they used: `{{filter:date_from}}`, `{{filter:date_to}}`, `{{filter:currency}}`.
-
-// For the Sub-Page query, they used `{{filter:branch_id}}`, `{{filter:metric}}`.
+// Build branch filter SQL clause
+$branch_filter_sql = '';
+if (!empty($branch_id) && is_array($branch_id)) {
+  $clean_branch_ids = array_filter($branch_id, 'is_numeric');
+  $clean_branch_ids = array_map('intval', $clean_branch_ids);
+  if (!empty($clean_branch_ids)) {
+    $branch_filter_sql = ' AND cg.id IN (' . implode(',', $clean_branch_ids) . ')';
+  }
+}
 
 $currency_sql = $currency ? "'" . $CI->db->escape_str($currency) . "'" : "NULL";
 
 $page = $CI->input->get('page');
 
 if ($page === 'sub') {
-    // Sub-Page Logic
-    $filters_sub = $CI->input->get('filters_sub');
-    $sub_branch_id = isset($filters_sub['branch_id']) ? $CI->db->escape_str($filters_sub['branch_id']) : 'all';
-    $metric = isset($filters_sub['metric']) ? $CI->db->escape_str($filters_sub['metric']) : '';
+  // Sub-Page Logic
+  $filters_sub = $CI->input->get('filters_sub');
+  $sub_branch_id = isset($filters_sub['branch_id']) ? $CI->db->escape_str($filters_sub['branch_id']) : 'all';
+  $metric = isset($filters_sub['metric']) ? $CI->db->escape_str($filters_sub['metric']) : '';
 
-    // Date filters for sub-page might come from query string or main filter.
-    // The links in main report use `filters_sub[date_from]`.
-    $sub_date_from = isset($filters_sub['date_from']) ? "'" . $CI->db->escape_str($filters_sub['date_from']) . "'" : "NULL";
-    $sub_date_to = isset($filters_sub['date_to']) ? "'" . $CI->db->escape_str($filters_sub['date_to']) . "'" : "NULL";
+  // Date filters for sub-page might come from query string or main filter.
+  // The links in main report use `filters_sub[date_from]`.
+  $sub_date_from = isset($filters_sub['date_from']) ? "'" . $CI->db->escape_str($filters_sub['date_from']) . "'" : "NULL";
+  $sub_date_to = isset($filters_sub['date_to']) ? "'" . $CI->db->escape_str($filters_sub['date_to']) . "'" : "NULL";
 
-    if ($sub_branch_id !== 'all' && !is_numeric($sub_branch_id)) {
-        $sub_branch_id = 'all'; // Safety fallback
-    }
+  if ($sub_branch_id !== 'all' && !is_numeric($sub_branch_id)) {
+    $sub_branch_id = 'all'; // Safety fallback
+  }
 
-    // We need to quote the branch_id if it's a specific number, but the query uses `map.groupid = {{filter:branch_id}}`.
-    // If it's 'all', the query says `{{filter:branch_id}} = 'all'`.
-    // So if $sub_branch_id is numeric, we treat it as value.
-    // The query logic: `({{filter:branch_id}} = 'all' OR map.groupid = {{filter:branch_id}} ...)`
-    // So we pass the value as a string: "'all'" or "'1'".
-    $sub_branch_id_val = "'" . $sub_branch_id . "'";
-    $metric_val = "'" . $metric . "'";
+  // We need to quote the branch_id if it's a specific number, but the query uses `map.groupid = {{filter:branch_id}}`.
+  // If it's 'all', the query says `{{filter:branch_id}} = 'all'`.
+  // So if $sub_branch_id is numeric, we treat it as value.
+  // The query logic: `({{filter:branch_id}} = 'all' OR map.groupid = {{filter:branch_id}} ...)`
+  // So we pass the value as a string: "'all'" or "'1'".
+  $sub_branch_id_val = "'" . $sub_branch_id . "'";
+  $metric_val = "'" . $metric . "'";
 
-    // Sub-Page Logic
-    $sql = "
+  // Sub-Page Logic
+  $sql = "
     SELECT 
         1 AS `S.No`,
         c.userid AS `Patient ID`,
@@ -83,22 +69,22 @@ if ($page === 'sub') {
     WHERE 1=1
     ";
 
-    // Reconstruct the user's SUB query
-    // The user provided query:
-    /*
-    SELECT 
-    ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS `S.No`,
-    ...
-    */
+  // Reconstruct the user's SUB query
+  // The user provided query:
+  /*
+  SELECT 
+  ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS `S.No`,
+  ...
+  */
 
-    // I need to be careful with the user's specific sub-query which uses detailed logic for each metric.
-    // The user provided many IF/ELSE blocks or a big CASE statement presumably?
-    // Actually, the user provided a "Sub Page Query" in the prompt (which I need to retrieve from context if I lost it, but I have it in my 'context' or 'clipboard').
-    // Wait, I need to check the User's prompt again for the Sub Page Query.
-    // The user provided: "Sub-Page Query: ..."
-    // It has `CASE WHEN '{{filter:metric}}' = 'gt' THEN ...`
+  // I need to be careful with the user's specific sub-query which uses detailed logic for each metric.
+  // The user provided many IF/ELSE blocks or a big CASE statement presumably?
+  // Actually, the user provided a "Sub Page Query" in the prompt (which I need to retrieve from context if I lost it, but I have it in my 'context' or 'clipboard').
+  // Wait, I need to check the User's prompt again for the Sub Page Query.
+  // The user provided: "Sub-Page Query: ..."
+  // It has `CASE WHEN '{{filter:metric}}' = 'gt' THEN ...`
 
-    $sql = "
+  $sql = "
     SELECT 
         ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS `S.No`,
         final.userid AS `Patient ID`,
@@ -560,10 +546,17 @@ if ($page === 'sub') {
     ";
 
 } else {
-    // Main Report Logic
+  // Main Report Logic
+  // If no branches selected, return empty result
+  if (empty($branch_id) || !is_array($branch_id)) {
+    $output = ['data' => []];
+    header('Content-Type: application/json');
+    echo json_encode($output);
+    exit;
+  }
 
-    // Main Report Logic
-    $sql = "
+  // Main Report Logic
+  $sql = "
         SELECT *
         FROM (
             SELECT
@@ -840,6 +833,7 @@ if ($page === 'sub') {
                           AND ($to_date_sql IS NULL OR pay.date <= $to_date_sql)
                         GROUP BY map.groupid
                     ) ref_money_table ON ref_money_table.branch_id = cg.id
+                    WHERE 1=1 $branch_filter_sql
                 ) metrics
                 LEFT JOIN (
                     SELECT cg.id AS branch_id, COALESCE(SUM(pr.amount), 0) AS payments_received
@@ -864,54 +858,54 @@ if ($page === 'sub') {
 }
 
 $output = [
-    'data' => []
+  'data' => []
 ];
 
 $result = $CI->db->query($sql)->result_array();
 
 // Format data for DataTable
 if ($page === 'sub') {
-    foreach ($result as $row) {
-        $output['data'][] = [
-            $row['S.No'],
-            $row['Patient ID'],
-            $row['Patient Name'],
-            $row['Mobile'],
-            $row['Category'],
-            $row['Amount'],
-        ];
-    }
+  foreach ($result as $row) {
+    $output['data'][] = [
+      $row['S.No'],
+      $row['Patient ID'],
+      $row['Patient Name'],
+      $row['Mobile'],
+      $row['Category'],
+      $row['Amount'],
+    ];
+  }
 } else {
-    foreach ($result as $row) {
-        $output['data'][] = [
-            $row['Branch'],
-            $row['GT'],
-            $row['PROG'],
-            $row['NP Visit'],
-            $row['NP Registration'],
-            $row['Registration %'],
-            $row['Consultation Fee'],
-            $row['NP Paid'],
-            $row['Enquiry Projection'],
-            $row['Enquiry Due'],
-            $row['Enquiry Ticket Value'],
-            $row['Renewal Visits'],
-            $row['Renewals'],
-            $row['Renewal %'],
-            $row['Renewal Paid'],
-            $row['Renewal Due'],
-            $row['Renewal Projection'],
-            $row['Renewal Ticket Value'],
-            $row['Referral Visits'],
-            $row['Referral Registrations'],
-            $row['Referral %'],
-            $row['Referral Paid'],
-            $row['Referral Due'],
-            $row['Referral Projection'],
-            $row['Referral Ticket Value'],
-            $row['Refund Amount'],
-        ];
-    }
+  foreach ($result as $row) {
+    $output['data'][] = [
+      $row['Branch'],
+      $row['GT'],
+      $row['PROG'],
+      $row['NP Visit'],
+      $row['NP Registration'],
+      $row['Registration %'],
+      $row['Consultation Fee'],
+      $row['NP Paid'],
+      $row['Enquiry Projection'],
+      $row['Enquiry Due'],
+      $row['Enquiry Ticket Value'],
+      $row['Renewal Visits'],
+      $row['Renewals'],
+      $row['Renewal %'],
+      $row['Renewal Paid'],
+      $row['Renewal Due'],
+      $row['Renewal Projection'],
+      $row['Renewal Ticket Value'],
+      $row['Referral Visits'],
+      $row['Referral Registrations'],
+      $row['Referral %'],
+      $row['Referral Paid'],
+      $row['Referral Due'],
+      $row['Referral Projection'],
+      $row['Referral Ticket Value'],
+      $row['Refund Amount'],
+    ];
+  }
 }
 
 header('Content-Type: application/json');
