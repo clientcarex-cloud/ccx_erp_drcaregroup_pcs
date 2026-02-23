@@ -405,27 +405,29 @@ foreach ($result as $row) {
   $totals['ref_gt'] += (int) $row['Referral Projection'];
   $totals['refund_amount'] += (int) $row['Refund Amount'];
 
+  $branch_id_row = isset($row['branch_id']) ? $row['branch_id'] : ''; // Need branch_id from SQL
+
   $output['data'][] = [
     $row['Branch'],
     $row['GT'],
     $row['PROG'],
-    $row['NP Visit'],
-    $row['NP Registration'],
+    '<a href="#" class="metric-drilldown" data-metric="np_visit" data-branch="' . html_escape($branch_id_row) . '">' . $row['NP Visit'] . '</a>',
+    '<a href="#" class="metric-drilldown" data-metric="np_reg" data-branch="' . html_escape($branch_id_row) . '">' . $row['NP Registration'] . '</a>',
     $row['Registration %'],
     $row['Consultation Fee'],
     $row['NP Paid'],
     $row['Enquiry Projection'],
     $row['Enquiry Due'],
     $row['Enquiry Ticket Value'],
-    $row['Renewal Visits'],
-    $row['Renewals'],
+    '<a href="#" class="metric-drilldown" data-metric="ren_visited" data-branch="' . html_escape($branch_id_row) . '">' . $row['Renewal Visits'] . '</a>',
+    '<a href="#" class="metric-drilldown" data-metric="ren_registered" data-branch="' . html_escape($branch_id_row) . '">' . $row['Renewals'] . '</a>',
     $row['Renewal %'],
     $row['Renewal Paid'],
     $row['Renewal Due'],
     $row['Renewal Projection'],
     $row['Renewal Ticket Value'],
-    $row['Referral Visits'],
-    $row['Referral Registrations'],
+    '<a href="#" class="metric-drilldown" data-metric="ref_visited" data-branch="' . html_escape($branch_id_row) . '">' . $row['Referral Visits'] . '</a>',
+    '<a href="#" class="metric-drilldown" data-metric="ref_reg" data-branch="' . html_escape($branch_id_row) . '">' . $row['Referral Registrations'] . '</a>',
     $row['Referral %'],
     $row['Referral Paid'],
     $row['Referral Due'],

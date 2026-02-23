@@ -114,11 +114,43 @@
 </div>
 
 <?php init_tail(); ?>
+<!-- Metric Details Modal -->
+<div class="modal fade" id="metricDetailsModal" tabindex="-1" role="dialog" aria-labelledby="metricDetailsModalLabel">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title" id="metricDetailsModalLabel">Patient Details</h4>
+            </div>
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped" id="metricDetailsTable" style="width: 100%;">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>MR No</th>
+                                <th>Patient Name</th>
+                                <th>Phone Number</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Data populated via AJAX -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script>
     $(function () {
         // Main report: load only on form submit with branch validation
         var gtTableInitialized = false;
+        var metricTable = null;
 
         $('#unitGTForm').on('submit', function (e) {
             e.preventDefault();
@@ -168,6 +200,49 @@
                 gtTableInitialized = true;
             }
         });
+
+        // Click listener for metric drilldown links in the datatable (and footer)
+        $(document).on('click', '.metric-drilldown', function (e) {
+            e.preventDefault();
+            var metric = $(this).data('metric');
+            var branchId = $(this).data('branch'); // Can be empty if clicked from Grand Total row
+            var fromDate = $('#consulted_date').val();
+            var toDate = $('#consulted_to_date').val();
+            var metricName = $(this).closest('td, th').index(); // Attempt to get column index for title
+
+            // Update modal title
+            var columnHeaders = $('.table-unit-gt-report thead th').map(function() { return $(this).text(); }).get();
+            if(metricName >= 0 && columnHeaders[metricName]) {
+                 $('#metricDetailsModalLabel').text('Patient Details - ' + columnHeaders[metricName]);
+            } else {
+                 $('#metricDetailsModalLabel').text('Patient Details');
+            }
+
+            // Show modal loading state
+            $('#metricDetailsModal').modal('show');
+            if (metricTable !== null) {
+                metricTable.destroy();
+                $('#metricDetailsTable tbody').empty();
+            }
+
+            $.post("<?= admin_url('client/get_gt_report_details') ?>", {
+                metric: metric,
+                branch_id: branchId,
+                from_date: fromDate,
+                to_date: toDate,
+                "<?= $this->security->get_csrf_token_name() ?>": "<?= $this->security->get_csrf_hash() ?>"
+            }, function (res) {
+                var data = JSON.parse(res);
+                metricTable = $('#metricDetailsTable').DataTable({
+                    data: data.data,
+                    destroy: true,
+                    paging: true,
+                    searching: true,
+                    info: true
+                });
+            });
+        });
+
     });
 
 </script>

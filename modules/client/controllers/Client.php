@@ -3518,54 +3518,145 @@ class Client extends AdminController
 
 
 
-	public function get_branch_report_data()
+	public function get_gt_report_details()
 	{
-		$data = [
-			[
-				'branch_name' => 'TEST BRANCH',
-				'total_registrations' => 3,
-				'ref_reg' => 0,
-				'package_amount' => 0,
-				'paid_amount' => 0,
-				'due_amount' => 0,
-				'walkin_reg' => 0,
+		if (!$this->input->is_ajax_request()) {
+			show_404();
+		}
 
-				'cc_reg' => 3,
-				'enquiry_package_amount' => '38,200',
-				'enquiry_paid_amount' => '37,300',
-				'enquiry_due_amount' => '900',
-				'enquiry_blank1' => '',
-				'enquiry_blank2' => '',
+		$metric = $this->input->post('metric');
+		$branch_id = $this->input->post('branch_id');
+		$from_date = $this->input->post('from_date');
+		$to_date = $this->input->post('to_date');
 
-				'renewal_reg' => 0,
-				'renewal_package_amount' => 0,
-				'renewal_paid_amount' => 0,
-				'renewal_due_amount' => 0,
-			],
-			[
-				'branch_name' => '<strong>Grand Total</strong>',
-				'total_registrations' => 3,
-				'ref_reg' => 0,
-				'package_amount' => 0,
-				'paid_amount' => 0,
-				'due_amount' => 0,
-				'walkin_reg' => 0,
+		if (!$from_date)
+			$from_date = date('Y-m-01');
+		if (!$to_date)
+			$to_date = date('Y-m-t');
 
-				'cc_reg' => 3,
-				'enquiry_package_amount' => '<strong>38,200</strong>',
-				'enquiry_paid_amount' => '<strong>37,300</strong>',
-				'enquiry_due_amount' => '<strong>900</strong>',
-				'enquiry_blank1' => '',
-				'enquiry_blank2' => '',
+		$from_date_sql = "'" . $this->db->escape_str($from_date) . "'";
+		$to_date_sql = "'" . $this->db->escape_str($to_date) . "'";
 
-				'renewal_reg' => 0,
-				'renewal_package_amount' => 0,
-				'renewal_paid_amount' => 0,
-				'renewal_due_amount' => 0,
-			],
-		];
+		$branch_filter = "";
+		if (is_numeric($branch_id)) {
+			$branch_filter = " AND map.groupid = " . (int) $branch_id;
+		}
 
-		echo json_encode($data);
+		$sql = "";
+
+		switch ($metric) {
+			case 'np_visit':
+				$sql = "
+					SELECT DISTINCT c.userid, c.company AS patient_name, nf.mr_no, c.phonenumber 
+					FROM tblappointment a
+					JOIN tblclients c ON c.userid = a.userid
+					LEFT JOIN tblclients_new_fields nf ON nf.userid = c.userid
+					JOIN tblcustomer_groups map ON map.customer_id = c.userid
+					WHERE a.visit_status = 1
+					  AND a.appointment_type_id IN (18, 2)
+					  AND a.appointment_date >= CONCAT($from_date_sql, ' 00:00:00')
+					  AND a.appointment_date <= CONCAT($to_date_sql, ' 23:59:59')
+					  $branch_filter
+				";
+				break;
+			case 'np_reg':
+				$sql = "
+					SELECT DISTINCT c.userid, c.company AS patient_name, nf.mr_no, c.phonenumber 
+					FROM tblappointment a
+					JOIN tblinvoices inv ON inv.clientid = a.userid
+					JOIN tblitemable item ON item.rel_id = inv.id AND item.rel_type = 'invoice'
+					JOIN tblclients c ON c.userid = a.userid
+					LEFT JOIN tblclients_new_fields nf ON nf.userid = c.userid
+					JOIN tblcustomer_groups map ON map.customer_id = c.userid
+					WHERE a.visit_status = 1
+					  AND a.appointment_type_id IN (18, 2)
+					  AND item.description <> 'Consultation Fee'
+					  AND a.appointment_date >= CONCAT($from_date_sql, ' 00:00:00')
+					  AND a.appointment_date <= CONCAT($to_date_sql, ' 23:59:59')
+					  AND inv.date >= $from_date_sql
+					  AND inv.date <= $to_date_sql
+					  $branch_filter
+				";
+				break;
+			case 'ren_visited':
+				$sql = "
+					SELECT DISTINCT c.userid, c.company AS patient_name, nf.mr_no, c.phonenumber 
+					FROM tblappointment a
+					JOIN tblclients c ON c.userid = a.userid
+					LEFT JOIN tblclients_new_fields nf ON nf.userid = c.userid
+					JOIN tblcustomer_groups map ON map.customer_id = c.userid
+					WHERE a.visit_status = 1
+					  AND a.appointment_type_id IN (6, 11, 17, 24, 32)
+					  AND a.appointment_date >= CONCAT($from_date_sql, ' 00:00:00')
+					  AND a.appointment_date <= CONCAT($to_date_sql, ' 23:59:59')
+					  $branch_filter
+				";
+				break;
+			case 'ren_registered':
+				$sql = "
+					SELECT DISTINCT c.userid, c.company AS patient_name, nf.mr_no, c.phonenumber 
+					FROM tblappointment a
+					JOIN tblinvoices inv ON inv.clientid = a.userid
+					JOIN tblitemable item ON item.rel_id = inv.id AND item.rel_type = 'invoice'
+					JOIN tblclients c ON c.userid = a.userid
+					LEFT JOIN tblclients_new_fields nf ON nf.userid = c.userid
+					JOIN tblcustomer_groups map ON map.customer_id = c.userid
+					WHERE a.visit_status = 1
+					  AND a.appointment_type_id IN (6, 11, 17, 24, 32)
+					  AND item.description <> 'Consultation Fee'
+					  AND a.appointment_date >= CONCAT($from_date_sql, ' 00:00:00')
+					  AND a.appointment_date <= CONCAT($to_date_sql, ' 23:59:59')
+					  $branch_filter
+				";
+				break;
+			case 'ref_visited':
+				$sql = "
+					SELECT DISTINCT c.userid, c.company AS patient_name, nf.mr_no, c.phonenumber 
+					FROM tblleads l
+					JOIN tblclients c ON c.leadid = l.id
+					JOIN tblcustomer_groups map ON map.customer_id = c.userid
+					JOIN tblappointment a ON a.userid = c.userid
+					LEFT JOIN tblclients_new_fields nf ON nf.userid = c.userid
+					WHERE l.refer_id > 0
+					  AND a.visit_status = 1
+					  AND a.appointment_date >= CONCAT($from_date_sql, ' 00:00:00')
+					  AND a.appointment_date <= CONCAT($to_date_sql, ' 23:59:59')
+					  $branch_filter
+				";
+				break;
+			case 'ref_reg':
+				$sql = "
+					SELECT DISTINCT c.userid, c.company AS patient_name, nf.mr_no, c.phonenumber  
+					FROM tblinvoices inv
+					JOIN tblitemable item ON item.rel_id = inv.id AND item.rel_type = 'invoice'
+					JOIN tblinvoicepaymentrecords pay ON pay.invoiceid = inv.id
+					JOIN tblcustomer_groups map ON map.customer_id = inv.clientid
+					JOIN tblclients c ON c.userid = inv.clientid
+					LEFT JOIN tblclients_new_fields nf ON nf.userid = c.userid
+					WHERE item.description <> 'Consultation Fee'
+					  AND inv.date >= $from_date_sql
+					  AND inv.date <= $to_date_sql
+					  $branch_filter
+				";
+				break;
+			default:
+				echo json_encode(['data' => []]);
+				exit;
+		}
+
+		$patients = $this->db->query($sql)->result_array();
+
+		$data = [];
+		foreach ($patients as $idx => $row) {
+			$data[] = [
+				$idx + 1,
+				$row['mr_no'],
+				'<a href="' . admin_url('client/index/' . $row['userid']) . '" target="_blank">' . $row['patient_name'] . '</a>',
+				$row['phonenumber']
+			];
+		}
+
+		echo json_encode(['data' => $data]);
 		exit;
 	}
 
