@@ -3247,6 +3247,30 @@ class Client extends AdminController
 		$data['title'] = _l($type);
 		$data['type'] = $type;
 		$data['category'] = $category;
+
+		// Override with POST data if available (from DataTables ajax)
+		if ($this->input->post('consulted_date')) {
+			$consulted_date = $this->input->post('consulted_date');
+		}
+		if ($this->input->post('consulted_to_date')) {
+			$consulted_to_date = $this->input->post('consulted_to_date');
+		}
+		if ($this->input->post('appointment_type')) {
+			$appointment_type = $this->input->post('appointment_type');
+		}
+		if ($this->input->post('branch')) {
+			$selected_branch_id = $this->input->post('branch');
+			if (is_array($selected_branch_id)) {
+				$selected_branch_id = implode(',', $selected_branch_id);
+			}
+		}
+		if ($this->input->post('doctor_id')) {
+			$doctor_id = $this->input->post('doctor_id');
+		}
+		if ($this->input->post('staff_id')) {
+			$staff_id = $this->input->post('staff_id');
+		}
+
 		$data['consulted_from_date'] = $consulted_date;
 		$data['consulted_to_date'] = $consulted_to_date;
 		$data['appointment_type_id'] = $appointment_type;

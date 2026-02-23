@@ -152,22 +152,15 @@
         if (!branchId) branchId = 'null';
 
         let doctorId = $('#doctor_id').val() || 'null';
+        let url = '<?= admin_url("client/reports/$type/1/"); ?>';
 
-        if (branchId === 'null' || !fromDate || !toDate) {
-            // Initialize empty datatable if filters are missing
-            initDataTable('.table-master_renewal_report', '', [1], [1]);
-            $('.table-master_renewal_report').DataTable().clear().draw();
-            return;
-        }
-
-        let url = '<?= admin_url("client/reports/$type/1/") ?>'
-            + fromDate + '/'
-            + toDate + '/'
-            + appointmentType + '/'
-            + branchId + '/'
-            + doctorId + '/null';
-
-        initDataTable('.table-master_renewal_report', url, [1], [1]);
+        initDataTable('.table-master_renewal_report', url, [1], [1], {
+            'consulted_date': '#consulted_date',
+            'consulted_to_date': '#consulted_to_date',
+            'appointment_type': '#appointment_type',
+            'branch': '#branch',
+            'doctor_id': '#doctor_id',
+        });
     });
 </script>
 
@@ -201,14 +194,16 @@
             let doctorId = $('#doctor_id').val() || 'null';
 
             if ($.fn.DataTable.isDataTable('.table-master_renewal_report')) {
-                $('.table-master_renewal_report').DataTable().ajax.url(
-                    '<?= admin_url("client/reports/$type/1/") ?>'
-                    + from + '/'
-                    + to + '/'
-                    + appointmentType + '/'
-                    + branchId + '/'
-                    + doctorId + '/null'
-                ).load();
+                $('.table-master_renewal_report').DataTable().ajax.reload();
+            } else {
+                let url = '<?= admin_url("client/reports/$type/1/"); ?>';
+                initDataTable('.table-master_renewal_report', url, [1], [1], {
+                    'consulted_date': '#consulted_date',
+                    'consulted_to_date': '#consulted_to_date',
+                    'appointment_type': '#appointment_type',
+                    'branch': '#branch',
+                    'doctor_id': '#doctor_id',
+                });
             }
         });
     });
