@@ -159,7 +159,6 @@
     $(function () {
         // Main report: load only on form submit with branch validation
         var gtTableInitialized = false;
-        var metricTable = null;
 
         $('#unitGTForm').on('submit', function (e) {
             e.preventDefault();
@@ -230,10 +229,8 @@
 
             // Show modal loading state
             $('#metricDetailsModal').modal('show');
-            if (metricTable !== null) {
-                metricTable.destroy();
-                $('#metricDetailsTable tbody').empty();
-            }
+            var $tbody = $('#metricDetailsTable tbody');
+            $tbody.html('<tr><td colspan="4" class="text-center">Loading Data...</td></tr>');
 
             $.post("<?= admin_url('client/get_gt_report_details') ?>", {
                 metric: metric,
@@ -244,13 +241,21 @@
                 "<?= $this->security->get_csrf_token_name() ?>": "<?= $this->security->get_csrf_hash() ?>"
             }, function (res) {
                 var data = JSON.parse(res);
-                metricTable = $('#metricDetailsTable').DataTable({
-                    data: data.data,
-                    destroy: true,
-                    paging: true,
-                    searching: true,
-                    info: true
-                });
+                $tbody.empty();
+                
+                if (data.data && data.data.length > 0) {
+                    $.each(data.data, function (index, row) {
+                        var tr = '<tr>' +
+                            '<td>' + row[0] + '</td>' +
+                            '<td>' + row[1] + '</td>' +
+                            '<td>' + row[2] + '</td>' +
+                            '<td>' + row[3] + '</td>' +
+                            '</tr>';
+                        $tbody.append(tr);
+                    });
+                } else {
+                    $tbody.html('<tr><td colspan="4" class="text-center">No records found.</td></tr>');
+                }
             });
         });
 
