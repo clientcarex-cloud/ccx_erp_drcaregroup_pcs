@@ -5,10 +5,10 @@ defined('BASEPATH') or exit('No direct script access allowed');
 $aColumns = ['name'];
 
 $sIndexColumn = 'id';
-$sTable       = db_prefix() . 'customers_groups';
+$sTable = db_prefix() . 'customers_groups';
 
-$result  = data_tables_init($aColumns, $sIndexColumn, $sTable, [], [], ['id']);
-$output  = $result['output'];
+$result = data_tables_init($aColumns, $sIndexColumn, $sTable, [], [], ['id']);
+$output = $result['output'];
 $rResult = $result['rResult'];
 
 foreach ($rResult as $aRow) {
@@ -24,10 +24,6 @@ foreach ($rResult as $aRow) {
         <i class="fa-regular fa-pen-to-square fa-lg"></i>
     </a>';
 
-    $options .= '<a href="' . admin_url('clients/delete_group/' . $aRow['id']) . '"
-    class="tw-text-neutral-500 hover:tw-text-neutral-700 focus:tw-text-neutral-700 _delete">
-        <i class="fa-regular fa-trash-can fa-lg"></i>
-    </a>';
     $options .= '</div>';
 
     $row[] = $options;
