@@ -41,24 +41,8 @@
 
                                     ?>
                                 </div>
-                                <div class="col-md-3">
-                                    <?php
-                                    $selected_doctor = $this->input->post('doctor_id') ?? [];
-                                    echo render_select(
-                                        'doctor_id[]', // Note the [] for multiple selection
-                                        $doctors,
-                                        ['staffid', ['firstname', 'lastname']],
-                                        _l('doctor'),
-                                        $selected_doctor,
-                                        [
-                                            'multiple' => true,
-                                            'data-actions-box' => true, // enables Select All / Deselect All
-                                            'data-none-selected-text' => _l('dropdown_non_selected_tex')
-                                        ]
-                                    );
-                                    ?>
 
-                                </div>
+
                                 <div class="col-md-2">
                                     <label><?php echo _l('from_date'); ?></label>
                                     <input class="form-control" type="date" id="consulted_date" name="consulted_date"
