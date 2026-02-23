@@ -45,6 +45,38 @@ $to_date_sql = "'" . $CI->db->escape_str($to_date) . "'";
 
 $currency_sql = $currency ? "'" . $CI->db->escape_str($currency) . "'" : "NULL";
 
+// Generate Branch Filter SQL for both queries
+$branch_filter_sql = '';
+if (!empty($branch_id)) {
+    if (is_array($branch_id)) {
+        // clean array
+        $branch_id = array_filter($branch_id, function($id) { return is_numeric($id); });
+        $branch_id = array_map('intval', $branch_id);
+    } else {
+        $branch_id = urldecode($branch_id);
+        $branch_id = explode(',', $branch_id);
+        $branch_id = array_filter($branch_id, function($id) { return is_numeric($id) && $id !== ''; });
+        $branch_id = array_map('intval', $branch_id);
+    }
+
+    if (!empty($branch_id)) {
+        $branch_filter_sql = ' AND cg.id IN (' . implode(',', $branch_id) . ') ';
+    }
+
+
+// Branch filter for invoice maps
+$branch_filter_map = '';
+// Branch filter for appointments
+$branch_filter_appt = '';
+
+if (!empty($branch_id)) {
+    $branch_filter_map = ' AND map.groupid IN (' . implode(',', $branch_id) . ') ';
+    $branch_filter_appt = ' AND a.branch_id IN (' . implode(',', $branch_id) . ') ';
+}
+
+}
+
+
 $page = $CI->input->get('page');
 
 if ($page === 'sub') {
@@ -654,6 +686,7 @@ if ($page === 'sub') {
                         CASE WHEN IFNULL(ref_reg_table.ref_reg, 0) = 0 THEN 0 ELSE ROUND(IFNULL(ref_money_table.ref_paid, 0) / ref_reg_table.ref_reg, 0) END AS ref_tv,
                         0 AS refund_amount
                     FROM tblcustomers_groups cg
+                    WHERE 1=1 " . $branch_filter_sql . "
                     LEFT JOIN (
                         SELECT map.groupid AS branch_id, SUM(pay.amount) AS gt
                         FROM tblcustomer_groups map
@@ -662,9 +695,10 @@ if ($page === 'sub') {
                         JOIN tblitemable item ON item.rel_id = inv.id AND item.rel_type = 'invoice'
                         WHERE item.description <> 'Consultation Fee'
                           AND ($from_date_sql IS NULL OR inv.date >= $from_date_sql)
-                          AND ($to_date_sql IS NULL OR inv.date <= $to_date_sql)
+                          AND ($to_date_sql IS NULL OR inv.date <= $to_date_sql) " . $branch_filter_map . "
                           AND ($from_date_sql IS NULL OR pay.date >= $from_date_sql)
                           AND ($to_date_sql IS NULL OR pay.date <= $to_date_sql)
+                        " . $branch_filter_map . "
                         GROUP BY map.groupid
                     ) gt_table ON gt_table.branch_id = cg.id
                     LEFT JOIN (
@@ -675,9 +709,10 @@ if ($page === 'sub') {
                         JOIN tblinvoicepaymentrecords pay ON pay.invoiceid = inv.id
                         WHERE item.description = 'Consultation Fee'
                           AND ($from_date_sql IS NULL OR inv.date >= $from_date_sql)
-                          AND ($to_date_sql IS NULL OR inv.date <= $to_date_sql)
+                          AND ($to_date_sql IS NULL OR inv.date <= $to_date_sql) " . $branch_filter_map . "
                           AND ($from_date_sql IS NULL OR pay.date >= $from_date_sql)
                           AND ($to_date_sql IS NULL OR pay.date <= $to_date_sql)
+                        " . $branch_filter_map . "
                         GROUP BY map.groupid
                     ) con_fee_table ON con_fee_table.branch_id = cg.id
                     LEFT JOIN (
@@ -686,7 +721,8 @@ if ($page === 'sub') {
                         WHERE a.visit_status = 1
                           AND a.appointment_type_id IN (18, 2)
                           AND ($from_date_sql IS NULL OR a.appointment_date >= CONCAT($from_date_sql, ' 00:00:00'))
-                          AND ($to_date_sql IS NULL OR a.appointment_date <= CONCAT($to_date_sql, ' 23:59:59'))
+                          AND ($to_date_sql IS NULL OR a.appointment_date <= CONCAT($to_date_sql, ' 23:59:59')) " . $branch_filter_appt . "
+                        " . $branch_filter_appt . "
                         GROUP BY a.branch_id
                     ) np_visit_table ON np_visit_table.branch_id = cg.id
                     LEFT JOIN (
@@ -700,9 +736,9 @@ if ($page === 'sub') {
                               AND a.appointment_type_id IN (18, 2)
                               AND item.description <> 'Consultation Fee'
                               AND ($from_date_sql IS NULL OR a.appointment_date >= CONCAT($from_date_sql, ' 00:00:00'))
-                              AND ($to_date_sql IS NULL OR a.appointment_date <= CONCAT($to_date_sql, ' 23:59:59'))
+                              AND ($to_date_sql IS NULL OR a.appointment_date <= CONCAT($to_date_sql, ' 23:59:59')) " . $branch_filter_appt . "
                               AND ($from_date_sql IS NULL OR inv.date >= $from_date_sql)
-                              AND ($to_date_sql IS NULL OR inv.date <= $to_date_sql)
+                              AND ($to_date_sql IS NULL OR inv.date <= $to_date_sql) " . $branch_filter_map . "
                         ) sub
                         GROUP BY sub.branch_id
                     ) np_reg_table ON np_reg_table.branch_id = cg.id
@@ -717,16 +753,16 @@ if ($page === 'sub') {
                               AND a.appointment_type_id IN (18, 2)
                               AND item.description <> 'Consultation Fee'
                               AND ($from_date_sql IS NULL OR a.appointment_date >= CONCAT($from_date_sql, ' 00:00:00'))
-                              AND ($to_date_sql IS NULL OR a.appointment_date <= CONCAT($to_date_sql, ' 23:59:59'))
+                              AND ($to_date_sql IS NULL OR a.appointment_date <= CONCAT($to_date_sql, ' 23:59:59')) " . $branch_filter_appt . "
                               AND ($from_date_sql IS NULL OR inv.date >= $from_date_sql)
-                              AND ($to_date_sql IS NULL OR inv.date <= $to_date_sql)
+                              AND ($to_date_sql IS NULL OR inv.date <= $to_date_sql) " . $branch_filter_map . "
                         ) sub
                         JOIN tblinvoices inv ON inv.clientid = sub.userid
                         JOIN tblinvoicepaymentrecords pay ON pay.invoiceid = inv.id
                         JOIN tblitemable item ON item.rel_id = inv.id AND item.rel_type = 'invoice'
                         WHERE item.description <> 'Consultation Fee'
                           AND ($from_date_sql IS NULL OR inv.date >= $from_date_sql)
-                          AND ($to_date_sql IS NULL OR inv.date <= $to_date_sql)
+                          AND ($to_date_sql IS NULL OR inv.date <= $to_date_sql) " . $branch_filter_map . "
                           AND ($from_date_sql IS NULL OR pay.date >= $from_date_sql)
                           AND ($to_date_sql IS NULL OR pay.date <= $to_date_sql)
                         GROUP BY sub.branch_id
@@ -742,14 +778,14 @@ if ($page === 'sub') {
                               AND a.appointment_type_id IN (18, 2)
                               AND item.description <> 'Consultation Fee'
                               AND ($from_date_sql IS NULL OR a.appointment_date >= CONCAT($from_date_sql, ' 00:00:00'))
-                              AND ($to_date_sql IS NULL OR a.appointment_date <= CONCAT($to_date_sql, ' 23:59:59'))
+                              AND ($to_date_sql IS NULL OR a.appointment_date <= CONCAT($to_date_sql, ' 23:59:59')) " . $branch_filter_appt . "
                         ) sub
                         JOIN tblinvoices inv ON inv.clientid = sub.userid
                         LEFT JOIN tblinvoicepaymentrecords pay ON pay.invoiceid = inv.id
                         JOIN tblitemable item ON item.rel_id = inv.id AND item.rel_type = 'invoice'
                         WHERE item.description <> 'Consultation Fee'
                           AND ($from_date_sql IS NULL OR inv.date >= $from_date_sql)
-                          AND ($to_date_sql IS NULL OR inv.date <= $to_date_sql)
+                          AND ($to_date_sql IS NULL OR inv.date <= $to_date_sql) " . $branch_filter_map . "
                           AND ($from_date_sql IS NULL OR pay.date >= $from_date_sql)
                           AND ($to_date_sql IS NULL OR pay.date <= $to_date_sql)
                         GROUP BY sub.branch_id
@@ -760,7 +796,8 @@ if ($page === 'sub') {
                         WHERE a.visit_status = 1
                           AND a.appointment_type_id IN (6, 11, 17, 24, 32)
                           AND ($from_date_sql IS NULL OR a.appointment_date >= CONCAT($from_date_sql, ' 00:00:00'))
-                          AND ($to_date_sql IS NULL OR a.appointment_date <= CONCAT($to_date_sql, ' 23:59:59'))
+                          AND ($to_date_sql IS NULL OR a.appointment_date <= CONCAT($to_date_sql, ' 23:59:59')) " . $branch_filter_appt . "
+                        " . $branch_filter_appt . "
                         GROUP BY a.branch_id
                     ) ren_visit_table ON ren_visit_table.branch_id = cg.id
                     LEFT JOIN (
@@ -774,7 +811,7 @@ if ($page === 'sub') {
                               AND a.appointment_type_id IN (6, 11, 17, 24, 32)
                               AND item.description <> 'Consultation Fee'
                               AND ($from_date_sql IS NULL OR a.appointment_date >= CONCAT($from_date_sql, ' 00:00:00'))
-                              AND ($to_date_sql IS NULL OR a.appointment_date <= CONCAT($to_date_sql, ' 23:59:59'))
+                              AND ($to_date_sql IS NULL OR a.appointment_date <= CONCAT($to_date_sql, ' 23:59:59')) " . $branch_filter_appt . "
                         ) sub
                         GROUP BY sub.branch_id
                     ) ren_reg_table ON ren_reg_table.branch_id = cg.id
@@ -786,14 +823,14 @@ if ($page === 'sub') {
                             WHERE a.visit_status = 1
                               AND a.appointment_type_id IN (6, 11, 17, 24, 32)
                               AND ($from_date_sql IS NULL OR a.appointment_date >= CONCAT($from_date_sql, ' 00:00:00'))
-                              AND ($to_date_sql IS NULL OR a.appointment_date <= CONCAT($to_date_sql, ' 23:59:59'))
+                              AND ($to_date_sql IS NULL OR a.appointment_date <= CONCAT($to_date_sql, ' 23:59:59')) " . $branch_filter_appt . "
                         ) visit
                         JOIN tblinvoices inv ON inv.clientid = visit.userid
                         LEFT JOIN tblinvoicepaymentrecords pay ON pay.invoiceid = inv.id
                         JOIN tblitemable item ON item.rel_id = inv.id AND item.rel_type = 'invoice'
                         WHERE item.description <> 'Consultation Fee'
                           AND ($from_date_sql IS NULL OR inv.date >= $from_date_sql)
-                          AND ($to_date_sql IS NULL OR inv.date <= $to_date_sql)
+                          AND ($to_date_sql IS NULL OR inv.date <= $to_date_sql) " . $branch_filter_map . "
                           AND ($from_date_sql IS NULL OR pay.date >= $from_date_sql)
                           AND ($to_date_sql IS NULL OR pay.date <= $to_date_sql)
                         GROUP BY visit.branch_id
@@ -805,12 +842,12 @@ if ($page === 'sub') {
                             FROM tblleads l
                             JOIN tblclients c ON c.leadid = l.id
                             JOIN tblcustomer_groups map ON map.customer_id = c.userid
-                            WHERE l.refer_id > 0
+                            WHERE l.refer_id > 0 " . $branch_filter_map . "
                         ) rc
                         JOIN tblappointment a ON a.userid = rc.userid
                         WHERE a.visit_status = 1
                           AND ($from_date_sql IS NULL OR a.appointment_date >= CONCAT($from_date_sql, ' 00:00:00'))
-                          AND ($to_date_sql IS NULL OR a.appointment_date <= CONCAT($to_date_sql, ' 23:59:59'))
+                          AND ($to_date_sql IS NULL OR a.appointment_date <= CONCAT($to_date_sql, ' 23:59:59')) " . $branch_filter_appt . "
                         GROUP BY rc.branch_id
                     ) ref_visit_table ON ref_visit_table.branch_id = cg.id
                     LEFT JOIN (
@@ -823,7 +860,7 @@ if ($page === 'sub') {
                             JOIN tblcustomer_groups map ON map.customer_id = inv.clientid
                             WHERE item.description <> 'Consultation Fee'
                               AND ($from_date_sql IS NULL OR inv.date >= $from_date_sql)
-                              AND ($to_date_sql IS NULL OR inv.date <= $to_date_sql)
+                              AND ($to_date_sql IS NULL OR inv.date <= $to_date_sql) " . $branch_filter_map . "
                         ) rc
                         GROUP BY rc.branch_id
                     ) ref_reg_table ON ref_reg_table.branch_id = cg.id
@@ -835,15 +872,17 @@ if ($page === 'sub') {
                         JOIN tblcustomer_groups map ON map.customer_id = inv.clientid
                         WHERE item.description <> 'Consultation Fee'
                           AND ($from_date_sql IS NULL OR inv.date >= $from_date_sql)
-                          AND ($to_date_sql IS NULL OR inv.date <= $to_date_sql)
+                          AND ($to_date_sql IS NULL OR inv.date <= $to_date_sql) " . $branch_filter_map . "
                           AND ($from_date_sql IS NULL OR pay.date >= $from_date_sql)
                           AND ($to_date_sql IS NULL OR pay.date <= $to_date_sql)
+                        " . $branch_filter_map . "
                         GROUP BY map.groupid
                     ) ref_money_table ON ref_money_table.branch_id = cg.id
                 ) metrics
                 LEFT JOIN (
                     SELECT cg.id AS branch_id, COALESCE(SUM(pr.amount), 0) AS payments_received
                     FROM tblcustomers_groups cg
+                    WHERE 1=1 " . $branch_filter_sql . "
                     LEFT JOIN tblcustomer_groups map ON map.groupid = cg.id
                     LEFT JOIN tblinvoices inv ON inv.clientid = map.customer_id
                     LEFT JOIN tblinvoicepaymentrecords pr ON pr.invoiceid = inv.id
