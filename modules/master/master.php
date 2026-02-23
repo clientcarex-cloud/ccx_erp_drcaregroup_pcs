@@ -51,12 +51,12 @@ function master_init_menu_items()
 			'position' => 4,
 		]);
 
-		/* $CI->app_menu->add_sidebar_children_item('master', [
-			'slug'     => 'branch',
-			'name'     => _l('Branch'),
-			'href'     => admin_url('master/branch'),
+		$CI->app_menu->add_sidebar_children_item('master', [
+			'slug'     => 'branches',
+			'name'     => 'Branches',
+			'href'     => admin_url('clients/groups'),
 			'position' => 5,
-		]); */
+		]);
 
 		/* $CI->app_menu->add_sidebar_children_item('master', [
 			'slug'     => 'assign_doctor',
