@@ -9,80 +9,6 @@
     .tw-bg-white {
         --tw-bg-opacity: 1 !important;
     }
-
-    .summary-card {
-        position: relative;
-        display: flex;
-        align-items: flex-start;
-        justify-content: space-between;
-        gap: 12px;
-        background: #ffffff;
-        border: 1px solid rgba(15, 23, 42, 0.08);
-        border-radius: 12px;
-        padding: 14px 16px;
-        box-shadow: 0 3px 8px rgba(15, 23, 42, 0.05);
-        cursor: pointer;
-        transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
-        --card-accent: #2563eb;
-        --card-accent-rgb: 37, 99, 235;
-    }
-
-    .summary-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
-    }
-
-    .summary-card:focus-visible {
-        outline: 3px solid rgba(var(--card-accent-rgb), 0.35);
-        outline-offset: 2px;
-    }
-
-    .summary-card__content {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-    }
-
-    .summary-card__count {
-        font-size: 20px;
-        font-weight: 600;
-        color: #111827;
-        line-height: 1.2;
-    }
-
-    .summary-card__label {
-        font-size: 13px;
-        font-weight: 500;
-        color: #6b7280;
-        letter-spacing: 0.02em;
-    }
-
-    .summary-card__indicator {
-        align-self: center;
-        width: 12px;
-        height: 12px;
-        border-radius: 999px;
-        background-color: rgba(var(--card-accent-rgb), 0.18);
-        box-shadow: 0 0 0 4px rgba(var(--card-accent-rgb), 0.12);
-        transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
-    }
-
-    .summary-card.is-active {
-        border-color: var(--card-accent);
-        background: linear-gradient(135deg, rgba(var(--card-accent-rgb), 0.1), #ffffff);
-        box-shadow: 0 18px 30px rgba(var(--card-accent-rgb), 0.28);
-    }
-
-    .summary-card.is-active .summary-card__indicator {
-        transform: scale(1.25);
-        background-color: var(--card-accent);
-        box-shadow: 0 0 0 6px rgba(var(--card-accent-rgb), 0.2);
-    }
-
-    .summary-card.is-active .summary-card__count,
-    .summary-card.is-active .summary-card__label {
-        color: var(--card-accent);
-    }
 </style>
 
 <div id="wrapper">
@@ -97,11 +23,7 @@
                         <hr class="hr-panel-heading" />
                         <div class="clearfix"></div>
 
-                        <div id="appointmentSummaryCards"
-                            class="tw-grid tw-grid-cols-2 md:tw-grid-cols-3 lg:tw-grid-cols-6 tw-gap-2 mb-4">
-                            <!-- Filled via JS -->
-                        </div>
-                        <br>
+
 
                         <div class="row">
                             <?php
@@ -201,10 +123,7 @@
                             _l('appointment_type'),
                             _l('branch'),
                             _l('registration_end_date'),
-                            _l('consultation_fee'),
-                            _l('payment_status'),
-                            _l('action'),
-                        ], 'doctor-appointments'); ?>
+                        ], 'doctor-appointments custom-excel-table'); ?>
 
                     </div>
                 </div>
@@ -216,75 +135,6 @@
 <?php init_tail(); ?>
 
 <script>
-    const buildSummaryCard = (count, label, filter, accentHex, accentRgb) => `
-    <div class="summary-card tw-flex tw-items-start" data-filter="${filter}" role="button" tabindex="0" aria-pressed="false" style="--card-accent:${accentHex}; --card-accent-rgb:${accentRgb};">
-        <div class="summary-card__content">
-            <span class="summary-card__count">${count}</span>
-            <span class="summary-card__label">${label}</span>
-        </div>
-        <span class="summary-card__indicator" aria-hidden="true"></span>
-    </div>
-`;
-
-    let activeAppointmentSummaryFilter = null;
-
-    function loadAppointmentSummary(from_date = '', to_date = '', enquiry_doctor_id = '', branch_id = '', appointment_type_id = '') {
-        $.ajax({
-            url: admin_url + 'client/get_appointment_summary',
-            type: 'POST',
-            data: {
-                from_date: from_date,
-                to_date: to_date,
-                enquiry_doctor_id: enquiry_doctor_id,
-                branch_id: branch_id,
-                appointment_type_id: appointment_type_id,
-            },
-            dataType: 'json',
-            success: function (res) {
-                $('#appointmentSummaryCards').html([
-                    buildSummaryCard(res.total, '<?= _l('appointments'); ?>', 'all', '#2563eb', '37, 99, 235'),
-                    buildSummaryCard(res.missed, '<?= _l('missed'); ?>', 'missed', '#ef4444', '239, 68, 68'),
-                    buildSummaryCard(res.consulted, '<?= _l('consulted'); ?>', 'consulted', '#10b981', '16, 185, 129')
-                ].join(''));
-
-                const $cards = $('#appointmentSummaryCards .summary-card');
-
-                if (activeAppointmentSummaryFilter) {
-                    const $activeCard = $cards.filter('[data-filter="' + activeAppointmentSummaryFilter + '"]');
-                    if ($activeCard.length) {
-                        $activeCard.addClass('is-active').attr('aria-pressed', 'true');
-                    }
-                }
-
-                $cards.on('click', function () {
-                    const $card = $(this);
-                    const filterType = $card.data('filter');
-                    const from = $('#consulted_date').val();
-                    const to = $('#consulted_to_date').val();
-                    const doctor_id = $('#enquiry_doctor_id').val();
-                    const branch_val = $('#appointment_branch_id').val();
-                    const appointment_type_id_val = $('#appointment_type_id').val();
-
-                    $cards.removeClass('is-active').attr('aria-pressed', 'false');
-                    $card.addClass('is-active').attr('aria-pressed', 'true');
-                    activeAppointmentSummaryFilter = filterType;
-
-                    if ($.fn.DataTable.isDataTable('.table-doctor-appointments')) {
-                        let table = $('.table-doctor-appointments').DataTable();
-                        table.settings()[0].ajax.data = function (d) {
-                            d.from_date = from;
-                            d.to_date = to;
-                            d.enquiry_doctor_id = doctor_id;
-                            d.branch_id = branch_val;
-                            d.summary_filter = filterType;
-                            d.appointment_type_id = appointment_type_id_val;
-                        };
-                        table.ajax.reload();
-                    }
-                });
-            }
-        });
-    }
 
     $(document).ready(function () {
 
@@ -294,7 +144,6 @@
         let appointment_type_id = $('#appointment_type_id').val() || '0';
         let branch_id = $('#appointment_branch_id').val() || '0';
 
-        loadAppointmentSummary(from, to, enquiry_doctor_id, branch_id, appointment_type_id);
 
         var url = `<?= admin_url("client/reports/doctor_appointments/null/") ?>${from}/${to}/${enquiry_doctor_id}/All/${branch_id}/0/${appointment_type_id}`;
 
@@ -314,9 +163,6 @@
 
             let visit_status = $('#appointment_status option:selected').text().trim();
             visit_status = visit_status && visit_status !== 'Select Response' ? visit_status.replace(/\s+/g, '_') : 'All';
-
-            activeAppointmentSummaryFilter = null;
-            loadAppointmentSummary(from, to, enquiry_doctor_id, branch_id, appointment_type_id);
 
             if ($.fn.DataTable.isDataTable('.table-doctor-appointments')) {
                 const newUrl = `<?= admin_url("client/reports/doctor_appointments/null/") ?>${from}/${to}/${enquiry_doctor_id}/${visit_status}/${branch_id}/0/${appointment_type_id}`;

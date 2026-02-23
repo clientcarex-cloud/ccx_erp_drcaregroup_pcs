@@ -209,48 +209,6 @@ foreach ($results as $aRow) {
     $row[] = _d($aRow['registration_end_date']);
     //$row[] = $aRow['enquiry_type_name'];
 
-    $total = $check_payment->total ?? 0;
-    $paid  = $check_payment->paid_amount ?? 0;
-    $due   = $total - $paid;
-
-    $row[] = $total;
-    $row[] = ($due > 0)
-    ? format_invoice_status_custom($check_payment->status) . " (₹" . number_format($due) . ")"
-    : format_invoice_status_custom($check_payment->status);
-
-
-    // Actions
-    $action = '';
-    $appointmentDate = date('Y-m-d', strtotime($aRow['appointment_date']));
-    $today = date('Y-m-d');
-    $status_key = ($aRow['visit_status'] == 1) ? '1' : (($appointmentDate < $today) ? 'missed' : (($appointmentDate > $today) ? 'upcoming' : 'today'));
-	
-    if ($aRow['visit_status'] != 1 && $appointmentDate == $today && (($check_payment->status ?? null) == 2 || $aRow['consultation_fee_id'] == 0 || $due == 0)) {
-        if (staff_can('confirm_visit', 'customers')) {
-            $action .= '<a href="javascript:void(0);" onclick="confirmBooking(' . $aRow['appointment_id'] . ')" class="btn btn-warning btn-sm text-white" style="color: #fff">Confirm Visit</a> ';
-        }
-    }
-
-    if ($due > 0 && isset($check_payment->id)) {
-        $action .= '<button type="button" class="btn btn-success btn-sm" onclick="showPaymentForm(' . $check_payment->id . ')">Pay</button> ';
-    }
-
-    $more = '<div class="btn-group">
-        <button type="button" class="btn btn-default btn-sm dropdown-toggle" data-toggle="dropdown">More <span class="caret"></span></button>
-        <ul class="dropdown-menu dropdown-menu-right">';
-
-    if (($check_payment->paid_amount ?? 0) > 0 && isset($check_payment->payment_id)) {
-        $more .= '<li><a href="' . admin_url('payments/pdf/' . $check_payment->payment_id . '?print=true') . '" target="_blank"><i class="fa fa-print"></i> Payment Slip</a></li>';
-    }
-
-    if ($status_key != '1') {
-        $more .= '<li><a href="' . admin_url('client/edit_appointment/' . $aRow['appointment_id']) . '"><i class="fa fa-user-md"></i> Change Doctor</a></li>';
-    }
-
-    $more .= '</ul></div>';
-    $action .= $more;
-    //$row[] = ($due > 0 ? 'Due - ₹' . number_format($due) . ' - ' : '') . $action;
-    $row[] = $action;
 
     $output['aaData'][] = $row;
 }
