@@ -129,43 +129,35 @@
 
 <script>
     $(function () {
-        var gtTableInitialized = false;
         var urlParams = new URLSearchParams(window.location.search);
         var isSubPage = urlParams.get('page') === 'sub';
+        var baseUrl = '<?= admin_url("client/reports/gt_report") ?>';
 
-        function reloadUnitGTReport() {
-            var url = '<?= admin_url("client/reports/gt_report") ?>';
-
-            if (isSubPage) {
-                url += window.location.search;
-            }
-
-            var formData = $('#unitGTForm').serialize();
-
-            if (gtTableInitialized && $.fn.DataTable.isDataTable('.table-unit-gt-report')) {
-                var dt = $('.table-unit-gt-report').DataTable();
-                dt.ajax.url(url + (url.indexOf('?') !== -1 ? '&' : '?') + formData).load();
-            } else {
-                initDataTable('.table-unit-gt-report', url + (url.indexOf('?') !== -1 ? '&' : '?') + formData, [0], [0]);
-                gtTableInitialized = true;
-            }
-        }
-
-        // Auto-load for sub-page (filters come from URL)
         if (isSubPage) {
-            reloadUnitGTReport();
-        }
+            // Sub-page: auto-load using only URL query params (filters_sub already in URL)
+            initDataTable('.table-unit-gt-report', baseUrl + window.location.search, [0], [0]);
+        } else {
+            // Main report: load only on form submit
+            var gtTableInitialized = false;
 
-        // On form submit only for main report
-        $('#unitGTForm').on('submit', function (e) {
-            e.preventDefault();
-            var branches = $('[name="branch[]"]').val();
-            if (!branches || branches.length === 0) {
-                alert_float('warning', 'Please select at least one branch.');
-                return;
-            }
-            reloadUnitGTReport();
-        });
+            $('#unitGTForm').on('submit', function (e) {
+                e.preventDefault();
+                var branches = $('[name="branch[]"]').val();
+                if (!branches || branches.length === 0) {
+                    alert_float('warning', 'Please select at least one branch.');
+                    return;
+                }
+                var formData = $(this).serialize();
+                var ajaxUrl = baseUrl + '?' + formData;
+
+                if (gtTableInitialized && $.fn.DataTable.isDataTable('.table-unit-gt-report')) {
+                    $('.table-unit-gt-report').DataTable().ajax.url(ajaxUrl).load();
+                } else {
+                    initDataTable('.table-unit-gt-report', ajaxUrl, [0], [0]);
+                    gtTableInitialized = true;
+                }
+            });
+        }
     });
 
 </script>
