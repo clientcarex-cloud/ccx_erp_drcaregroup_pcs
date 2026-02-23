@@ -59,7 +59,7 @@
                                 <div class="col-md-3">
                                     <label for="branch" class="control-label"><?= _l('branch'); ?></label>
                                     <select name="branch" id="branch" class="selectpicker" multiple data-width="100%"
-                                        data-none-selected-text="<?= _l('all_branches'); ?>">
+                                        data-none-selected-text="<?= _l('all_branches'); ?>" data-actions-box="true">
                                         <?php foreach ($branch as $b) { ?>
                                             <option value="<?= $b['id']; ?>" <?= (in_array($b['id'], $selected_branch_id) ? 'selected' : ''); ?>><?= $b['name']; ?></option>
                                         <?php } ?>
