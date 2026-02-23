@@ -10,7 +10,7 @@ class Mis_reports extends AdminController
         $this->load->model('client/master_model');
         $this->load->model('client/doctor_model');
         $this->load->model('client/staff_model');
-        $this->load->helper('custom'); // loads custom_helper.php
+        $this->load->helper('client/custom'); // loads custom_helper.php from client module
     }
 
     public function index()
