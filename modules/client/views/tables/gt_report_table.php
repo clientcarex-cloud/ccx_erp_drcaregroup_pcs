@@ -861,22 +861,28 @@ if ($page === 'sub') {
         ";
 }
 
+$draw = (int) ($CI->input->post('draw') ?? 1);
+$result = $CI->db->query($sql)->result_array();
+$total = count($result);
+
 $output = [
+  'draw' => $draw,
+  'recordsTotal' => $total,
+  'recordsFiltered' => $total,
   'data' => []
 ];
 
-$result = $CI->db->query($sql)->result_array();
-
 // Format data for DataTable
 if ($page === 'sub') {
+  $i = 1;
   foreach ($result as $row) {
     $output['data'][] = [
-      $row['S.No'],
+      $i++,
       $row['Patient ID'],
       $row['Patient Name'],
       $row['Mobile'],
       $row['Category'],
-      $row['Amount'],
+      number_format((float) $row['Amount'], 0),
     ];
   }
 } else {
