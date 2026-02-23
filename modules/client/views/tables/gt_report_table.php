@@ -52,6 +52,7 @@ $sql = "
         SELECT *
         FROM (
                 SELECT
+                final.branch_id AS `branch_id`,
                 final.branch_label AS `Branch`,
                 CAST(ROUND(IFNULL(final.gt, 0), 0) AS SIGNED) AS `GT`,
                 CAST(ROUND(IFNULL(final.prog, 0), 0) AS SIGNED) AS `PROG`,

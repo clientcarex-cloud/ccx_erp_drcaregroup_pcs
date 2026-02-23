@@ -4,6 +4,15 @@
     .swal2-popup {
         font-size: 1.6rem !important;
     }
+    .metric-drilldown {
+        color: #03a9f4;
+        font-weight: bold;
+        text-decoration: none;
+    }
+    .metric-drilldown:hover {
+        color: #0288d1;
+        text-decoration: underline;
+    }
 </style>
 
 <?php
@@ -206,6 +215,7 @@
             e.preventDefault();
             var metric = $(this).data('metric');
             var branchId = $(this).data('branch'); // Can be empty if clicked from Grand Total row
+            var selectedBranches = $('[name="branch[]"]').val(); // Fallback for Grand Total row
             var fromDate = $('#consulted_date').val();
             var toDate = $('#consulted_to_date').val();
             var metricName = $(this).closest('td, th').index(); // Attempt to get column index for title
@@ -228,6 +238,7 @@
             $.post("<?= admin_url('client/get_gt_report_details') ?>", {
                 metric: metric,
                 branch_id: branchId,
+                branches: selectedBranches,
                 from_date: fromDate,
                 to_date: toDate,
                 "<?= $this->security->get_csrf_token_name() ?>": "<?= $this->security->get_csrf_hash() ?>"

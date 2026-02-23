@@ -3526,6 +3526,7 @@ class Client extends AdminController
 
 		$metric = $this->input->post('metric');
 		$branch_id = $this->input->post('branch_id');
+		$branches = $this->input->post('branches'); // For Grand Total logic
 		$from_date = $this->input->post('from_date');
 		$to_date = $this->input->post('to_date');
 
@@ -3538,8 +3539,13 @@ class Client extends AdminController
 		$to_date_sql = "'" . $this->db->escape_str($to_date) . "'";
 
 		$branch_filter = "";
-		if (is_numeric($branch_id)) {
+		if (is_numeric($branch_id) && $branch_id > 0) {
 			$branch_filter = " AND map.groupid = " . (int) $branch_id;
+		} elseif (!empty($branches) && is_array($branches)) {
+			$clean_branches = array_filter(array_map('intval', $branches), 'is_numeric');
+			if (!empty($clean_branches)) {
+				$branch_filter = " AND map.groupid IN (" . implode(',', $clean_branches) . ")";
+			}
 		}
 
 		$sql = "";
