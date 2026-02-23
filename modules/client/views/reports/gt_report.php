@@ -130,13 +130,41 @@
 
             var from = $('#consulted_date').val();
             var to = $('#consulted_to_date').val();
-            var branchParam = branches.map(function(b) { return 'branch[]=' + encodeURIComponent(b); }).join('&');
+            var branchParam = branches.map(function (b) { return 'branch[]=' + encodeURIComponent(b); }).join('&');
             var ajaxUrl = '<?= admin_url("client/reports/" . $type . "/1/") ?>' + from + '/' + to + '?' + branchParam;
 
-            if (gtTableInitialized && $.fn.DataTable.isDataTable('.table-unit-gt-report')) {
-                $('.table-unit-gt-report').DataTable().ajax.url(ajaxUrl).load();
+            var tableSelector = '.table-unit-gt-report';
+            var $table = $(tableSelector);
+
+            if (gtTableInitialized && $.fn.DataTable.isDataTable(tableSelector)) {
+                $table.DataTable().ajax.url(ajaxUrl).load();
             } else {
-                initDataTable('.table-unit-gt-report', ajaxUrl, [0], [0]);
+                // Ensure tfoot exists for the totals row before initializing Datatable
+                if ($table.find('tfoot').length === 0) {
+                    var tfootHtml = '<tfoot><tr>';
+                    var numCols = $table.find('thead th').length;
+                    for (var i = 0; i < numCols; i++) {
+                        tfootHtml += '<th></th>';
+                    }
+                    tfootHtml += '</tr></tfoot>';
+                    $table.append(tfootHtml);
+                }
+
+                initDataTable(tableSelector, ajaxUrl, [0], [0]);
+
+                // Add an event listener to capture totals from the server response
+                $table.on('xhr.dt', function (e, settings, json, xhr) {
+                    if (json && json.totals) {
+                        var $tfoot = $table.find('tfoot tr');
+                        // Ensure we wait for the table draw to finish before manipulating the layout
+                        setTimeout(function () {
+                            $.each(json.totals, function (index, value) {
+                                $tfoot.find('th').eq(index).html(value);
+                            });
+                        }, 100);
+                    }
+                });
+
                 gtTableInitialized = true;
             }
         });

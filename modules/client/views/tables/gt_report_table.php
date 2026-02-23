@@ -37,18 +37,18 @@ $currency_sql = $currency ? "'" . $CI->db->escape_str($currency) . "'" : "NULL";
 
 // Removed sub-page SQL. Always run main report logic.
 // If no branches selected, return empty result
-  
-  // Main Report Logic
-  // If no branches selected, return empty result
-  if (empty($branch_id) || !is_array($branch_id)) {
-    $output = ['data' => []];
-    header('Content-Type: application/json');
-    echo json_encode($output);
-    exit;
-  }
 
-  // Main Report Logic
-  $sql = "
+// Main Report Logic
+// If no branches selected, return empty result
+if (empty($branch_id) || !is_array($branch_id)) {
+  $output = ['data' => []];
+  header('Content-Type: application/json');
+  echo json_encode($output);
+  exit;
+}
+
+// Main Report Logic
+$sql = "
         SELECT *
         FROM (
                 SELECT
@@ -359,8 +359,52 @@ $output = [
   'data' => []
 ];
 
+// Initialize totals array
+$totals = [
+  'gt' => 0,
+  'prog' => 0,
+  'np_visit' => 0,
+  'np_reg' => 0,
+  'con_fee' => 0,
+  'np_paid' => 0,
+  'enq_gt' => 0,
+  'enq_due' => 0,
+  'ren_visited' => 0,
+  'ren_registered' => 0,
+  'ren_paid' => 0,
+  'ren_due' => 0,
+  'ren_gt' => 0,
+  'ref_visited' => 0,
+  'ref_reg' => 0,
+  'ref_paid' => 0,
+  'ref_due' => 0,
+  'ref_gt' => 0,
+  'refund_amount' => 0
+];
+
 // Format data for DataTable (main report only)
 foreach ($result as $row) {
+  // Accumulate sums
+  $totals['gt'] += (int) $row['GT'];
+  $totals['prog'] += (int) $row['PROG'];
+  $totals['np_visit'] += (int) $row['NP Visit'];
+  $totals['np_reg'] += (int) $row['NP Registration'];
+  $totals['con_fee'] += (int) $row['Consultation Fee'];
+  $totals['np_paid'] += (int) $row['NP Paid'];
+  $totals['enq_gt'] += (int) $row['Enquiry Projection'];
+  $totals['enq_due'] += (int) $row['Enquiry Due'];
+  $totals['ren_visited'] += (int) $row['Renewal Visits'];
+  $totals['ren_registered'] += (int) $row['Renewals'];
+  $totals['ren_paid'] += (int) $row['Renewal Paid'];
+  $totals['ren_due'] += (int) $row['Renewal Due'];
+  $totals['ren_gt'] += (int) $row['Renewal Projection'];
+  $totals['ref_visited'] += (int) $row['Referral Visits'];
+  $totals['ref_reg'] += (int) $row['Referral Registrations'];
+  $totals['ref_paid'] += (int) $row['Referral Paid'];
+  $totals['ref_due'] += (int) $row['Referral Due'];
+  $totals['ref_gt'] += (int) $row['Referral Projection'];
+  $totals['refund_amount'] += (int) $row['Refund Amount'];
+
   $output['data'][] = [
     $row['Branch'],
     $row['GT'],
@@ -390,6 +434,43 @@ foreach ($result as $row) {
     $row['Refund Amount'],
   ];
 }
+
+// Calculate percentages and ticket values correctly for the totals row
+$total_reg_percent = ($totals['np_visit'] > 0) ? round(($totals['np_reg'] / $totals['np_visit']) * 100) : 0;
+$total_enq_tv = ($totals['np_reg'] > 0) ? round(($totals['con_fee'] + $totals['np_paid']) / $totals['np_reg']) : 0;
+$total_ren_percent = ($totals['ren_visited'] > 0) ? round(($totals['ren_registered'] / $totals['ren_visited']) * 100) : 0;
+$total_ren_tv = ($totals['ren_registered'] > 0) ? round($totals['ren_paid'] / $totals['ren_registered']) : 0;
+$total_ref_percent = ($totals['ref_visited'] > 0) ? round(($totals['ref_reg'] / $totals['ref_visited']) * 100) : 0;
+$total_ref_tv = ($totals['ref_reg'] > 0) ? round($totals['ref_paid'] / $totals['ref_reg']) : 0;
+
+$output['totals'] = [
+  '<strong>Grand Total</strong>',
+  '<strong>' . $totals['gt'] . '</strong>',
+  '<strong>' . $totals['prog'] . '</strong>',
+  '<strong>' . $totals['np_visit'] . '</strong>',
+  '<strong>' . $totals['np_reg'] . '</strong>',
+  '<strong>' . $total_reg_percent . '</strong>',
+  '<strong>' . $totals['con_fee'] . '</strong>',
+  '<strong>' . $totals['np_paid'] . '</strong>',
+  '<strong>' . $totals['enq_gt'] . '</strong>',
+  '<strong>' . $totals['enq_due'] . '</strong>',
+  '<strong>' . $total_enq_tv . '</strong>',
+  '<strong>' . $totals['ren_visited'] . '</strong>',
+  '<strong>' . $totals['ren_registered'] . '</strong>',
+  '<strong>' . $total_ren_percent . '</strong>',
+  '<strong>' . $totals['ren_paid'] . '</strong>',
+  '<strong>' . $totals['ren_due'] . '</strong>',
+  '<strong>' . $totals['ren_gt'] . '</strong>',
+  '<strong>' . $total_ren_tv . '</strong>',
+  '<strong>' . $totals['ref_visited'] . '</strong>',
+  '<strong>' . $totals['ref_reg'] . '</strong>',
+  '<strong>' . $total_ref_percent . '</strong>',
+  '<strong>' . $totals['ref_paid'] . '</strong>',
+  '<strong>' . $totals['ref_due'] . '</strong>',
+  '<strong>' . $totals['ref_gt'] . '</strong>',
+  '<strong>' . $total_ref_tv . '</strong>',
+  '<strong>' . $totals['refund_amount'] . '</strong>',
+];
 
 header('Content-Type: application/json');
 echo json_encode($output);
