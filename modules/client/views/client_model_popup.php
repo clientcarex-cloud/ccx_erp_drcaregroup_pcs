@@ -541,7 +541,7 @@ $(document).on('click', '.update-status', function () {
 			if($callback_url){
 				if($should_close_tab){
 					?>
-					<a href="#" onclick="window.close();">
+					<a href="#" onclick="location.reload();">
 						<button type="button" class="btn btn-secondary btn-sm close close-button">
 						<span aria-hidden="true">&times;</span>
 					</button>

@@ -3353,6 +3353,8 @@ class Client extends AdminController
 			return $CI->db->get(db_prefix() . 'counter')->row(); // returns single row (object)
 		}
 
+		$statuses = $this->leads_model->get_status();
+
 		if ($id && $id != 'NULL') {
 			$this->load->model('leads_model');
 			$this->load->model('currencies_model');
@@ -3461,6 +3463,7 @@ class Client extends AdminController
 					'expirydate' => $estimate->expirydate,
 				];
 			}
+			$callback_url = "reports/" . $type;
 			$home_branch_id = $this->client_model->get_client_branch($id);
 			$branch = $this->client_model->get_branch();
 			// Pass the data to the view
