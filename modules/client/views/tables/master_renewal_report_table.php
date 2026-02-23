@@ -32,6 +32,11 @@ $totals = [
     'ry_due_due_amount' => 0,
 ];
 
+if (empty($selected_branch_id)) {
+    echo json_encode(['data' => []]);
+    exit;
+}
+
 // Get all branches
 $CI->db->select('id, name');
 if (!empty($selected_branch_id)) {
@@ -93,10 +98,6 @@ foreach ($branches as $branch) {
             ->where('inv.date <=', $to_date)
             ->where('item.description !=', 'Consultation Fee')
             ->where_in('inv.clientid', $customer_ids);
-
-        if (!empty($staff_id_filter)) {
-            $CI->db->where_in('inv.sale_agent', $staff_id_filter);
-        }
 
         // Include previous duedate in selection for active/inactive calc
         $CI->db->select('T_prev.previous_duedate');

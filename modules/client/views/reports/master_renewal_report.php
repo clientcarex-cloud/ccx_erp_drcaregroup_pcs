@@ -66,17 +66,6 @@
                                     </select>
                                 </div>
 
-                                <!-- Staff -->
-                                <div class="col-md-3">
-                                    <label for="staff_id" class="control-label"><?= _l('staff'); ?></label>
-                                    <select name="staff_id" id="staff_id" class="selectpicker" multiple
-                                        data-width="100%" data-none-selected-text="<?= _l('all_staff'); ?>">
-                                        <?php foreach ($staff as $s) { ?>
-                                            <option value="<?= $s['staffid']; ?>" <?= (isset($staff_id_filter) && in_array($s['staffid'], $staff_id_filter) ? 'selected' : ''); ?>>
-                                                <?= $s['firstname'] . ' ' . $s['lastname']; ?></option>
-                                        <?php } ?>
-                                    </select>
-                                </div>
 
                                 <!-- Submit -->
                                 <div class="col-md-2">
@@ -164,18 +153,12 @@
 
         let doctorId = $('#doctor_id').val() || 'null';
 
-        // Staff
-        let staffId = $('#staff_id').val();
-        if (Array.isArray(staffId)) staffId = staffId.join(',');
-        if (!staffId) staffId = 'null';
-
         let url = '<?= admin_url("client/reports/$type/1/") ?>'
             + fromDate + '/'
             + toDate + '/'
             + appointmentType + '/'
             + branchId + '/'
-            + doctorId + '/'
-            + staffId;
+            + doctorId + '/null';
 
         initDataTable('.table-master_renewal_report', url, [1], [1]);
     });
@@ -198,11 +181,12 @@
             if (Array.isArray(branchId)) branchId = branchId.join(',');
             if (!branchId) branchId = 'null';
 
-            let doctorId = $('#doctor_id').val() || 'null';
+            if (branchId === 'null') {
+                alert_float('warning', 'Please select at least one branch.');
+                return;
+            }
 
-            let staffId = $('#staff_id').val();
-            if (Array.isArray(staffId)) staffId = staffId.join(',');
-            if (!staffId) staffId = 'null';
+            let doctorId = $('#doctor_id').val() || 'null';
 
             if ($.fn.DataTable.isDataTable('.table-master_renewal_report')) {
                 $('.table-master_renewal_report').DataTable().ajax.url(
@@ -211,8 +195,7 @@
                     + to + '/'
                     + appointmentType + '/'
                     + branchId + '/'
-                    + doctorId + '/'
-                    + staffId
+                    + doctorId + '/null'
                 ).load();
             }
         });
