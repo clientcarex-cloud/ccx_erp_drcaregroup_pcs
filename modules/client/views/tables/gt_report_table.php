@@ -4,9 +4,13 @@ defined('BASEPATH') or exit('No direct script access allowed');
 
 $CI = &get_instance();
 
-// ---- Filters (support both GET and POST since form serialize sends as GET) ----
+// ---- Filters (support GET params, POST, and controller-passed variables) ----
 $from_date = $CI->input->get_post('consulted_date');
+if (!$from_date && isset($consulted_from_date))
+  $from_date = $consulted_from_date;
 $to_date = $CI->input->get_post('consulted_to_date');
+if (!$to_date && isset($consulted_to_date))
+  $to_date = $consulted_to_date;
 $branch_id = $CI->input->get_post('branch'); // Array of branch IDs from multi-select
 $currency = $CI->input->get_post('currency');
 
