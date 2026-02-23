@@ -139,6 +139,8 @@
 
 							// NEW
 							$mis_sections['Other Reports'][] = ['Master Renewal Report', 'v3, Master Renewal Report', admin_url('client/reports/master_renewal_report')];
+
+							$mis_sections['Other Reports'][] = ['Doctor Appointments', 'Doctor Appointments', admin_url('client/reports/doctor_appointments')];
 						}
 
 						if (staff_can('manager_reports', 'customers')) {
