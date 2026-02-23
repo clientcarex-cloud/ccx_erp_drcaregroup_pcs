@@ -59,7 +59,7 @@
                                     value="<?= date('Y-m-d'); ?>" required>
                             </div>
                             <div class="col-md-3">
-                                <?= render_select('appointment_type_id', $appointment_type, ['appointment_type_id', 'appointment_type_name'], _l('appointment_type') . '*', '', ['data-none-selected-text' => _l('dropdown_non_selected_tex'), 'required' => 'required']) ?>
+                                <?= render_select('appointment_type_id', $appointment_type, ['appointment_type_id', 'appointment_type_name'], _l('appointment_type'), '', ['data-none-selected-text' => _l('dropdown_non_selected_tex')]) ?>
                             </div>
 
                             <?php if (count($final_doctor_list) > 0 && count($final_doctor_list) != 1): ?>
@@ -68,12 +68,9 @@
                                         'appointment_branch_id',
                                         $branch,
                                         ['id', 'name'],
-                                        _l('branch') . '*',
+                                        _l('branch'),
                                         isset($current_branch_id) ? $current_branch_id : '',
-                                        [],
-                                        [],
-                                        '',
-                                        ['id' => 'appointment_branch_id', 'required' => 'required', 'data-none-selected-text' => _l('dropdown_non_selected_tex')]
+                                        ['multiple' => true, 'data-actions-box' => true, 'id' => 'appointment_branch_id', 'data-none-selected-text' => _l('dropdown_non_selected_tex')]
                                     ) ?>
                                 </div>
                             <?php endif; ?>
@@ -165,16 +162,12 @@
                 alert_float('warning', 'Please select Date Range');
                 return;
             }
-            if (!appointment_type_id) {
-                alert_float('warning', 'Please select Appointment Type');
-                return;
-            }
-            if ($('#appointment_branch_id').length > 0 && !branch_id) {
-                alert_float('warning', 'Please select Branch');
-                return;
-            }
 
             appointment_type_id = appointment_type_id || '0';
+            
+            if (Array.isArray(branch_id)) {
+                branch_id = branch_id.join(',');
+            }
             branch_id = branch_id || '0';
 
             let visit_status = $('#appointment_status option:selected').text().trim();
