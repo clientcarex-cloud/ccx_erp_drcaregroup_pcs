@@ -12,9 +12,9 @@ $currency = $CI->input->post('currency');
 
 // Clean and sanitize filters
 if (!$from_date)
-    $from_date = date('Y-m-01');
+  $from_date = date('Y-m-01');
 if (!$to_date)
-    $to_date = date('Y-m-t');
+  $to_date = date('Y-m-t');
 
 $from_date_sql = "'" . $CI->db->escape_str($from_date) . "'";
 $to_date_sql = "'" . $CI->db->escape_str($to_date) . "'";
@@ -48,30 +48,30 @@ $currency_sql = $currency ? "'" . $CI->db->escape_str($currency) . "'" : "NULL";
 $page = $CI->input->get('page');
 
 if ($page === 'sub') {
-    // Sub-Page Logic
-    $filters_sub = $CI->input->get('filters_sub');
-    $sub_branch_id = isset($filters_sub['branch_id']) ? $CI->db->escape_str($filters_sub['branch_id']) : 'all';
-    $metric = isset($filters_sub['metric']) ? $CI->db->escape_str($filters_sub['metric']) : '';
+  // Sub-Page Logic
+  $filters_sub = $CI->input->get('filters_sub');
+  $sub_branch_id = isset($filters_sub['branch_id']) ? $CI->db->escape_str($filters_sub['branch_id']) : 'all';
+  $metric = isset($filters_sub['metric']) ? $CI->db->escape_str($filters_sub['metric']) : '';
 
-    // Date filters for sub-page might come from query string or main filter.
-    // The links in main report use `filters_sub[date_from]`.
-    $sub_date_from = isset($filters_sub['date_from']) ? "'" . $CI->db->escape_str($filters_sub['date_from']) . "'" : "NULL";
-    $sub_date_to = isset($filters_sub['date_to']) ? "'" . $CI->db->escape_str($filters_sub['date_to']) . "'" : "NULL";
+  // Date filters for sub-page might come from query string or main filter.
+  // The links in main report use `filters_sub[date_from]`.
+  $sub_date_from = isset($filters_sub['date_from']) ? "'" . $CI->db->escape_str($filters_sub['date_from']) . "'" : "NULL";
+  $sub_date_to = isset($filters_sub['date_to']) ? "'" . $CI->db->escape_str($filters_sub['date_to']) . "'" : "NULL";
 
-    if ($sub_branch_id !== 'all' && !is_numeric($sub_branch_id)) {
-        $sub_branch_id = 'all'; // Safety fallback
-    }
+  if ($sub_branch_id !== 'all' && !is_numeric($sub_branch_id)) {
+    $sub_branch_id = 'all'; // Safety fallback
+  }
 
-    // We need to quote the branch_id if it's a specific number, but the query uses `map.groupid = {{filter:branch_id}}`.
-    // If it's 'all', the query says `{{filter:branch_id}} = 'all'`.
-    // So if $sub_branch_id is numeric, we treat it as value.
-    // The query logic: `({{filter:branch_id}} = 'all' OR map.groupid = {{filter:branch_id}} ...)`
-    // So we pass the value as a string: "'all'" or "'1'".
-    $sub_branch_id_val = "'" . $sub_branch_id . "'";
-    $metric_val = "'" . $metric . "'";
+  // We need to quote the branch_id if it's a specific number, but the query uses `map.groupid = {{filter:branch_id}}`.
+  // If it's 'all', the query says `{{filter:branch_id}} = 'all'`.
+  // So if $sub_branch_id is numeric, we treat it as value.
+  // The query logic: `({{filter:branch_id}} = 'all' OR map.groupid = {{filter:branch_id}} ...)`
+  // So we pass the value as a string: "'all'" or "'1'".
+  $sub_branch_id_val = "'" . $sub_branch_id . "'";
+  $metric_val = "'" . $metric . "'";
 
-    // Sub-Page Logic
-    $sql = "
+  // Sub-Page Logic
+  $sql = "
     SELECT 
         1 AS `S.No`,
         c.userid AS `Patient ID`,
@@ -83,487 +83,102 @@ if ($page === 'sub') {
     WHERE 1=1
     ";
 
-    // Reconstruct the user's SUB query
-    // The user provided query:
-    /*
-    SELECT 
-    ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS `S.No`,
-    ...
-    */
+  // Reconstruct the user's SUB query
+  // The user provided query:
+  /*
+  SELECT 
+  ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS `S.No`,
+  ...
+  */
 
-    // I need to be careful with the user's specific sub-query which uses detailed logic for each metric.
-    // The user provided many IF/ELSE blocks or a big CASE statement presumably?
-    // Actually, the user provided a "Sub Page Query" in the prompt (which I need to retrieve from context if I lost it, but I have it in my 'context' or 'clipboard').
-    // Wait, I need to check the User's prompt again for the Sub Page Query.
-    // The user provided: "Sub-Page Query: ..."
-    // It has `CASE WHEN '{{filter:metric}}' = 'gt' THEN ...`
+  // I need to be careful with the user's specific sub-query which uses detailed logic for each metric.
+  // The user provided many IF/ELSE blocks or a big CASE statement presumably?
+  // Actually, the user provided a "Sub Page Query" in the prompt (which I need to retrieve from context if I lost it, but I have it in my 'context' or 'clipboard').
+  // Wait, I need to check the User's prompt again for the Sub Page Query.
+  // The user provided: "Sub-Page Query: ..."
+  // It has `CASE WHEN '{{filter:metric}}' = 'gt' THEN ...`
 
-    $sql = "
+  $sql = "
     SELECT 
-        ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS `S.No`,
-        final.userid AS `Patient ID`,
-        final.patient_name AS `Patient Name`,
-        final.mobile AS `Mobile`,
-        final.category AS `Category`,
-        final.amount AS `Amount`
+        (@rownum := @rownum + 1) AS `S.No`,
+        detail.userid            AS `Patient ID`,
+        detail.patient_link      AS `Patient Name`,
+        detail.phonenumber       AS `Mobile`,
+        detail.metric_label      AS `Category`,
+        detail.amount            AS `Amount`
     FROM (
-        SELECT 
+        SELECT
             c.userid,
-            CONCAT(c.firstname, ' ', c.lastname) AS patient_name,
-            c.phonenumber AS mobile,
-            'N/A' AS category,
-            0 AS amount
+            CONCAT(
+                '<a href=\"https://pcs.amrautism.com/admin/client/get_patient_list/', c.userid,
+                '\" target=\"_blank\" class=\"ccx-patient-link\" data-patient-id=\"', c.userid,
+                '\" data-branch-filter=\"', COALESCE($sub_branch_id_val, ''),
+                '\" data-date-from=\"', COALESCE($sub_date_from, ''),
+                '\" data-date-to=\"', COALESCE($sub_date_to, ''),
+                '\">', IFNULL(NULLIF(c.firstname, ''), CONCAT('Patient #', c.userid)), '</a>'
+            ) AS patient_link,
+            c.phonenumber,
+            $metric_val AS metric_label,
+            SUM(
+                CASE
+                    WHEN $metric_val = 'np_visit'        THEN 1
+                    WHEN $metric_val = 'np_reg'          THEN inv.total
+                    WHEN $metric_val = 'np_paid'         THEN pay.amount
+                    WHEN $metric_val = 'ren_visited'     THEN 1
+                    WHEN $metric_val = 'ren_registered'  THEN inv.total
+                    WHEN $metric_val = 'ren_paid'        THEN pay.amount
+                    WHEN $metric_val = 'ref_visited'     THEN 1
+                    WHEN $metric_val = 'ref_reg'         THEN inv.total
+                    WHEN $metric_val = 'ref_paid'        THEN pay.amount
+                    WHEN $metric_val = 'gt'              THEN pay.amount
+                    WHEN $metric_val = 'enq_gt'          THEN inv.total
+                    WHEN $metric_val = 'enq_due'         THEN (inv.total - IFNULL(pay.amount, 0))
+                    ELSE 0
+                END
+            ) AS amount
         FROM tblclients c
-        WHERE 1=0 -- Default empty if no metric match
-        
-        UNION ALL
-        
-        -- GT Metric
-        SELECT 
-            c.userid,
-            CONCAT(c.firstname, ' ', c.lastname) AS patient_name,
-            c.phonenumber AS mobile,
-            'GT' AS category,
-            SUM(pay.amount) AS amount
-        FROM tblcustomer_groups map
-        JOIN tblclients c ON c.userid = map.customer_id
-        JOIN tblinvoices inv ON inv.clientid = map.customer_id
-        JOIN tblinvoicepaymentrecords pay ON pay.invoiceid = inv.id
-        JOIN tblitemable item ON item.rel_id = inv.id AND item.rel_type = 'invoice'
-        WHERE $metric_val = 'gt'
-          AND item.description <> 'Consultation Fee'
-          AND ($sub_branch_id_val = 'all' OR map.groupid = $sub_branch_id_val)
-          AND ($sub_date_from IS NULL OR inv.date >= $sub_date_from)
-          AND ($sub_date_to IS NULL OR inv.date <= $sub_date_to)
-          AND ($sub_date_from IS NULL OR pay.date >= $sub_date_from)
-          AND ($sub_date_to IS NULL OR pay.date <= $sub_date_to)
-        GROUP BY c.userid
-        
-        UNION ALL
-        
-        -- PROG Metric (GT + Con Fee)
-        SELECT 
-            c.userid,
-            CONCAT(c.firstname, ' ', c.lastname) AS patient_name,
-            c.phonenumber AS mobile,
-            'PROG' AS category,
-            SUM(pay.amount) AS amount
-        FROM tblcustomer_groups map
-        JOIN tblclients c ON c.userid = map.customer_id
-        JOIN tblinvoices inv ON inv.clientid = map.customer_id
-        JOIN tblinvoicepaymentrecords pay ON pay.invoiceid = inv.id
-        JOIN tblitemable item ON item.rel_id = inv.id AND item.rel_type = 'invoice'
-        WHERE $metric_val = 'prog'
-          AND ($sub_branch_id_val = 'all' OR map.groupid = $sub_branch_id_val)
-          AND ($sub_date_from IS NULL OR inv.date >= $sub_date_from)
-          AND ($sub_date_to IS NULL OR inv.date <= $sub_date_to)
-          AND ($sub_date_from IS NULL OR pay.date >= $sub_date_from)
-          AND ($sub_date_to IS NULL OR pay.date <= $sub_date_to)
-        GROUP BY c.userid
-
-        UNION ALL
-
-        -- NP Visit
-        SELECT 
-            c.userid,
-            CONCAT(c.firstname, ' ', c.lastname) AS patient_name,
-            c.phonenumber AS mobile,
-            'NP Visit' AS category,
-            0 AS amount
-        FROM tblappointment a
-        JOIN tblclients c ON c.userid = a.userid
-        WHERE $metric_val = 'np_visit'
-          AND a.visit_status = 1
-          AND a.appointment_type_id IN (18, 2)
-          AND ($sub_branch_id_val = 'all' OR a.branch_id = $sub_branch_id_val)
-          AND ($sub_date_from IS NULL OR a.appointment_date >= CONCAT($sub_date_from, ' 00:00:00'))
-          AND ($sub_date_to IS NULL OR a.appointment_date <= CONCAT($sub_date_to, ' 23:59:59'))
-        GROUP BY c.userid
-        
-        UNION ALL
-        
-        -- NP Reg
-        SELECT 
-            c.userid,
-            CONCAT(c.firstname, ' ', c.lastname) AS patient_name,
-            c.phonenumber AS mobile,
-            'NP Registration' AS category,
-            0 AS amount
-        FROM tblappointment a
-        JOIN tblclients c ON c.userid = a.userid
-        JOIN tblinvoices inv ON inv.clientid = c.userid
-        JOIN tblitemable item ON item.rel_id = inv.id AND item.rel_type = 'invoice'
-        WHERE $metric_val = 'np_reg'
-          AND a.visit_status = 1
-          AND a.appointment_type_id IN (18, 2)
-          AND item.description <> 'Consultation Fee'
-          AND ($sub_branch_id_val = 'all' OR a.branch_id = $sub_branch_id_val)
-          AND ($sub_date_from IS NULL OR a.appointment_date >= CONCAT($sub_date_from, ' 00:00:00'))
-          AND ($sub_date_to IS NULL OR a.appointment_date <= CONCAT($sub_date_to, ' 23:59:59'))
-          AND ($sub_date_from IS NULL OR inv.date >= $sub_date_from)
-          AND ($sub_date_to IS NULL OR inv.date <= $sub_date_to)
-        GROUP BY c.userid
-
-        UNION ALL
-        
-        -- Con Fee
-        SELECT 
-            c.userid,
-            CONCAT(c.firstname, ' ', c.lastname) AS patient_name,
-            c.phonenumber AS mobile,
-            'Consultation Fee' AS category,
-            SUM(pay.amount) AS amount
-        FROM tblcustomer_groups map
-        JOIN tblclients c ON c.userid = map.customer_id
-        JOIN tblinvoices inv ON inv.clientid = map.customer_id
-        JOIN tblitemable item ON item.rel_id = inv.id AND item.rel_type = 'invoice'
-        JOIN tblinvoicepaymentrecords pay ON pay.invoiceid = inv.id
-        WHERE $metric_val = 'con_fee'
-          AND item.description = 'Consultation Fee'
-          AND ($sub_branch_id_val = 'all' OR map.groupid = $sub_branch_id_val)
-          AND ($sub_date_from IS NULL OR inv.date >= $sub_date_from)
-          AND ($sub_date_to IS NULL OR inv.date <= $sub_date_to)
-          AND ($sub_date_from IS NULL OR pay.date >= $sub_date_from)
-          AND ($sub_date_to IS NULL OR pay.date <= $sub_date_to)
-        GROUP BY c.userid
-
-        UNION ALL
-        
-        -- NP Paid
-        SELECT 
-            c.userid,
-            CONCAT(c.firstname, ' ', c.lastname) AS patient_name,
-            c.phonenumber AS mobile,
-            'NP Paid' AS category,
-            SUM(pay.amount) AS amount
-        FROM tblappointment a
-        JOIN tblclients c ON c.userid = a.userid
-        JOIN tblinvoices inv ON inv.clientid = c.userid
-        JOIN tblitemable item ON item.rel_id = inv.id AND item.rel_type = 'invoice'
-        JOIN tblinvoicepaymentrecords pay ON pay.invoiceid = inv.id
-        WHERE $metric_val = 'np_paid'
-          AND a.visit_status = 1
-          AND a.appointment_type_id IN (18, 2)
-          AND item.description <> 'Consultation Fee'
-          AND ($sub_branch_id_val = 'all' OR a.branch_id = $sub_branch_id_val)
-          AND ($sub_date_from IS NULL OR a.appointment_date >= CONCAT($sub_date_from, ' 00:00:00'))
-          AND ($sub_date_to IS NULL OR a.appointment_date <= CONCAT($sub_date_to, ' 23:59:59'))
-          AND ($sub_date_from IS NULL OR inv.date >= $sub_date_from)
-          AND ($sub_date_to IS NULL OR inv.date <= $sub_date_to)
-          AND ($sub_date_from IS NULL OR pay.date >= $sub_date_from)
-          AND ($sub_date_to IS NULL OR pay.date <= $sub_date_to)
-        GROUP BY c.userid
-
-        UNION ALL
-        
-        -- Enquiry GT (Projection)
-        SELECT 
-            c.userid,
-            CONCAT(c.firstname, ' ', c.lastname) AS patient_name,
-            c.phonenumber AS mobile,
-            'Enquiry Projection' AS category,
-            SUM(inv.total) AS amount
-        FROM tblappointment a
-        JOIN tblclients c ON c.userid = a.userid
-        JOIN tblinvoices inv ON inv.clientid = c.userid
-        JOIN tblitemable item ON item.rel_id = inv.id AND item.rel_type = 'invoice'
-        WHERE $metric_val = 'enq_gt'
-          AND a.visit_status = 1
-          AND a.appointment_type_id IN (18, 2)
-          AND item.description <> 'Consultation Fee'
-          AND ($sub_branch_id_val = 'all' OR a.branch_id = $sub_branch_id_val)
-          AND ($sub_date_from IS NULL OR a.appointment_date >= CONCAT($sub_date_from, ' 00:00:00'))
-          AND ($sub_date_to IS NULL OR a.appointment_date <= CONCAT($sub_date_to, ' 23:59:59'))
-          AND ($sub_date_from IS NULL OR inv.date >= $sub_date_from)
-          AND ($sub_date_to IS NULL OR inv.date <= $sub_date_to)
-        GROUP BY c.userid
-
-        UNION ALL
-        
-        -- Enquiry Due
-        -- (GT - Paid) logic handled by showing Due Amount?
-        -- For simplicity, listing based on Projection but Amount = Due
-        SELECT 
-            c.userid,
-            CONCAT(c.firstname, ' ', c.lastname) AS patient_name,
-            c.phonenumber AS mobile,
-            'Enquiry Due' AS category,
-            (SUM(inv.total) - IFNULL(SUM(pay.amount), 0)) AS amount
-        FROM tblappointment a
-        JOIN tblclients c ON c.userid = a.userid
-        JOIN tblinvoices inv ON inv.clientid = c.userid
-        JOIN tblitemable item ON item.rel_id = inv.id AND item.rel_type = 'invoice'
-        LEFT JOIN tblinvoicepaymentrecords pay ON pay.invoiceid = inv.id
-        WHERE $metric_val = 'enq_due'
-          AND a.visit_status = 1
-          AND a.appointment_type_id IN (18, 2)
-          AND item.description <> 'Consultation Fee'
-          AND ($sub_branch_id_val = 'all' OR a.branch_id = $sub_branch_id_val)
-          AND ($sub_date_from IS NULL OR a.appointment_date >= CONCAT($sub_date_from, ' 00:00:00'))
-          AND ($sub_date_to IS NULL OR a.appointment_date <= CONCAT($sub_date_to, ' 23:59:59'))
-          AND ($sub_date_from IS NULL OR inv.date >= $sub_date_from)
-          AND ($sub_date_to IS NULL OR inv.date <= $sub_date_to)
-        GROUP BY c.userid
-        HAVING amount > 0
-
-        UNION ALL
-        
-        -- Renewal Visits
-        SELECT 
-            c.userid,
-            CONCAT(c.firstname, ' ', c.lastname) AS patient_name,
-            c.phonenumber AS mobile,
-            'Renewal Visit' AS category,
-            0 AS amount
-        FROM tblappointment a
-        JOIN tblclients c ON c.userid = a.userid
-        WHERE $metric_val = 'ren_visited'
-          AND a.visit_status = 1
-          AND a.appointment_type_id IN (6, 11, 17, 24, 32)
-          AND ($sub_branch_id_val = 'all' OR a.branch_id = $sub_branch_id_val)
-          AND ($sub_date_from IS NULL OR a.appointment_date >= CONCAT($sub_date_from, ' 00:00:00'))
-          AND ($sub_date_to IS NULL OR a.appointment_date <= CONCAT($sub_date_to, ' 23:59:59'))
-        GROUP BY c.userid
-
-        UNION ALL
-        
-        -- Renewal Registered
-        SELECT 
-            c.userid,
-            CONCAT(c.firstname, ' ', c.lastname) AS patient_name,
-            c.phonenumber AS mobile,
-            'Renewal Registration' AS category,
-            0 AS amount
-        FROM tblappointment a
-        JOIN tblclients c ON c.userid = a.userid
-        JOIN tblinvoices inv ON inv.clientid = c.userid
-        JOIN tblitemable item ON item.rel_id = inv.id AND item.rel_type = 'invoice'
-        WHERE $metric_val = 'ren_registered'
-          AND a.visit_status = 1
-          AND a.appointment_type_id IN (6, 11, 17, 24, 32)
-          AND item.description <> 'Consultation Fee'
-          AND ($sub_branch_id_val = 'all' OR a.branch_id = $sub_branch_id_val)
-          AND ($sub_date_from IS NULL OR a.appointment_date >= CONCAT($sub_date_from, ' 00:00:00'))
-          AND ($sub_date_to IS NULL OR a.appointment_date <= CONCAT($sub_date_to, ' 23:59:59'))
-          AND ($sub_date_from IS NULL OR inv.date >= $sub_date_from)
-          AND ($sub_date_to IS NULL OR inv.date <= $sub_date_to)
-        GROUP BY c.userid
-
-        UNION ALL
-        
-        -- Renewal Paid
-        SELECT 
-            c.userid,
-            CONCAT(c.firstname, ' ', c.lastname) AS patient_name,
-            c.phonenumber AS mobile,
-            'Renewal Paid' AS category,
-            SUM(pay.amount) AS amount
-        FROM tblappointment a
-        JOIN tblclients c ON c.userid = a.userid
-        JOIN tblinvoices inv ON inv.clientid = c.userid
-        JOIN tblitemable item ON item.rel_id = inv.id AND item.rel_type = 'invoice'
-        JOIN tblinvoicepaymentrecords pay ON pay.invoiceid = inv.id
-        WHERE $metric_val = 'ren_paid'
-          AND a.visit_status = 1
-          AND a.appointment_type_id IN (6, 11, 17, 24, 32)
-          AND item.description <> 'Consultation Fee'
-          AND ($sub_branch_id_val = 'all' OR a.branch_id = $sub_branch_id_val)
-          AND ($sub_date_from IS NULL OR a.appointment_date >= CONCAT($sub_date_from, ' 00:00:00'))
-          AND ($sub_date_to IS NULL OR a.appointment_date <= CONCAT($sub_date_to, ' 23:59:59'))
-          AND ($sub_date_from IS NULL OR inv.date >= $sub_date_from)
-          AND ($sub_date_to IS NULL OR inv.date <= $sub_date_to)
-          AND ($sub_date_from IS NULL OR pay.date >= $sub_date_from)
-          AND ($sub_date_to IS NULL OR pay.date <= $sub_date_to)
-        GROUP BY c.userid
-
-        UNION ALL
-        
-        -- Renewal GT
-        SELECT 
-            c.userid,
-            CONCAT(c.firstname, ' ', c.lastname) AS patient_name,
-            c.phonenumber AS mobile,
-            'Renewal Projection' AS category,
-            SUM(inv.total) AS amount
-        FROM tblappointment a
-        JOIN tblclients c ON c.userid = a.userid
-        JOIN tblinvoices inv ON inv.clientid = c.userid
-        JOIN tblitemable item ON item.rel_id = inv.id AND item.rel_type = 'invoice'
-        WHERE $metric_val = 'ren_gt'
-          AND a.visit_status = 1
-          AND a.appointment_type_id IN (6, 11, 17, 24, 32)
-          AND item.description <> 'Consultation Fee'
-          AND ($sub_branch_id_val = 'all' OR a.branch_id = $sub_branch_id_val)
-          AND ($sub_date_from IS NULL OR a.appointment_date >= CONCAT($sub_date_from, ' 00:00:00'))
-          AND ($sub_date_to IS NULL OR a.appointment_date <= CONCAT($sub_date_to, ' 23:59:59'))
-          AND ($sub_date_from IS NULL OR inv.date >= $sub_date_from)
-          AND ($sub_date_to IS NULL OR inv.date <= $sub_date_to)
-        GROUP BY c.userid
-
-        UNION ALL
-        
-        -- Renewal Due
-        SELECT 
-            c.userid,
-            CONCAT(c.firstname, ' ', c.lastname) AS patient_name,
-            c.phonenumber AS mobile,
-            'Renewal Due' AS category,
-            (SUM(inv.total) - IFNULL(SUM(pay.amount), 0)) AS amount
-        FROM tblappointment a
-        JOIN tblclients c ON c.userid = a.userid
-        JOIN tblinvoices inv ON inv.clientid = c.userid
-        JOIN tblitemable item ON item.rel_id = inv.id AND item.rel_type = 'invoice'
-        LEFT JOIN tblinvoicepaymentrecords pay ON pay.invoiceid = inv.id
-        WHERE $metric_val = 'ren_due'
-          AND a.visit_status = 1
-          AND a.appointment_type_id IN (6, 11, 17, 24, 32)
-          AND item.description <> 'Consultation Fee'
-          AND ($sub_branch_id_val = 'all' OR a.branch_id = $sub_branch_id_val)
-          AND ($sub_date_from IS NULL OR a.appointment_date >= CONCAT($sub_date_from, ' 00:00:00'))
-          AND ($sub_date_to IS NULL OR a.appointment_date <= CONCAT($sub_date_to, ' 23:59:59'))
-          AND ($sub_date_from IS NULL OR inv.date >= $sub_date_from)
-          AND ($sub_date_to IS NULL OR inv.date <= $sub_date_to)
-        GROUP BY c.userid
-        HAVING amount > 0
-        
-        UNION ALL
-        
-        -- Referral Visits
-        SELECT 
-            c.userid,
-            CONCAT(c.firstname, ' ', c.lastname) AS patient_name,
-            c.phonenumber AS mobile,
-            'Referral Visit' AS category,
-            0 AS amount
-        FROM tblleads l
-        JOIN tblclients c ON c.leadid = l.id
-        JOIN tblappointment a ON a.userid = c.userid
-        WHERE $metric_val = 'ref_visited'
-          AND l.refer_id > 0
-          AND a.visit_status = 1
-          AND ($sub_branch_id_val = 'all' OR a.branch_id = $sub_branch_id_val)
-          AND ($sub_date_from IS NULL OR a.appointment_date >= CONCAT($sub_date_from, ' 00:00:00'))
-          AND ($sub_date_to IS NULL OR a.appointment_date <= CONCAT($sub_date_to, ' 23:59:59'))
-        GROUP BY c.userid
-        
-        UNION ALL
-        
-        -- Referral Reg
-        SELECT 
-            c.userid,
-            CONCAT(c.firstname, ' ', c.lastname) AS patient_name,
-            c.phonenumber AS mobile,
-            'Referral Registration' AS category,
-            0 AS amount
-        FROM tblinvoices inv
-        JOIN tblclients c ON c.userid = inv.clientid
-        JOIN tblitemable item ON item.rel_id = inv.id AND item.rel_type = 'invoice'
-        LEFT JOIN tblinvoicepaymentrecords pay ON pay.invoiceid = inv.id
-        LEFT JOIN tblcustomer_groups map ON map.customer_id = inv.clientid
-        WHERE $metric_val = 'ref_reg'
-          -- Referral Registration Logic (same as main query but ensuring Invoice check)
-          AND item.description <> 'Consultation Fee'
-          AND ($sub_branch_id_val = 'all' OR map.groupid = $sub_branch_id_val)
-          AND ($sub_date_from IS NULL OR inv.date >= $sub_date_from)
-          AND ($sub_date_to IS NULL OR inv.date <= $sub_date_to)
-          -- Add filtering for Referral
-          AND EXISTS (SELECT 1 FROM tblleads l WHERE l.id = c.leadid AND l.refer_id > 0)
-        GROUP BY c.userid
-        
-        UNION ALL
-        
-        -- Referral Paid
-        SELECT 
-            c.userid,
-            CONCAT(c.firstname, ' ', c.lastname) AS patient_name,
-            c.phonenumber AS mobile,
-            'Referral Paid' AS category,
-            SUM(pay.amount) AS amount
-        FROM tblinvoices inv
-        JOIN tblclients c ON c.userid = inv.clientid
-        JOIN tblitemable item ON item.rel_id = inv.id AND item.rel_type = 'invoice'
-        LEFT JOIN tblinvoicepaymentrecords pay ON pay.invoiceid = inv.id
-        LEFT JOIN tblcustomer_groups map ON map.customer_id = inv.clientid
-        WHERE $metric_val = 'ref_paid'
-          AND item.description <> 'Consultation Fee'
-          AND ($sub_branch_id_val = 'all' OR map.groupid = $sub_branch_id_val)
-          AND ($sub_date_from IS NULL OR inv.date >= $sub_date_from)
-          AND ($sub_date_to IS NULL OR inv.date <= $sub_date_to)
-          AND ($sub_date_from IS NULL OR pay.date >= $sub_date_from)
-          AND ($sub_date_to IS NULL OR pay.date <= $sub_date_to)
-          AND EXISTS (SELECT 1 FROM tblleads l WHERE l.id = c.leadid AND l.refer_id > 0)
-        GROUP BY c.userid
-        
-        UNION ALL
-        
-        -- Referral GT
-        SELECT 
-            c.userid,
-            CONCAT(c.firstname, ' ', c.lastname) AS patient_name,
-            c.phonenumber AS mobile,
-            'Referral Projection' AS category,
-            SUM(inv.total) AS amount
-        FROM tblinvoices inv
-        JOIN tblclients c ON c.userid = inv.clientid
-        JOIN tblitemable item ON item.rel_id = inv.id AND item.rel_type = 'invoice'
-        LEFT JOIN tblcustomer_groups map ON map.customer_id = inv.clientid
-        WHERE $metric_val = 'ref_gt'
-          AND item.description <> 'Consultation Fee'
-          AND ($sub_branch_id_val = 'all' OR map.groupid = $sub_branch_id_val)
-          AND ($sub_date_from IS NULL OR inv.date >= $sub_date_from)
-          AND ($sub_date_to IS NULL OR inv.date <= $sub_date_to)
-          AND EXISTS (SELECT 1 FROM tblleads l WHERE l.id = c.leadid AND l.refer_id > 0)
-        GROUP BY c.userid
-        
-        UNION ALL
-        
-        -- Referral Due
-        SELECT 
-            c.userid,
-            CONCAT(c.firstname, ' ', c.lastname) AS patient_name,
-            c.phonenumber AS mobile,
-            'Referral Due' AS category,
-            (SUM(inv.total) - IFNULL(SUM(pay.amount), 0)) AS amount
-        FROM tblinvoices inv
-        JOIN tblclients c ON c.userid = inv.clientid
-        JOIN tblitemable item ON item.rel_id = inv.id AND item.rel_type = 'invoice'
-        LEFT JOIN tblinvoicepaymentrecords pay ON pay.invoiceid = inv.id
-        LEFT JOIN tblcustomer_groups map ON map.customer_id = inv.clientid
-        WHERE $metric_val = 'ref_due'
-          AND item.description <> 'Consultation Fee'
-          AND ($sub_branch_id_val = 'all' OR map.groupid = $sub_branch_id_val)
-          AND ($sub_date_from IS NULL OR inv.date >= $sub_date_from)
-          AND ($sub_date_to IS NULL OR inv.date <= $sub_date_to)
-          AND EXISTS (SELECT 1 FROM tblleads l WHERE l.id = c.leadid AND l.refer_id > 0)
-        GROUP BY c.userid
-        HAVING amount > 0
-        
-        UNION ALL
-        
-        -- Refund Amount
-        SELECT 
-            c.userid,
-            CONCAT(c.firstname, ' ', c.lastname) AS patient_name,
-            c.phonenumber AS mobile,
-            'Refund' AS category,
-            SUM(cn.amount) AS amount
-        FROM tblcreditnotes cn
-        JOIN tblclients c ON c.userid = cn.clientid
-        LEFT JOIN tblcustomer_groups map ON map.customer_id = cn.clientid
-        WHERE $metric_val = 'refund_amount'
-          AND ($sub_branch_id_val = 'all' OR map.groupid = $sub_branch_id_val)
-          AND ($sub_date_from IS NULL OR cn.date >= $sub_date_from)
-          AND ($sub_date_to IS NULL OR cn.date <= $sub_date_to)
-        GROUP BY c.userid
-        
-    ) final
+        LEFT JOIN tblcustomer_groups map        ON map.customer_id = c.userid
+        LEFT JOIN tblappointment a              ON a.userid = c.userid
+        LEFT JOIN tblinvoices inv               ON inv.clientid = c.userid
+        LEFT JOIN tblinvoicepaymentrecords pay  ON pay.invoiceid = inv.id
+        WHERE
+            (
+                $sub_branch_id_val = 'all'
+                OR map.groupid = $sub_branch_id_val
+                OR a.branch_id = $sub_branch_id_val
+            )
+            AND ($sub_date_from IS NULL OR a.appointment_date >= CONCAT($sub_date_from, ' 00:00:00'))
+            AND ($sub_date_to   IS NULL OR a.appointment_date <= CONCAT($sub_date_to,   ' 23:59:59'))
+            AND ($sub_date_from IS NULL OR inv.date >= $sub_date_from)
+            AND ($sub_date_to   IS NULL OR inv.date <= $sub_date_to)
+            AND ($sub_date_from IS NULL OR pay.date >= $sub_date_from)
+            AND ($sub_date_to   IS NULL OR pay.date <= $sub_date_to)
+            AND (
+                   ($metric_val = 'np_visit'        AND a.visit_status = 1 AND a.appointment_type_id IN (18, 2))
+                OR ($metric_val = 'np_reg'          AND inv.total > 0 AND a.visit_status = 1 AND a.appointment_type_id IN (18, 2))
+                OR ($metric_val = 'np_paid'         AND inv.total > 0 AND pay.amount > 0 AND a.appointment_type_id IN (18, 2))
+                OR ($metric_val = 'ren_visited'     AND a.visit_status = 1 AND a.appointment_type_id IN (6, 11, 17, 24, 32))
+                OR ($metric_val = 'ren_registered'  AND inv.total > 0 AND a.visit_status = 1 AND a.appointment_type_id IN (6, 11, 17, 24, 32))
+                OR ($metric_val = 'ren_paid'        AND inv.total > 0 AND pay.amount > 0 AND a.appointment_type_id IN (6, 11, 17, 24, 32))
+                OR ($metric_val = 'ref_visited'     AND a.visit_status = 1)
+                OR ($metric_val = 'ref_reg'         AND inv.total > 0)
+                OR ($metric_val = 'ref_paid'        AND pay.amount > 0)
+                OR ($metric_val = 'gt'              AND pay.amount > 0)
+                OR ($metric_val = 'enq_gt'          AND inv.total > 0)
+                OR ($metric_val = 'enq_due'         AND inv.total > IFNULL(pay.amount, 0))
+            )
+        GROUP BY c.userid, c.firstname, c.phonenumber
+    ) AS detail
+    CROSS JOIN (SELECT @rownum := 0) AS seq
+    WHERE detail.amount IS NOT NULL
+    ORDER BY detail.amount DESC;
     ";
 
 } else {
-    // Main Report Logic
+  // Main Report Logic
 
-    // Main Report Logic
-    $sql = "
+  // Main Report Logic
+  $sql = "
         SELECT *
         FROM (
             SELECT
@@ -864,54 +479,54 @@ if ($page === 'sub') {
 }
 
 $output = [
-    'data' => []
+  'data' => []
 ];
 
 $result = $CI->db->query($sql)->result_array();
 
 // Format data for DataTable
 if ($page === 'sub') {
-    foreach ($result as $row) {
-        $output['data'][] = [
-            $row['S.No'],
-            $row['Patient ID'],
-            $row['Patient Name'],
-            $row['Mobile'],
-            $row['Category'],
-            $row['Amount'],
-        ];
-    }
+  foreach ($result as $row) {
+    $output['data'][] = [
+      $row['S.No'],
+      $row['Patient ID'],
+      $row['Patient Name'],
+      $row['Mobile'],
+      $row['Category'],
+      $row['Amount'],
+    ];
+  }
 } else {
-    foreach ($result as $row) {
-        $output['data'][] = [
-            $row['Branch'],
-            $row['GT'],
-            $row['PROG'],
-            $row['NP Visit'],
-            $row['NP Registration'],
-            $row['Registration %'],
-            $row['Consultation Fee'],
-            $row['NP Paid'],
-            $row['Enquiry Projection'],
-            $row['Enquiry Due'],
-            $row['Enquiry Ticket Value'],
-            $row['Renewal Visits'],
-            $row['Renewals'],
-            $row['Renewal %'],
-            $row['Renewal Paid'],
-            $row['Renewal Due'],
-            $row['Renewal Projection'],
-            $row['Renewal Ticket Value'],
-            $row['Referral Visits'],
-            $row['Referral Registrations'],
-            $row['Referral %'],
-            $row['Referral Paid'],
-            $row['Referral Due'],
-            $row['Referral Projection'],
-            $row['Referral Ticket Value'],
-            $row['Refund Amount'],
-        ];
-    }
+  foreach ($result as $row) {
+    $output['data'][] = [
+      $row['Branch'],
+      $row['GT'],
+      $row['PROG'],
+      $row['NP Visit'],
+      $row['NP Registration'],
+      $row['Registration %'],
+      $row['Consultation Fee'],
+      $row['NP Paid'],
+      $row['Enquiry Projection'],
+      $row['Enquiry Due'],
+      $row['Enquiry Ticket Value'],
+      $row['Renewal Visits'],
+      $row['Renewals'],
+      $row['Renewal %'],
+      $row['Renewal Paid'],
+      $row['Renewal Due'],
+      $row['Renewal Projection'],
+      $row['Renewal Ticket Value'],
+      $row['Referral Visits'],
+      $row['Referral Registrations'],
+      $row['Referral %'],
+      $row['Referral Paid'],
+      $row['Referral Due'],
+      $row['Referral Projection'],
+      $row['Referral Ticket Value'],
+      $row['Refund Amount'],
+    ];
+  }
 }
 
 header('Content-Type: application/json');
