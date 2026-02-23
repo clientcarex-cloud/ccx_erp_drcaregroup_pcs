@@ -151,10 +151,11 @@ $sub_branch_id_val = isset($filters_sub['branch_id']) ? $filters_sub['branch_id'
         var isSubPage = urlParams.get('page') === 'sub';
 
         if (isSubPage) {
-            // Sub-page: use original URL format with path segments (required by controller routing)
-            var subDateFrom = '<?= addslashes($sub_date_from ?: date("Y-m-d")) ?>';
-            var subDateTo = '<?= addslashes($sub_date_to ?: date("Y-m-d")) ?>';
-            var subUrl = '<?= admin_url("client/reports/" . $type . "/1/") ?>' + subDateFrom + '/' + subDateTo + window.location.search;
+            // Sub-page: pass all filter params via query string only (no path segments).
+            // The table script reads everything from $_GET['filters_sub'] and $_GET['page'].
+            // IMPORTANT: Do NOT include /1/ in the path — that triggers the client modal load
+            // in the controller and causes a timeout.
+            var subUrl = '<?= admin_url("client/reports/" . $type) ?>' + window.location.search;
             initDataTable('.table-unit-gt-report', subUrl, [0], [0]);
         } else {
             // Main report: load only on form submit with branch validation
