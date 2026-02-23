@@ -153,6 +153,13 @@
 
         let doctorId = $('#doctor_id').val() || 'null';
 
+        if (branchId === 'null' || !fromDate || !toDate) {
+            // Initialize empty datatable if filters are missing
+            initDataTable('.table-master_renewal_report', '', [1], [1]);
+            $('.table-master_renewal_report').DataTable().clear().draw();
+            return;
+        }
+
         let url = '<?= admin_url("client/reports/$type/1/") ?>'
             + fromDate + '/'
             + toDate + '/'
@@ -180,6 +187,11 @@
             let branchId = $('#branch').val();
             if (Array.isArray(branchId)) branchId = branchId.join(',');
             if (!branchId) branchId = 'null';
+
+            if (!from || !to) {
+                alert_float('warning', 'Please select both from date and to date.');
+                return;
+            }
 
             if (branchId === 'null') {
                 alert_float('warning', 'Please select at least one branch.');
