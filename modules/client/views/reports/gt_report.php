@@ -130,13 +130,13 @@
 <script>
     $(function () {
         var gtTableInitialized = false;
+        var urlParams = new URLSearchParams(window.location.search);
+        var isSubPage = urlParams.get('page') === 'sub';
 
         function reloadUnitGTReport() {
             var url = '<?= admin_url("client/reports/gt_report") ?>';
 
-            // Check if we are in sub-report mode
-            var urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('page') === 'sub') {
+            if (isSubPage) {
                 url += window.location.search;
             }
 
@@ -151,10 +151,14 @@
             }
         }
 
-        // On form submit only — no auto-load
+        // Auto-load for sub-page (filters come from URL)
+        if (isSubPage) {
+            reloadUnitGTReport();
+        }
+
+        // On form submit only for main report
         $('#unitGTForm').on('submit', function (e) {
             e.preventDefault();
-            // Require at least one branch selected
             var branches = $('[name="branch[]"]').val();
             if (!branches || branches.length === 0) {
                 alert_float('warning', 'Please select at least one branch.');
