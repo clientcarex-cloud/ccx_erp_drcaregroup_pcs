@@ -21,7 +21,7 @@ class Master extends AdminController
 
     public function enquiry_type()
     {
-        if (!is_admin()) {
+        if (!is_admin() && !staff_can("view", "master")) {
             access_denied('enquiry_type');
         }
         $this->_handle_crud('enquiry_type');
@@ -29,7 +29,7 @@ class Master extends AdminController
 
     public function state()
     {
-        if (!is_admin()) {
+        if (!is_admin() && !staff_can("view", "master")) {
             access_denied('state');
         }
         $this->_handle_crud('state');
@@ -37,14 +37,14 @@ class Master extends AdminController
 
     public function city()
     {
-        if (!is_admin()) {
+        if (!is_admin() && !staff_can("view", "master")) {
             access_denied('city');
         }
         $this->_handle_crud('city');
     }
     public function pincode()
     {
-        if (!is_admin()) {
+        if (!is_admin() && !staff_can("view", "master")) {
             access_denied('pincode');
         }
         $this->_handle_crud('pincode');
@@ -52,7 +52,7 @@ class Master extends AdminController
 
     public function patient_response()
     {
-        if (!is_admin()) {
+        if (!is_admin() && !staff_can("view", "master")) {
             access_denied('enquiry_type');
         }
         $this->_handle_crud('patient_response');
@@ -60,7 +60,7 @@ class Master extends AdminController
 
     public function patient_priority()
     {
-        if (!is_admin()) {
+        if (!is_admin() && !staff_can("view", "master")) {
             access_denied('enquiry_type');
         }
         $this->_handle_crud('patient_priority');
@@ -68,7 +68,7 @@ class Master extends AdminController
 
     public function slots()
     {
-        if (!is_admin()) {
+        if (!is_admin() && !staff_can("view", "master")) {
             access_denied('enquiry_type');
         }
         $this->_handle_crud('slots');
@@ -76,7 +76,7 @@ class Master extends AdminController
 
     public function patient_source()
     {
-        if (!is_admin()) {
+        if (!is_admin() && !staff_can("view", "master")) {
             access_denied('enquiry_type');
         }
         $this->_handle_crud('patient_source');
@@ -84,14 +84,14 @@ class Master extends AdminController
 
     public function treatment()
     {
-        if (!is_admin()) {
+        if (!is_admin() && !staff_can("view", "master")) {
             access_denied('enquiry_type');
         }
         $this->_handle_crud('treatment');
     }
     public function languages()
     {
-        if (!is_admin()) {
+        if (!is_admin() && !staff_can("view", "master")) {
             access_denied('languages');
         }
         $this->_handle_crud('languages');
@@ -99,7 +99,7 @@ class Master extends AdminController
 
     public function medicine()
     {
-        if (!is_admin()) {
+        if (!is_admin() && !staff_can("view", "master")) {
             access_denied('enquiry_type');
         }
         $this->_handle_crud('medicine');
@@ -107,7 +107,7 @@ class Master extends AdminController
 
     public function consultation_fee()
     {
-        if (!is_admin()) {
+        if (!is_admin() && !staff_can("view", "master")) {
             access_denied('enquiry_type');
         }
         $this->_handle_crud('consultation_fee');
@@ -115,7 +115,7 @@ class Master extends AdminController
 
     public function medicine_potency()
     {
-        if (!is_admin()) {
+        if (!is_admin() && !staff_can("view", "master")) {
             access_denied('enquiry_type');
         }
         $this->_handle_crud('medicine_potency');
@@ -123,7 +123,7 @@ class Master extends AdminController
 
     public function medicine_dose()
     {
-        if (!is_admin()) {
+        if (!is_admin() && !staff_can("view", "master")) {
             access_denied('enquiry_type');
         }
         $this->_handle_crud('medicine_dose');
@@ -131,7 +131,7 @@ class Master extends AdminController
 
     public function medicine_timing()
     {
-        if (!is_admin()) {
+        if (!is_admin() && !staff_can("view", "master")) {
             access_denied('enquiry_type');
         }
         $this->_handle_crud('medicine_timing');
@@ -139,7 +139,7 @@ class Master extends AdminController
 
     public function patient_status()
     {
-        if (!is_admin()) {
+        if (!is_admin() && !staff_can("view", "master")) {
             access_denied('enquiry_type');
         }
         $this->_handle_crud('patient_status');
@@ -147,28 +147,28 @@ class Master extends AdminController
 
     public function appointment_type()
     {
-        if (!is_admin()) {
+        if (!is_admin() && !staff_can("view", "master")) {
             access_denied('enquiry_type');
         }
         $this->_handle_crud('appointment_type');
     }
     public function call_type()
     {
-        if (!is_admin()) {
+        if (!is_admin() && !staff_can("view", "master")) {
             access_denied('enquiry_type');
         }
         $this->_handle_crud('call_type');
     }
     public function criteria()
     {
-        if (!is_admin()) {
+        if (!is_admin() && !staff_can("view", "master")) {
             access_denied('enquiry_type');
         }
         $this->_handle_crud('criteria');
     }
     public function specialization()
     {
-        if (!is_admin()) {
+        if (!is_admin() && !staff_can("view", "master")) {
             access_denied('enquiry_type');
         }
         $this->_handle_crud('specialization');
@@ -176,7 +176,7 @@ class Master extends AdminController
 	
 	public function chief_complaint()
 	{
-		if (!is_admin()) {
+		if (!is_admin() && !staff_can("view", "master")) {
 			access_denied('chief_complaint');
 		}
 		$this->_handle_crud('chief_complaint');
@@ -184,7 +184,7 @@ class Master extends AdminController
 
 	public function medical_problem()
 	{
-		if (!is_admin()) {
+		if (!is_admin() && !staff_can("view", "master")) {
 			access_denied('medical_problem');
 		}
 		$this->_handle_crud('medical_problem');
@@ -192,7 +192,7 @@ class Master extends AdminController
 
 	public function medical_investigation()
 	{
-		if (!is_admin()) {
+		if (!is_admin() && !staff_can("view", "master")) {
 			access_denied('medical_investigation');
 		}
 		$this->_handle_crud('medical_investigation');
@@ -200,7 +200,7 @@ class Master extends AdminController
 
 	public function dental_investigation()
 	{
-		if (!is_admin()) {
+		if (!is_admin() && !staff_can("view", "master")) {
 			access_denied('dental_investigation');
 		}
 		$this->_handle_crud('dental_investigation');
@@ -208,7 +208,7 @@ class Master extends AdminController
 
 	public function treatment_type()
 	{
-		if (!is_admin()) {
+		if (!is_admin() && !staff_can("view", "master")) {
 			access_denied('treatment_type');
 		}
 		$this->_handle_crud('treatment_type');
@@ -216,7 +216,7 @@ class Master extends AdminController
 
 	public function treatment_sub_type()
 	{
-		if (!is_admin()) {
+		if (!is_admin() && !staff_can("view", "master")) {
 			access_denied('treatment_sub_type');
 		}
 		$this->_handle_crud('treatment_sub_type');
@@ -224,7 +224,7 @@ class Master extends AdminController
 
 	public function treatment_procedure()
 	{
-		if (!is_admin()) {
+		if (!is_admin() && !staff_can("view", "master")) {
 			access_denied('treatment_procedure');
 		}
 		$this->_handle_crud('treatment_procedure');
@@ -232,7 +232,7 @@ class Master extends AdminController
 
 	public function lab()
 	{
-		if (!is_admin()) {
+		if (!is_admin() && !staff_can("view", "master")) {
 			access_denied('lab');
 		}
 		$this->_handle_crud('lab');
@@ -240,7 +240,7 @@ class Master extends AdminController
 
 	public function lab_work()
 	{
-		if (!is_admin()) {
+		if (!is_admin() && !staff_can("view", "master")) {
 			access_denied('lab_work');
 		}
 		$this->_handle_crud('lab_work');
@@ -248,7 +248,7 @@ class Master extends AdminController
 
 	public function lab_followup()
 	{
-		if (!is_admin()) {
+		if (!is_admin() && !staff_can("view", "master")) {
 			access_denied('lab_followup');
 		}
 		$this->_handle_crud('lab_followup');
@@ -256,7 +256,7 @@ class Master extends AdminController
 
 	public function case_remark()
 	{
-		if (!is_admin()) {
+		if (!is_admin() && !staff_can("view", "master")) {
 			access_denied('case_remark');
 		}
 		$this->_handle_crud('case_remark');
@@ -264,7 +264,7 @@ class Master extends AdminController
 
 	public function suggested_diagnostics()
 	{
-		if (!is_admin()) {
+		if (!is_admin() && !staff_can("view", "master")) {
 			access_denied('suggested_diagnostics');
 		}
 		$this->_handle_crud('suggested_diagnostics');
@@ -273,7 +273,7 @@ class Master extends AdminController
 
     public function shift()
     {
-        if (!is_admin()) {
+        if (!is_admin() && !staff_can("view", "master")) {
             access_denied('enquiry_type');
         }
         $this->_handle_crud('shift');
@@ -285,7 +285,7 @@ class Master extends AdminController
 			$this->app->get_table_data($table);
 		} else {
 			if ($this->input->post()) {
-				if (!is_admin()) {
+				if (!is_admin() && !staff_can("view", "master")) {
 					access_denied($table);
 				}
 				$data = $this->input->post();

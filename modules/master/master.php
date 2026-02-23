@@ -11,11 +11,26 @@ Version: 1.0.0
 define('MASTER_MODULE_NAME', 'master');
 
 hooks()->add_action('admin_init', MASTER_MODULE_NAME . '_init_menu_items');
+hooks()->add_action('admin_init', MASTER_MODULE_NAME . '_permissions');
+
+function master_permissions()
+{
+	$capabilities = [];
+
+	$capabilities['capabilities'] = [
+		'view' => _l('permission_view') . '(' . _l('permission_global') . ')',
+		'create' => _l('permission_create'),
+		'edit' => _l('permission_edit'),
+		'delete' => _l('permission_delete'),
+	];
+
+	register_staff_capabilities('master', $capabilities, _l('master'));
+}
 
 function master_init_menu_items()
 {
 	$CI = &get_instance();
-	if (is_admin()) {
+	if (is_admin() || staff_can('view', 'master')) {
 		$CI->app_menu->add_sidebar_menu_item('master', [
 			'name' => _l('master'),
 			'icon' => 'fa fa-plus',
