@@ -2489,9 +2489,6 @@ class Client extends AdminController
 
 	public function get_patient_list($id = NULL, $consulted_date = NULL, $consulted_to_date = NULL, $current_branch_id = null, $selected_branch_id = null, $callback_url = NULL)
 	{
-		if (staff_can('view', 'customers')) {
-			//access_denied('appointments');
-		}
 		$data['title'] = "Patients";
 		$data['consulted_from_date'] = $consulted_date;
 		$data['consulted_to_date'] = $consulted_to_date;
@@ -2599,7 +2596,7 @@ class Client extends AdminController
 		{
 			$CI =& get_instance();
 			$CI->db->where('doctor_id', $doctor_id);
-			return $CI->db->get(db_prefix() . 'counter')->row(); // returns single row (object)
+			return $CI->db->get(db_prefix() . 'counter')->row();
 		}
 
 		if ($id) {
@@ -2609,7 +2606,7 @@ class Client extends AdminController
 			$this->load->model('invoice_items_model');
 			$this->load->model('estimates_model');
 			$data['clientid'] = $id;
-			// Fetch the existing patient data
+
 			$client = $this->client_model->get($id);
 			$estimates = $this->client_model->get_estimates($id);
 			foreach ($estimates as &$estimate) {
@@ -2618,7 +2615,7 @@ class Client extends AdminController
 				$this->db->where('rel_id', $estimate['id']);
 				$items = $this->db->get('tblitemable')->row();
 
-				$estimate['description'] = $items->description; // append to estimate
+				$estimate['description'] = $items->description;
 			}
 
 			$customer_new_fields = $this->client_model->get_customer_new_fields($id);
@@ -2637,13 +2634,12 @@ class Client extends AdminController
 
 			$patient_treatment = $this->client_model->get_patient_treatment($id);
 			$casesheet = $this->client_model->get_casesheet($id);
-			// Fetch patient call logs
-			$patient_call_logs = $this->client_model->get_patient_call_logs($id); // NEW
-			$invoices = $this->client_model->get_invoices($id); // NEW
-			$invoice_payments = $this->client_model->get_invoice_payments($id); // NEW
-			$shared_requests = $this->client_model->get_shared_requests($id); // NEW
 
-			// Fetch medicine data (names, potencies, doses, timings)
+			$patient_call_logs = $this->client_model->get_patient_call_logs($id);
+			$invoices = $this->client_model->get_invoices($id);
+			$invoice_payments = $this->client_model->get_invoice_payments($id);
+			$shared_requests = $this->client_model->get_shared_requests($id);
+
 			$medicines = $this->master_model->get_all('medicine');
 			$potencies = $this->master_model->get_all('medicine_potency');
 			$doses = $this->master_model->get_all('medicine_dose');
@@ -2679,7 +2675,6 @@ class Client extends AdminController
 			{
 				$CI =& get_instance();
 
-				// 1. Get the estimate row
 				$CI->db->select('total, invoiceid, currency, date, expirydate');
 				$CI->db->where('id', $estimation_id);
 				$estimate = $CI->db->get(db_prefix() . 'estimates')->row();
@@ -2694,7 +2689,6 @@ class Client extends AdminController
 					];
 				}
 
-				// 2. Sum payments from invoicepaymentrecords
 				$CI->db->select_sum('amount');
 				$CI->db->where('invoiceid', $estimate->invoiceid);
 				$paid_row = $CI->db->get(db_prefix() . 'invoicepaymentrecords')->row();
@@ -2712,7 +2706,7 @@ class Client extends AdminController
 			}
 			$home_branch_id = $this->client_model->get_client_branch($id);
 			$branch = $this->client_model->get_branch();
-			// Pass the data to the view
+
 			$data['client_modal'] = $this->load->view('client_model_popup', [
 				'latest_casesheet' => $latest_casesheet,
 				'latest_casesheet_package' => $latest_casesheet_package,
@@ -2742,19 +2736,19 @@ class Client extends AdminController
 				'appointment_data' => $appointment_data,
 				'today_appointment_data' => $today_appointment_data,
 				'patient_activity_log' => $patient_activity_log,
-				'patient_call_logs' => $patient_call_logs, // NEW
-				'patient_prescriptions' => $patient_prescription, // NEW
-				'patient_treatment' => $patient_treatment, // NEW
-				'medicines' => $medicines, // NEW
-				'potencies' => $potencies, // NEW
-				'appointment_type' => $appointment_type, // NEW
-				'criteria' => $criteria, // NEW
-				'doses' => $doses, // NEW
-				'treatments' => $treatments, // NEW
-				'patient_status' => $patient_status, // NEW
-				'invoices' => $invoices, // NEW
-				'invoice_payments' => $invoice_payments, // NEW
-				'timings' => $timings // NEW
+				'patient_call_logs' => $patient_call_logs,
+				'patient_prescriptions' => $patient_prescription,
+				'patient_treatment' => $patient_treatment,
+				'medicines' => $medicines,
+				'potencies' => $potencies,
+				'appointment_type' => $appointment_type,
+				'criteria' => $criteria,
+				'doses' => $doses,
+				'treatments' => $treatments,
+				'patient_status' => $patient_status,
+				'invoices' => $invoices,
+				'invoice_payments' => $invoice_payments,
+				'timings' => $timings
 			], true);
 		}
 		$this->load->view('patients_list', $data);

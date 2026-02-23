@@ -20,23 +20,23 @@ $summary_filter = $CI->input->get('summary_filter');
 
 // Map DataTable columns to actual SQL columns/aliases (null means fallback to default)
 $columns = [
-    'c.userid',                   // 0 - S.No.
-    'c.company',                  // 1 - Patient name
-    'new.mr_no',                  // 2 - MR No
-    'new.age',                    // 3 - Age
-    'new.gender',                 // 4 - Gender
-    'c.phonenumber',              // 5 - Mobile number
-    null,                         // 6 - Treatment (calculated separately)
-    null,                         // 7 - Assigned doctor (calculated separately)
-    'patient_source_name',        // 8 - Source alias
-    'branch_names',               // 9 - Branch names alias
-    null,                         // 10 - Last calling date (calculated separately)
-    null,                         // 11 - Next calling date (calculated separately)
-    null,                         // 12 - Current status (calculated separately)
-    'new.patient_status',         // 13 - Patient status
-    'new.registration_start_date',// 14 - Registration start date
-    'new.registration_end_date',  // 15 - Registration end date
-    null                          // 16 - Status badge (calculated separately)
+    'c.userid',
+    'c.company',
+    'new.mr_no',
+    'new.age',
+    'new.gender',
+    'c.phonenumber',
+    null,
+    null,
+    'patient_source_name',
+    'branch_names',
+    null,
+    null,
+    null,
+    'new.patient_status',
+    'new.registration_start_date',
+    'new.registration_end_date',
+    null
 ];
 
 $order_column = $columns[$order_column_index] ?? null;
@@ -371,9 +371,6 @@ if ($summary_filter === 'due') {
 }
 
 
-/* echo $CI->db->get_compiled_select();
-exit; */  
-
 $results = $CI->db->get()->result_array();
 
 // Process user IDs
@@ -521,13 +518,3 @@ foreach ($results as $row) {
 
 echo json_encode($output);
 exit;
-$postedFrom = $CI->input->post('from_date_filter');
-$postedTo = $CI->input->post('to_date_filter');
-
-if (!empty($postedFrom)) {
-    $from_date = $postedFrom;
-}
-
-if (!empty($postedTo)) {
-    $to_date = $postedTo;
-}
