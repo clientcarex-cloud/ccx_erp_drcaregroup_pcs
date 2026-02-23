@@ -2,414 +2,445 @@
 <div class="modal fade" id="client-model-auto" tabindex="-1" role="dialog">
   <div class="modal-dialog modal-xxl">
     <div class="modal-content">
-    <style>
-.dataTables_filter {
-  text-align: right !important;
-}
-.modal-body {
-  max-height: 90vh;
-  overflow-y: auto;
-}
+      <style>
+        .dataTables_filter {
+          text-align: right !important;
+        }
 
-.dataTables_length select.form-control {
-    display: inline-block;
-    width: auto;
-    height: 30px;
-    min-height: 20px;
-    margin-top: 0px; /* adjust as needed */
-    padding-top: 4px; /* tweak if necessary */
-    font-size: 14px;
-}
-        
-/* Scoped styles for table and cell centering */
-.medicine-table-container {
-  margin-top: 20px;
-}
+        .modal-body {
+          max-height: 90vh;
+          overflow-y: auto;
+        }
 
-.medicine-table {
-  width: 100%;
-  border-collapse: collapse;
-}
+        .dataTables_length select.form-control {
+          display: inline-block;
+          width: auto;
+          height: 30px;
+          min-height: 20px;
+          margin-top: 0px;
+          /* adjust as needed */
+          padding-top: 4px;
+          /* tweak if necessary */
+          font-size: 14px;
+        }
 
-.medicine-table th, .medicine-table td {
-  padding: 10px;
-  border: 1px solid #ddd;
-  text-align: left;
-  vertical-align: middle; /* Ensures vertical alignment in the cell */
-}
+        /* Scoped styles for table and cell centering */
+        .medicine-table-container {
+          margin-top: 20px;
+        }
 
+        .medicine-table {
+          width: 100%;
+          border-collapse: collapse;
+        }
 
-
-.medicine-table td {
-  vertical-align: middle; /* Vertically centers content in td */
-}
-
-.medicine-select-container {
-  position: relative;
-  width: 100%;
-}
-
-.medicine-select-input {
-  width: 100%;
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-}
-
-.medicine-select-options {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  width: 100%;
-  max-height: 150px;
-  overflow-y: auto;
-  background-color: white;
-  border: 1px solid #ccc;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-  display: none;
-  z-index: 999;
-}
-
-.medicine-select-option {
-  padding: 8px;
-  cursor: pointer;
-}
-
-.medicine-select-option:hover {
-  background-color: #f1f1f1;
-}
-
-.medicine-btn {
-  padding: 6px 12px;
-  background-color: #007bff;
-  color: white;
-  border: none;
-  cursor: pointer;
-  border-radius: 4px;
-}
-
-.medicine-btn:hover {
-  background-color: #0056b3;
-}
-
-.medicine-textarea {
-  width: 100%;
-  padding: 4px;
-  box-sizing: border-box;
-  border-radius: 4px;
-  border: 1px solid #ccc;
-}
-</style>
-<style>
-    /* Container for Prescription Form */
-    .medicine-table-container {
-        margin-top: 20px;
-        border: 1px solid #ccc;
-        padding: 20px;
-        !background-color: #f9f9f9;
-        border-radius: 8px;
-    }
-
-    /* Prescription Table */
-    .medicine-table {
-        width: 100%;
-        border-collapse: collapse;
-    }
-
-    /* Table Header Styling */
-    .medicine-table th {
-        padding: 12px;
-        text-align: left;
-        !background-color: #007bff;  /* A blue color for the table header */
-        !color: #fff;                /* White text color */
-        font-size: 16px;
-        font-weight: 500;
-    }
-
-    .medicine-table tbody tr:hover {
-        background-color: #f1f1f1;
-    }
-
-    /* Table Data Styling */
-    .medicine-table td {
-        padding: 12px;
-        text-align: left;
-        border: 1px solid #ddd;
-    }
-
-    /* Heading Styling */
-    .patient-section-title h4 {
-        color: #343a40;         /* Dark gray for headings */
-        font-size: 1.5rem;       /* Slightly larger font size */
-        font-weight: 600;        /* Bold text for headings */
-        margin-bottom: 20px;
-    }
-
-    /* Form Buttons */
-    .form-actions {
-        margin-top: 20px;
-        text-align: right;
-    }
-
-    .form-actions button {
-        margin-left: 10px;
-    }
-
-    /* Add Medicine Button */
-    .medicine-actions {
-        display: flex;
-        justify-content: flex-end;
-        margin-top: 20px;
-    }
-
-    .medicine-btn {
-        background-color: #28a745;  /* Green for the "Add Medicine" button */
-        color: #fff;
-        padding: 10px 20px;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-        font-size: 14px;
-    }
-
-    .medicine-btn:hover {
-        background-color: #218838;  /* Darker green on hover */
-    }
-
-    /* Prescription Form Layout */
-    .medicine-table th, .medicine-table td {
-        padding: 10px;
-        border: 1px solid #ddd;
-    }
-
-    .medicine-table-container h4 {
-        margin-bottom: 20px;
-    }
-
-    /* Prescription Form Input Styling */
-    .medicine-table input, .medicine-table textarea {
-        width: 100%;
-        padding: 8px;
-        border-radius: 5px;
-        border: 1px solid #ccc;
-    }
-
-    .medicine-table select {
-        width: 100%;
-        padding: 8px;
-        border-radius: 5px;
-        border: 1px solid #ccc;
-    }
-
-    /* Action Button Styling */
-    .medicine-btn {
-        padding: 8px 15px;
-        background-color: #007bff;
-        color: white;
-        border-radius: 5px;
-        font-size: 14px;
-    }
-
-    .medicine-btn:hover {
-        background-color: #0056b3;
-    }
-</style>
-<style>
-          .patient-section-title {
-            font-weight: 500;
-            !background: #f2f9ff;
-            font-size: 16px;
-            !color: #fff;
-            !text-align: center;
-            !color: #007bff; 
-            padding: 8px; 
-            border-radius: 5px; 
-            border: 1px solid #ccc;
-            margin: 0;
-          }
-
-          .patient-info-row {
-            margin-bottom: 10px;
-          }
-
-          .patient-label {
-            font-weight: 600;
-            color: #555;
-          }
-
-          .patient-value {
-            color: #000;
-          }
-
-          .note-text {
-            color: #007bff;
-            font-weight: 500;
-          }
-          .blurred {
-  filter: blur(3px);
-  transition: filter 0.3s;
-}
-
-          .patient-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-bottom: 20px;
-    font-size: 14px;
-  }
-
-  .patient-table td {
-    border: 1px solid #ccc;
-    padding: 8px 12px;
-    vertical-align: top;
-  }
-
-  .patient-label {
-    !font-weight: bold;
-    color: #333;
-    display: inline-block;
-    min-width: 150px;
-  }
-
-  .text-success {
-    color: green;
-  }
-  
+        .medicine-table th,
+        .medicine-table td {
+          padding: 10px;
+          border: 1px solid #ddd;
+          text-align: left;
+          vertical-align: middle;
+          /* Ensures vertical alignment in the cell */
+        }
 
 
-/* Card Header Styling */
-.card-header {
-    background-color: #f1f1f1; /* Light gray background */
-    color: #333; /* Dark text color for better contrast */
-    !padding: 12px 20px; /* Padding on both sides */
-    !border: 1px solid #ccc; /* Light gray border */
-    cursor: pointer; /* Pointer cursor on hover */
-    display: flex;
-    justify-content: space-between; /* Space between title and icon */
-    align-items: center;
-    !border-radius: 5px 5px 0 0; /* Rounded corners at the top */
-    transition: background-color 0.3s ease; /* Smooth background color change */
-}
 
-/* Card Header Hover Effect */
-.card-header:hover {
-    !background-color: #e0e0e0; /* Slightly darker gray when hovering */
-}
+        .medicine-table td {
+          vertical-align: middle;
+          /* Vertically centers content in td */
+        }
 
-/* Accordion Header Text */
-.card-header h5 {
-    margin: 0;
-    font-size: 16px;
-    font-weight: 600; /* Slightly bolder text */
-}
+        .medicine-select-container {
+          position: relative;
+          width: 100%;
+        }
 
-/* Arrow Icon Styling */
-.toggle-icon {
-    transition: transform 0.3s; /* Smooth rotation for the arrow */
-    font-size: 18px;
-   
-}
+        .medicine-select-input {
+          width: 100%;
+          padding: 8px;
+          border: 1px solid #ccc;
+          border-radius: 4px;
+        }
 
-/* When the section is open, rotate the icon */
-.toggle-icon.open {
-    transform: rotate(180deg);
-}
+        .medicine-select-options {
+          position: absolute;
+          top: 100%;
+          left: 0;
+          width: 100%;
+          max-height: 150px;
+          overflow-y: auto;
+          background-color: white;
+          border: 1px solid #ccc;
+          box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+          display: none;
+          z-index: 999;
+        }
 
-/* Card Body Styling */
-.card-body {
-    padding: 20px;
-    !border-top: 1px solid #e0e0e0; /* Light gray border at the top */
-    background-color: #fafafa; /* Very light gray background for card content */
-}
+        .medicine-select-option {
+          padding: 8px;
+          cursor: pointer;
+        }
 
-/* General Form Layout */
-.mtop10 {
-    margin-top: 10px;
-}
+        .medicine-select-option:hover {
+          background-color: #f1f1f1;
+        }
 
-.mtop20 {
-    margin-top: 20px;
-}
+        .medicine-btn {
+          padding: 6px 12px;
+          background-color: #007bff;
+          color: white;
+          border: none;
+          cursor: pointer;
+          border-radius: 4px;
+        }
 
-.form-actions {
-    margin-top: 20px;
-    text-align: right;
-}
+        .medicine-btn:hover {
+          background-color: #0056b3;
+        }
 
-.form-actions .btn {
-    margin-left: 10px;
-}
+        .medicine-textarea {
+          width: 100%;
+          padding: 4px;
+          box-sizing: border-box;
+          border-radius: 4px;
+          border: 1px solid #ccc;
+        }
+      </style>
+      <style>
+        /* Container for Prescription Form */
+        .medicine-table-container {
+          margin-top: 20px;
+          border: 1px solid #ccc;
+          padding: 20px;
+          !background-color: #f9f9f9;
+          border-radius: 8px;
+        }
 
-/* Adjust for Card Body if needed */
-.card {
-    margin-bottom: 15px;
-}
+        /* Prescription Table */
+        .medicine-table {
+          width: 100%;
+          border-collapse: collapse;
+        }
 
-/* Styling for Form Elements */
-select.form-control, input.form-control, textarea.form-control {
-    !border-radius: 5px;
-    !border: 1px solid #ccc; /* Light gray border for form elements */
-    padding: 10px;
-}
-.scroller.arrow-right {
-  display: block !important;
-}
+        /* Table Header Styling */
+        .medicine-table th {
+          padding: 12px;
+          text-align: left;
+          !background-color: #007bff;
+          /* A blue color for the table header */
+          !color: #fff;
+          /* White text color */
+          font-size: 16px;
+          font-weight: 500;
+        }
+
+        .medicine-table tbody tr:hover {
+          background-color: #f1f1f1;
+        }
+
+        /* Table Data Styling */
+        .medicine-table td {
+          padding: 12px;
+          text-align: left;
+          border: 1px solid #ddd;
+        }
+
+        /* Heading Styling */
+        .patient-section-title h4 {
+          color: #343a40;
+          /* Dark gray for headings */
+          font-size: 1.5rem;
+          /* Slightly larger font size */
+          font-weight: 600;
+          /* Bold text for headings */
+          margin-bottom: 20px;
+        }
+
+        /* Form Buttons */
+        .form-actions {
+          margin-top: 20px;
+          text-align: right;
+        }
+
+        .form-actions button {
+          margin-left: 10px;
+        }
+
+        /* Add Medicine Button */
+        .medicine-actions {
+          display: flex;
+          justify-content: flex-end;
+          margin-top: 20px;
+        }
+
+        .medicine-btn {
+          background-color: #28a745;
+          /* Green for the "Add Medicine" button */
+          color: #fff;
+          padding: 10px 20px;
+          border: none;
+          border-radius: 5px;
+          cursor: pointer;
+          font-size: 14px;
+        }
+
+        .medicine-btn:hover {
+          background-color: #218838;
+          /* Darker green on hover */
+        }
+
+        /* Prescription Form Layout */
+        .medicine-table th,
+        .medicine-table td {
+          padding: 10px;
+          border: 1px solid #ddd;
+        }
+
+        .medicine-table-container h4 {
+          margin-bottom: 20px;
+        }
+
+        /* Prescription Form Input Styling */
+        .medicine-table input,
+        .medicine-table textarea {
+          width: 100%;
+          padding: 8px;
+          border-radius: 5px;
+          border: 1px solid #ccc;
+        }
+
+        .medicine-table select {
+          width: 100%;
+          padding: 8px;
+          border-radius: 5px;
+          border: 1px solid #ccc;
+        }
+
+        /* Action Button Styling */
+        .medicine-btn {
+          padding: 8px 15px;
+          background-color: #007bff;
+          color: white;
+          border-radius: 5px;
+          font-size: 14px;
+        }
+
+        .medicine-btn:hover {
+          background-color: #0056b3;
+        }
+      </style>
+      <style>
+        .patient-section-title {
+          font-weight: 500;
+          !background: #f2f9ff;
+          font-size: 16px;
+          !color: #fff;
+          !text-align: center;
+          !color: #007bff;
+          padding: 8px;
+          border-radius: 5px;
+          border: 1px solid #ccc;
+          margin: 0;
+        }
+
+        .patient-info-row {
+          margin-bottom: 10px;
+        }
+
+        .patient-label {
+          font-weight: 600;
+          color: #555;
+        }
+
+        .patient-value {
+          color: #000;
+        }
+
+        .note-text {
+          color: #007bff;
+          font-weight: 500;
+        }
+
+        .blurred {
+          filter: blur(3px);
+          transition: filter 0.3s;
+        }
+
+        .patient-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-bottom: 20px;
+          font-size: 14px;
+        }
+
+        .patient-table td {
+          border: 1px solid #ccc;
+          padding: 8px 12px;
+          vertical-align: top;
+        }
+
+        .patient-label {
+          !font-weight: bold;
+          color: #333;
+          display: inline-block;
+          min-width: 150px;
+        }
+
+        .text-success {
+          color: green;
+        }
 
 
-  </style>
+
+        /* Card Header Styling */
+        .card-header {
+          background-color: #f1f1f1;
+          /* Light gray background */
+          color: #333;
+          /* Dark text color for better contrast */
+          !padding: 12px 20px;
+          /* Padding on both sides */
+          !border: 1px solid #ccc;
+          /* Light gray border */
+          cursor: pointer;
+          /* Pointer cursor on hover */
+          display: flex;
+          justify-content: space-between;
+          /* Space between title and icon */
+          align-items: center;
+          !border-radius: 5px 5px 0 0;
+          /* Rounded corners at the top */
+          transition: background-color 0.3s ease;
+          /* Smooth background color change */
+        }
+
+        /* Card Header Hover Effect */
+        .card-header:hover {
+          !background-color: #e0e0e0;
+          /* Slightly darker gray when hovering */
+        }
+
+        /* Accordion Header Text */
+        .card-header h5 {
+          margin: 0;
+          font-size: 16px;
+          font-weight: 600;
+          /* Slightly bolder text */
+        }
+
+        /* Arrow Icon Styling */
+        .toggle-icon {
+          transition: transform 0.3s;
+          /* Smooth rotation for the arrow */
+          font-size: 18px;
+
+        }
+
+        /* When the section is open, rotate the icon */
+        .toggle-icon.open {
+          transform: rotate(180deg);
+        }
+
+        /* Card Body Styling */
+        .card-body {
+          padding: 20px;
+          !border-top: 1px solid #e0e0e0;
+          /* Light gray border at the top */
+          background-color: #fafafa;
+          /* Very light gray background for card content */
+        }
+
+        /* General Form Layout */
+        .mtop10 {
+          margin-top: 10px;
+        }
+
+        .mtop20 {
+          margin-top: 20px;
+        }
+
+        .form-actions {
+          margin-top: 20px;
+          text-align: right;
+        }
+
+        .form-actions .btn {
+          margin-left: 10px;
+        }
+
+        /* Adjust for Card Body if needed */
+        .card {
+          margin-bottom: 15px;
+        }
+
+        /* Styling for Form Elements */
+        select.form-control,
+        input.form-control,
+        textarea.form-control {
+          !border-radius: 5px;
+          !border: 1px solid #ccc;
+          /* Light gray border for form elements */
+          padding: 10px;
+        }
+
+        .scroller.arrow-right {
+          display: block !important;
+        }
+      </style>
 
       <!-- Modal Header -->
       <div class="modal-header d-flex justify-content-between align-items-center">
-	   <div class="modal-dialog modal-dialog-centered modal-xxl" role="document">
-      <div class="row align-items-center">
-			<div class="col-md-10">
-				<h4 class="modal-title m-0" style="display: inline-block;">
-					#<?= $client->userid; ?> - <?= $client->company; ?> | <?php echo $customer_new_fields->gender?> <?php
-					$today = date('Y-m-d');
-					$today_appointments = [];
-					foreach ($appointment_data as $app_data) {
-						if (!empty($app_data['appointment_date'])) {
-							$date_only = date('Y-m-d', strtotime($app_data['appointment_date']));
-							
-							if ($date_only === $today) {
-								$today_appointments[] = $app_data;
-							}
-						}
-					}
+        <div class="modal-dialog modal-dialog-centered modal-xxl" role="document">
+          <div class="row align-items-center">
+            <div class="col-md-10">
+              <h4 class="modal-title m-0" style="display: inline-block;">
+                #<?= $client->userid; ?> - <?= $client->company; ?> | <?php echo $customer_new_fields->gender ?> <?php
+                         $today = date('Y-m-d');
+                         $today_appointments = [];
+                         foreach ($appointment_data as $app_data) {
+                           if (!empty($app_data['appointment_date'])) {
+                             $date_only = date('Y-m-d', strtotime($app_data['appointment_date']));
 
-					if (!empty($customer_new_fields->age)) {
-						echo " | ".$customer_new_fields->age;
-					}else if (!empty($customer_new_fields->dob)) {
-						$dob = new DateTime($customer_new_fields->dob);
-						$today = new DateTime();
-						$diff = $dob->diff($today);
+                             if ($date_only === $today) {
+                               $today_appointments[] = $app_data;
+                             }
+                           }
+                         }
 
-						echo " | ".$diff->y . ' Years, ' . $diff->m . ' Months, ' . $diff->d . ' Days';
-					}
-					
-					if (!empty($patient_treatment)) {
-						$treatment_names = array_column($patient_treatment, 'treatment_name');
+                         if (!empty($customer_new_fields->age)) {
+                           echo " | " . $customer_new_fields->age;
+                         } else if (!empty($customer_new_fields->dob)) {
+                           $dob = new DateTime($customer_new_fields->dob);
+                           $today = new DateTime();
+                           $diff = $dob->diff($today);
 
-						// Get unique names
-						$unique_names = array_unique($treatment_names);
+                           echo " | " . $diff->y . ' Years, ' . $diff->m . ' Months, ' . $diff->d . ' Days';
+                         }
 
-						// Convert to comma-separated string
-						echo " | ".implode(', ', $unique_names);
-					}
+                         if (!empty($patient_treatment)) {
+                           $treatment_names = array_column($patient_treatment, 'treatment_name');
 
-					?>
-					<?php 
-		   $current_status = $client->status_name;
-		   $status_name = $client->status_name;
-		   $color = $client->status_color;
-		   
-		   echo $outputStatus = '<span class="lead-status-' . $current_status . ' label' . (empty($color) ? ' label-default' : '') . '" style="color:' . $color . ';border:1px solid ' . adjust_hex_brightness($color, 0.4) . ';background: ' . adjust_hex_brightness($color, 0.04) . ';">' . e($status_name) . '</span>';?>
-				</h4>
-				<?php
-				$color = '#28a745'; // green or any dynamic color
-				$bg = adjust_hex_brightness($color, 0.04);
-				$border = adjust_hex_brightness($color, 0.4);
+                           // Get unique names
+                           $unique_names = array_unique($treatment_names);
 
-				echo '<label id="consultation_timer_container" style="display: none; margin-left: 10px;">
+                           // Convert to comma-separated string
+                           echo " | " . implode(', ', $unique_names);
+                         }
+
+                         ?>
+                <?php
+                $current_status = $client->status_name;
+                $status_name = $client->status_name;
+                $color = $client->status_color;
+
+                echo $outputStatus = '<span class="lead-status-' . $current_status . ' label' . (empty($color) ? ' label-default' : '') . '" style="color:' . $color . ';border:1px solid ' . adjust_hex_brightness($color, 0.4) . ';background: ' . adjust_hex_brightness($color, 0.04) . ';">' . e($status_name) . '</span>'; ?>
+              </h4>
+              <?php
+              $color = '#28a745'; // green or any dynamic color
+              $bg = adjust_hex_brightness($color, 0.04);
+              $border = adjust_hex_brightness($color, 0.4);
+
+              echo '<label id="consultation_timer_container" style="display: none; margin-left: 10px;">
 				  <span class="label label-default" 
 						style="color:' . $color . ';
 							   border:1px solid ' . $border . ';
@@ -419,170 +450,170 @@ select.form-control, input.form-control, textarea.form-control {
 					Consultation Duration:&nbsp;<span id="consultation_timer"> 00:00</span>
 				  </span>
 				</label>';
-				?>
+              ?>
 
 
 
 
-			</div>
-			
-			<div class="col-md-2 text-end" style="display: flex; align-items: center; justify-content: flex-end; gap: 5px;">
+            </div>
+
+            <div class="col-md-2 text-end"
+              style="display: flex; align-items: center; justify-content: flex-end; gap: 5px;">
 
 
-<?php
-$doctor_id = get_staff_user_id(); // current logged-in staff
-$counter = get_counter_by_doctor_id($doctor_id);
+              <?php
+              $doctor_id = get_staff_user_id(); // current logged-in staff
+              $counter = get_counter_by_doctor_id($doctor_id);
 
-$current_status = strtolower($counter->counter_status ?? '');
-$is_break = in_array($current_status, ['emergency', 'lunch break']);
+              $current_status = strtolower($counter->counter_status ?? '');
+              $is_break = in_array($current_status, ['emergency', 'lunch break']);
 
-if($counter){
-	if (staff_can('token_emergency_lunch_break', 'customers')) {
-	?>
-	<div class="btn-group">
-  <button type="button" class="btn btn-info btn-sm dropdown-toggle" data-toggle="dropdown">
-    <?= _l('Counter Status'); ?>: <?= $current_status ?> <span class="caret"></span>
-  </button>
-  <ul class="dropdown-menu dropdown-menu-left">
-    <li class="<?= $current_status == 'Available' ? 'active' : '' ?>">
-      <a href="javascript:void(0);" class="update-status" data-status="Available">Available</a>
-    </li>
-    <li class="<?= $current_status == 'Lunch Break' ? 'active' : '' ?>">
-      <a href="javascript:void(0);" class="update-status" data-status="Lunch Break">Lunch Break</a>
-    </li>
-    <li class="<?= $current_status == 'Emergency' ? 'active' : '' ?>">
-      <a href="javascript:void(0);" class="update-status" data-status="Emergency">Emergency</a>
-    </li>
-  </ul>
-</div>
-<?PHP
-	}
-	if (staff_can('token_smart_queue', 'customers')) {
-		
-	?>
-<div class="btn-group ml-2">
-  <?php if (!$is_break): ?>
-    <button type="button" class="btn btn-default btn-sm dropdown-toggle" data-toggle="dropdown">
-      Start Token <span class="caret"></span>
-    </button>
-    <ul class="dropdown-menu dropdown-menu-right">
-      <?php foreach ($today_appointment_data as $row): ?>
-        <li>
-          <a href="javascript:void(0);" class="start-token"
-             data-patient-id="<?= $row['patient_id'] ?>"
-             data-doctor-id="<?= $row['enquiry_doctor_id'] ?>">
-            <?= $row['patient_name'] ?>
+              if ($counter) {
+                if (staff_can('token_emergency_lunch_break', 'customers')) {
+                  ?>
+                  <div class="btn-group">
+                    <button type="button" class="btn btn-info btn-sm dropdown-toggle" data-toggle="dropdown">
+                      <?= _l('Counter Status'); ?>: <?= $current_status ?> <span class="caret"></span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-left">
+                      <li class="<?= $current_status == 'Available' ? 'active' : '' ?>">
+                        <a href="javascript:void(0);" class="update-status" data-status="Available">Available</a>
+                      </li>
+                      <li class="<?= $current_status == 'Lunch Break' ? 'active' : '' ?>">
+                        <a href="javascript:void(0);" class="update-status" data-status="Lunch Break">Lunch Break</a>
+                      </li>
+                      <li class="<?= $current_status == 'Emergency' ? 'active' : '' ?>">
+                        <a href="javascript:void(0);" class="update-status" data-status="Emergency">Emergency</a>
+                      </li>
+                    </ul>
+                  </div>
+                  <?PHP
+                }
+                if (staff_can('token_smart_queue', 'customers')) {
+
+                  ?>
+                  <div class="btn-group ml-2">
+                    <?php if (!$is_break): ?>
+                      <button type="button" class="btn btn-default btn-sm dropdown-toggle" data-toggle="dropdown">
+                        Start Token <span class="caret"></span>
+                      </button>
+                      <ul class="dropdown-menu dropdown-menu-right">
+                        <?php foreach ($today_appointment_data as $row): ?>
+                          <li>
+                            <a href="javascript:void(0);" class="start-token" data-patient-id="<?= $row['patient_id'] ?>"
+                              data-doctor-id="<?= $row['enquiry_doctor_id'] ?>">
+                              <?= $row['patient_name'] ?>
+                            </a>
+                          </li>
+                        <?php endforeach; ?>
+                      </ul>
+                    <?php else: ?>
+                      <span class="label label-warning"><?= ucfirst($current_status) ?> Mode</span>
+                    <?php endif; ?>
+                  </div>
+
+                  <?PHP
+                }
+              }
+              ?>
+
+              <script>
+                $(document).on('click', '.start-token', function () {
+                  const patient_id = $(this).data('patient-id');
+                  const doctor_id = $(this).data('doctor-id');
+
+                  $.post(admin_url + 'client/ajax_start_token', {
+                    patient_id: patient_id,
+                    doctor_id: doctor_id
+                  }, function (response) {
+                    const res = JSON.parse(response);
+                    if (res.success) {
+                      window.location.href = admin_url + 'client/get_patient_list/' + patient_id;
+                      // Optional: refresh token table
+                    } else {
+                      alert_float('danger', 'Failed to start token');
+                    }
+                  });
+                });
+                $(document).on('click', '.update-status', function () {
+                  const status = $(this).data('status');
+                  const doctor_id = <?= get_staff_user_id(); ?>;
+
+                  $.post(admin_url + 'client/update_counter_status', {
+                    doctor_id: doctor_id,
+                    status: status
+                  }, function (res) {
+                    const response = JSON.parse(res);
+                    if (response.success) {
+                      alert_float('success', 'Counter status updated to ' + status);
+                      location.reload(); // Refresh to reflect status
+                    } else {
+                      alert_float('danger', 'Failed to update status.');
+                    }
+                  });
+                });
+
+
+              </script>
+              <?PHP
+
+
+              if (staff_can('edit', 'customers')) {
+                ?>
+                <a href="<?= admin_url('client/edit_client/' . $client->userid); ?>">
+                  <button type="button" class="btn btn-warning btn-sm edit-button">
+                    <i class="fas fa-pencil-alt"></i> <?php echo _l('edit'); ?>
+                  </button>
+                </a>
+                <?PHP
+              }
+              $should_close_tab = (strpos($callback_url, 'reports/') === 0);
+
+              if ($callback_url) {
+                if ($should_close_tab) {
+                  ?>
+                  <a href="#" onclick="window.location.href = '<?= admin_url('client/' . $callback_url) ?>';">
+                <button type="button" class="btn btn-secondary btn-sm close close-button">
+                <span aria-hidden="true">&times;</span>
+              </button>
+              </a>
+            <?php
+                } else {
+                  if ($callback_url == "appointments-tab") {
+                    ?>
+                <a href="<?= admin_url('client/get_patient_list/#appointments-tab'); ?>">
+                  <button type="button" class="btn btn-secondary btn-sm close close-button">
+                  <span aria-hidden="true">&times;</span>
+                </button>
+                </a>
+                <?php
+                  } else {
+
+                    ?>
+                <a href="<?= admin_url('client/' . $callback_url); ?>">
+                  <button type="button" class="btn btn-secondary btn-sm close close-button">
+                  <span aria-hidden="true">&times;</span>
+                </button>
+                </a>
+                <?php
+
+                  }
+                }
+
+              } else {
+                ?>
+          <a href="<?= admin_url('client/get_patient_list'); ?>">
+          <button type="button" class="btn btn-secondary btn-sm close close-button">
+            <span aria-hidden="true">&times;</span>
+          </button>
           </a>
-        </li>
-      <?php endforeach; ?>
-    </ul>
-  <?php else: ?>
-    <span class="label label-warning"><?= ucfirst($current_status) ?> Mode</span>
-  <?php endif; ?>
-</div>
-	
-	<?PHP
-	}
-}
-?>
-
-		<script>
-		$(document).on('click', '.start-token', function () {
-    const patient_id = $(this).data('patient-id');
-    const doctor_id  = $(this).data('doctor-id');
-
-    $.post(admin_url + 'client/ajax_start_token', {
-        patient_id: patient_id,
-        doctor_id: doctor_id
-    }, function (response) {
-        const res = JSON.parse(response);
-        if (res.success) {
-            window.location.href = admin_url + 'client/get_patient_list/' + patient_id;
-            // Optional: refresh token table
-        } else {
-			alert_float('danger', 'Failed to start token');
-        }
-    });
-});
-$(document).on('click', '.update-status', function () {
-    const status = $(this).data('status');
-    const doctor_id = <?= get_staff_user_id(); ?>;
-
-    $.post(admin_url + 'client/update_counter_status', {
-        doctor_id: doctor_id,
-        status: status
-    }, function (res) {
-        const response = JSON.parse(res);
-        if (response.success) {
-			alert_float('success', 'Counter status updated to ' + status);
-            location.reload(); // Refresh to reflect status
-        } else {
-			alert_float('danger', 'Failed to update status.');
-        }
-    });
-});
-
-
-		</script>	
-			<?PHP
-			
-
-			if (staff_can('edit', 'customers')) {
-			?>
-				<a href="<?= admin_url('client/edit_client/'.$client->userid); ?>">
-					<button type="button" class="btn btn-warning btn-sm edit-button">
-						<i class="fas fa-pencil-alt"></i> <?php echo _l('edit'); ?>
-					</button>
-				</a>
-			<?PHP
-			}
-			$should_close_tab = (strpos($callback_url, 'reports/') === 0);
-			
-			if($callback_url){
-				if($should_close_tab){
-					?>
-					<a href="#" onclick="location.reload();">
-						<button type="button" class="btn btn-secondary btn-sm close close-button">
-						<span aria-hidden="true">&times;</span>
-					</button>
-					</a>
-				<?php
-				}else{
-					if($callback_url == "appointments-tab"){
-						?>
-					<a href="<?= admin_url('client/get_patient_list/#appointments-tab'); ?>">
-						<button type="button" class="btn btn-secondary btn-sm close close-button">
-						<span aria-hidden="true">&times;</span>
-					</button>
-					</a>
-					<?php
-					}else{
-					
-					?>
-					<a href="<?= admin_url('client/'.$callback_url); ?>">
-						<button type="button" class="btn btn-secondary btn-sm close close-button">
-						<span aria-hidden="true">&times;</span>
-					</button>
-					</a>
-					<?php
-						
-					}
-				}
-				
-			}else{
-				?>
-				<a href="<?= admin_url('client/get_patient_list'); ?>">
-				<button type="button" class="btn btn-secondary btn-sm close close-button">
-					<span aria-hidden="true">&times;</span>
-				</button>
-				</a>
-				<?php
-			}
-			?>
-			
-				
-			</div>
-		</div>
+          <?php
+              }
+              ?>
+      
+        
+      </div>
+    </div>
 
       <!-- Modal Body -->
       <div class="modal-body">
@@ -594,111 +625,121 @@ $(document).on('click', '.update-status', function () {
             <div class="horizontal-tabs">
               <ul class="nav nav-tabs nav-tabs-horizontal nav-tabs-segmented" role="tablist">
                 <?php
-                  if (staff_can('view_overview', 'customers')) {
-                ?>
-                <li role="presentation" class="active">
-                  <a href="#tab_overview" aria-controls="tab_overview" role="tab" data-toggle="tab">
-                    <i class="fa-solid fa-circle-info menu-icon"></i>
-                    <?= _l('overview'); ?>
-                  </a>
-                </li>
-                <?php
-                  }if (staff_can('view_casesheet', 'customers')) {
-                ?>
-                <li role="presentation">
-                  <a href="#tab_casesheet" aria-controls="tab_casesheet" role="tab" data-toggle="tab">
-                  <i class="fa-solid fa-notes-medical menu-icon"></i>
-                    <?= _l('casesheet'); ?>
-                  </a>
-                </li>
-                <?php
-                  }if (staff_can('view_prescription', 'customers')) {
-                ?>
-                <li role="presentation">
-                  <a href="#tab_prescription" aria-controls="tab_prescription" role="tab" data-toggle="tab">
-                    <i class="fa-solid fa-prescription-bottle-medical menu-icon"></i>
-                    <?= _l('prescription'); ?>
-                  </a>
-                </li>
-                <?php
-                  }if (staff_can('view', 'estimates')) {
-                ?>
-                <li role="presentation">
-                  <a href="#tab_estimation" aria-controls="tab_estimation" role="tab" data-toggle="tab">
-                    <i class="fa-solid fa-credit-card menu-icon"></i>
-                    <?= _l('package'); ?>
-                  </a>
-                </li>
-                <?php
-                  }if (staff_can('view_payments', 'customers')) {
-                ?>
-                <li role="presentation">
-                  <a href="#tab_payments" aria-controls="tab_payments" role="tab" data-toggle="tab">
-                    <i class="fa-solid fa-credit-card menu-icon"></i>
-                    <?= _l('payments'); ?>
-                  </a>
-                </li>
-                <?php
-                  } if (staff_can('view_visits', 'customers')) {
-                ?>
-                <li role="presentation">
-                  <a href="#tab_visits" aria-controls="tab_visits" role="tab" data-toggle="tab">
-                    <i class="fa-solid fa-calendar-check menu-icon"></i>
-                    <?= _l('visits'); ?>
-                  </a>
-                </li>
-                <?php
-                  } if (staff_can('view_feedback', 'customers')) {
-                ?>
-                <li role="presentation">
-                  <a href="#tab_feedback" aria-controls="tab_feedback" role="tab" data-toggle="tab">
-                    <i class="fa-regular fa-comments menu-icon"></i>
-                    <?= _l('feedback'); ?>
-                  </a>
-                </li>
-                <?php
-                  }if (staff_can('view_call_log', 'customers')) {
-                ?>
-                <li role="presentation">
-                  <a href="#tab_calls" aria-controls="tab_calls" role="tab" data-toggle="tab">
-                    <i class="fa-solid fa-phone menu-icon"></i>
-                    <?= _l('call_logs'); ?>
-                  </a>
-                </li>
-                <?php
-                  }if (staff_can('view_message_log', 'customers')) {
-                ?>
-                <li role="presentation">
-					<a href="#message_log" aria-controls="message_log" role="tab" data-toggle="tab">
-						<i class="fa-solid fa-envelope menu-icon"></i> <?= _l('message_log'); ?>
-					</a>
-				</li>
-                <?php
-                  }if (staff_can('view_patient_reminders', 'customers')) {
-                ?>
-                <li role="presentation">
-					<a href="#patient_reminders"
-					   aria-controls="patient_reminders" role="tab" data-toggle="tab">
-						<i class="fa-regular fa-bell menu-icon"></i>
-						<?= _l('leads_reminders_tab'); ?>
-						<?php if ($total_reminders > 0) { ?>
-							<span class="badge"><?= $total_reminders; ?></span>
-						<?php } ?>
-					</a>
-				</li>
-
-                  <?php
-                  }if (staff_can('view_activity_log', 'customers')) {
-                ?>
-                <li role="presentation">
-                  <a href="#tab_activity" aria-controls="tab_activity" role="tab" data-toggle="tab">
-                    <i class="fa-solid fa-list menu-icon"></i>
-                    <?= _l('activity_logs'); ?>
-                  </a>
-                </li>
-                  <?php
-                  }
+                if (staff_can('view_overview', 'customers')) {
                   ?>
+                  <li role="presentation" class="active">
+                    <a href="#tab_overview" aria-controls="tab_overview" role="tab" data-toggle="tab">
+                      <i class="fa-solid fa-circle-info menu-icon"></i>
+                      <?= _l('overview'); ?>
+                    </a>
+                  </li>
+                  <?php
+                }
+                if (staff_can('view_casesheet', 'customers')) {
+                  ?>
+                  <li role="presentation">
+                    <a href="#tab_casesheet" aria-controls="tab_casesheet" role="tab" data-toggle="tab">
+                    <i class="fa-solid fa-notes-medical menu-icon"></i>
+                      <?= _l('casesheet'); ?>
+                    </a>
+                  </li>
+                  <?php
+                }
+                if (staff_can('view_prescription', 'customers')) {
+                  ?>
+                  <li role="presentation">
+                    <a href="#tab_prescription" aria-controls="tab_prescription" role="tab" data-toggle="tab">
+                      <i class="fa-solid fa-prescription-bottle-medical menu-icon"></i>
+                      <?= _l('prescription'); ?>
+                    </a>
+                  </li>
+                  <?php
+                }
+                if (staff_can('view', 'estimates')) {
+                  ?>
+                  <li role="presentation">
+                    <a href="#tab_estimation" aria-controls="tab_estimation" role="tab" data-toggle="tab">
+                      <i class="fa-solid fa-credit-card menu-icon"></i>
+                      <?= _l('package'); ?>
+                    </a>
+                  </li>
+                  <?php
+                }
+                if (staff_can('view_payments', 'customers')) {
+                  ?>
+                  <li role="presentation">
+                    <a href="#tab_payments" aria-controls="tab_payments" role="tab" data-toggle="tab">
+                      <i class="fa-solid fa-credit-card menu-icon"></i>
+                      <?= _l('payments'); ?>
+                    </a>
+                  </li>
+                  <?php
+                }
+                if (staff_can('view_visits', 'customers')) {
+                  ?>
+                  <li role="presentation">
+                    <a href="#tab_visits" aria-controls="tab_visits" role="tab" data-toggle="tab">
+                      <i class="fa-solid fa-calendar-check menu-icon"></i>
+                      <?= _l('visits'); ?>
+                    </a>
+                  </li>
+                  <?php
+                }
+                if (staff_can('view_feedback', 'customers')) {
+                  ?>
+                  <li role="presentation">
+                    <a href="#tab_feedback" aria-controls="tab_feedback" role="tab" data-toggle="tab">
+                      <i class="fa-regular fa-comments menu-icon"></i>
+                      <?= _l('feedback'); ?>
+                    </a>
+                  </li>
+                  <?php
+                }
+                if (staff_can('view_call_log', 'customers')) {
+                  ?>
+                  <li role="presentation">
+                    <a href="#tab_calls" aria-controls="tab_calls" role="tab" data-toggle="tab">
+                      <i class="fa-solid fa-phone menu-icon"></i>
+                      <?= _l('call_logs'); ?>
+                    </a>
+                  </li>
+                  <?php
+                }
+                if (staff_can('view_message_log', 'customers')) {
+                  ?>
+                  <li role="presentation">
+            <a href="#message_log" aria-controls="message_log" role="tab" data-toggle="tab">
+              <i class="fa-solid fa-envelope menu-icon"></i> <?= _l('message_log'); ?>
+            </a>
+          </li>
+                  <?php
+                }
+                if (staff_can('view_patient_reminders', 'customers')) {
+                  ?>
+                  <li role="presentation">
+            <a href="#patient_reminders"
+               aria-controls="patient_reminders" role="tab" data-toggle="tab">
+              <i class="fa-regular fa-bell menu-icon"></i>
+              <?= _l('leads_reminders_tab'); ?>
+              <?php if ($total_reminders > 0) { ?>
+                  <span class="badge"><?= $total_reminders; ?></span>
+              <?php } ?>
+            </a>
+          </li>
+
+                    <?php
+                }
+                if (staff_can('view_activity_log', 'customers')) {
+                  ?>
+                  <li role="presentation">
+                    <a href="#tab_activity" aria-controls="tab_activity" role="tab" data-toggle="tab">
+                      <i class="fa-solid fa-list menu-icon"></i>
+                      <?= _l('activity_logs'); ?>
+                    </a>
+                  </li>
+                    <?php
+                }
+                ?>
               </ul>
             </div>
           </div>
@@ -706,390 +747,390 @@ $(document).on('click', '.update-status', function () {
 
         <!-- Tab Content -->
         <div class="tab-content">
-		 <?php
-		  if (staff_can('view_overview', 'customers')) {
-		?>
-          <div role="tabpanel" class="tab-pane active" id="tab_overview">
+     <?php
+     if (staff_can('view_overview', 'customers')) {
+       ?>
+            <div role="tabpanel" class="tab-pane active" id="tab_overview">
           
         
-        <div class="container-fluid">
-		<?php
-        $estimate_info = get_latest_estimate_dates($client->userid);
-        $total_estimates = $estimate_info['total_estimates'] ?? 0;
-        $renewal_start_date = $estimate_info['date'] ?? null;
-        $renewal_end_date = $estimate_info['expirydate'] ?? null;
+          <div class="container-fluid">
+      <?php
+      $estimate_info = get_latest_estimate_dates($client->userid);
+      $total_estimates = $estimate_info['total_estimates'] ?? 0;
+      $renewal_start_date = $estimate_info['date'] ?? null;
+      $renewal_end_date = $estimate_info['expirydate'] ?? null;
+
+      $today = new DateTime();
+      $renewalLabel = '';
+      $color = '';
+      $bg = '';
+      $border = '';
+
+      if (!empty($renewal_end_date)) {
+        try {
+          $endDate = new DateTime($renewal_end_date);
+          $diff = (int) $today->diff($endDate)->format('%r%a');
+
+          if ($diff < 0) {
+            $renewalLabel = 'Renewal Expired Since ' . abs($diff) . ' days';
+            $color = '#dc3545'; // red
+          } elseif ($diff <= 30) {
+            $renewalLabel = 'Renewal Expiry In ' . $diff . ' days';
+            $color = '#28a745'; // green
+          }
+
+          if ($renewalLabel) {
+            $bg = adjust_hex_brightness($color, 0.04);
+            $border = adjust_hex_brightness($color, 0.4);
+          }
+
+        } catch (Exception $e) {
+          // Silent fail
+        }
+      }
+      ?>
+
     
-		$today = new DateTime();
-		$renewalLabel = '';
-		$color = '';
-		$bg = '';
-		$border = '';
-
-		if (!empty($renewal_end_date)) {
-			try {
-				$endDate = new DateTime($renewal_end_date);
-				$diff = (int)$today->diff($endDate)->format('%r%a');
-
-				if ($diff < 0) {
-					$renewalLabel = 'Renewal Expired Since ' . abs($diff) . ' days';
-					$color = '#dc3545'; // red
-				} elseif ($diff <= 30) {
-					$renewalLabel = 'Renewal Expiry In ' . $diff . ' days';
-					$color = '#28a745'; // green
-				}
-
-				if ($renewalLabel) {
-					$bg = adjust_hex_brightness($color, 0.04);
-					$border = adjust_hex_brightness($color, 0.4);
-				}
-
-			} catch (Exception $e) {
-				// Silent fail
-			}
-		}
-		?>
-
-		
 
 
-          <!-- Section 1: Patient Details -->
-          <div class="patient-section-title"><?= _l('patient_details'); ?> <?php if ($renewalLabel): ?> 
-		  <div class="text-right" style="display: inline-block; width: 85%;">
-			<span class="label"
-				  style="color: <?= $color ?>;
-						 border: 1px solid <?= $border ?>;
-						 background: <?= $bg ?>;
-						 border-radius: 4px;
-						 font-weight: 400;
-						 font-size: 14px;">
-			  <i class="fa fa-calendar-check-o"></i> <?= $renewalLabel ?>
-			</span>
-		  </div>
-		<?php endif; ?></div>
-			
+            <!-- Section 1: Patient Details -->
+            <div class="patient-section-title"><?= _l('patient_details'); ?>   <?php if ($renewalLabel): ?> 
+          <div class="text-right" style="display: inline-block; width: 85%;">
+          <span class="label"
+              style="color: <?= $color ?>;
+             border: 1px solid <?= $border ?>;
+             background: <?= $bg ?>;
+             border-radius: 4px;
+             font-weight: 400;
+             font-size: 14px;">
+            <i class="fa fa-calendar-check-o"></i> <?= $renewalLabel ?>
+          </span>
+          </div>
+      <?php endif; ?></div>
+      
 
-          <table class="patient-table">
-    <tr>
-        <td><span class="patient-value"><strong><?= _l('mr_no'); ?>:</strong> <?= $customer_new_fields->mr_no; ?></span></td>
-        <td><span class="patient-value"><strong><?= _l('city_state_country'); ?>:</strong> <?= $client->city_name; ?>, <?= $client->state_name; ?></span></td>
-    </tr>
-    <tr>
-        <td><span class="patient-value"><strong><?= _l('patient_name'); ?>:</strong> <?= $client->company; ?></span></td>
-        <td><span class="patient-value"><strong><?= _l('pincode'); ?>:</strong> <?= $client->pincode_name; ?></span></td>
-    </tr>
-    <tr>
-        <td><span class="patient-value"><strong><?= _l('age'); ?>:</strong> <?= $customer_new_fields->age; ?></span></td>
-        <td><span class="patient-value"><strong><?= _l('gender'); ?>:</strong> <?= $customer_new_fields->gender; ?></span></td>
-    </tr>
-    <tr>
-        <td><span class="patient-value"><strong><?= _l('contact_number'); ?>:</strong>
-            <?php
-                $number = $client->phonenumber;
-                if (staff_can('mobile_masking', 'customers') && !is_admin()) {
-                    $length = strlen($number);
-                    echo ($length <= 5) ? str_repeat('*', $length) : substr($number, 0, $length - 5) . str_repeat('*', 5);
-                } else {
-                    echo $number;
-                }
-            ?>
-        </span></td>
-        <td><span class="patient-value"><strong><?= _l('marital_status'); ?>:</strong> <?= $client->marital_status; ?></span></td>
-    </tr>
-    <tr>
-        <td><span class="patient-value"><strong><?= _l('email_id'); ?>:</strong> <?= $client->email_id; ?></span></td>
-        <td><span class="patient-value"><strong><?= _l('language_known'); ?>:</strong> <?= $client->default_language; ?></span></td>
-    </tr>
-    <tr>
-        <td><span class="patient-value"><strong><?= _l('area'); ?>:</strong> <?= $client->area; ?></span></td>
-        <td><span class="patient-value"><strong><?= _l('lead_source'); ?>:</strong> <?= $client->source_name ?? ''; ?></span></td>
-    </tr>
-    <tr>
-        <td><span class="patient-value"><strong><?= _l('address'); ?>:</strong> <?= $client->address; ?></span></td>
-        <td>
-            <span class="patient-value"><strong><?= _l('patient_status'); ?>:</strong>
-                <?php
-                    $status_name = $client->status_name;
-                    $color = $client->status_color;
-                    echo '<span class="lead-status label" style="color:' . $color . ';border:1px solid ' . adjust_hex_brightness($color, 0.4) . ';background:' . adjust_hex_brightness($color, 0.04) . ';">' . e($status_name) . '</span>';
-                ?>
-            </span>
-        </td>
-    </tr>
-    <tr>
-        <td><span class="patient-value"><strong><?= _l('current_status'); ?>:</strong>
-            <?php
-                $current_status_name = $client->current_status ?? '';
-                $CI = &get_instance();
-                $CI->db->select('color, id');
-                $CI->db->where('name', $current_status_name);
-                $status = $CI->db->get(db_prefix() . 'leads_status')->row();
-                if ($status) {
-                    echo '<span class="lead-status-' . $status->id . ' label" style="color:' . $status->color . ';border:1px solid ' . adjust_hex_brightness($status->color, 0.4) . ';background:' . adjust_hex_brightness($status->color, 0.04) . ';">' . e($current_status_name) . '</span>';
-                } else {
-                    echo '-';
-                }
-            ?>
-        </span></td>
-        <td><span class="patient-value"><strong><?= _l('registration_date'); ?>:</strong>
-            <?php
-                if (!empty($client->registration_start_date) && $client->registration_start_date != '1970-01-01' && !empty($customer_new_fields->mr_no)) {
-                    echo _d($client->registration_start_date);
-                } else {
-                    echo "-";
-                }
-            ?>
-        </span></td>
-    </tr>
+            <table class="patient-table">
+      <tr>
+          <td><span class="patient-value"><strong><?= _l('mr_no'); ?>:</strong> <?= $customer_new_fields->mr_no; ?></span></td>
+          <td><span class="patient-value"><strong><?= _l('city_state_country'); ?>:</strong> <?= $client->city_name; ?>, <?= $client->state_name; ?></span></td>
+      </tr>
+      <tr>
+          <td><span class="patient-value"><strong><?= _l('patient_name'); ?>:</strong> <?= $client->company; ?></span></td>
+          <td><span class="patient-value"><strong><?= _l('pincode'); ?>:</strong> <?= $client->pincode_name; ?></span></td>
+      </tr>
+      <tr>
+          <td><span class="patient-value"><strong><?= _l('age'); ?>:</strong> <?= $customer_new_fields->age; ?></span></td>
+          <td><span class="patient-value"><strong><?= _l('gender'); ?>:</strong> <?= $customer_new_fields->gender; ?></span></td>
+      </tr>
+      <tr>
+          <td><span class="patient-value"><strong><?= _l('contact_number'); ?>:</strong>
+              <?php
+              $number = $client->phonenumber;
+              if (staff_can('mobile_masking', 'customers') && !is_admin()) {
+                $length = strlen($number);
+                echo ($length <= 5) ? str_repeat('*', $length) : substr($number, 0, $length - 5) . str_repeat('*', 5);
+              } else {
+                echo $number;
+              }
+              ?>
+          </span></td>
+          <td><span class="patient-value"><strong><?= _l('marital_status'); ?>:</strong> <?= $client->marital_status; ?></span></td>
+      </tr>
+      <tr>
+          <td><span class="patient-value"><strong><?= _l('email_id'); ?>:</strong> <?= $client->email_id; ?></span></td>
+          <td><span class="patient-value"><strong><?= _l('language_known'); ?>:</strong> <?= $client->default_language; ?></span></td>
+      </tr>
+      <tr>
+          <td><span class="patient-value"><strong><?= _l('area'); ?>:</strong> <?= $client->area; ?></span></td>
+          <td><span class="patient-value"><strong><?= _l('lead_source'); ?>:</strong> <?= $client->source_name ?? ''; ?></span></td>
+      </tr>
+      <tr>
+          <td><span class="patient-value"><strong><?= _l('address'); ?>:</strong> <?= $client->address; ?></span></td>
+          <td>
+              <span class="patient-value"><strong><?= _l('patient_status'); ?>:</strong>
+                  <?php
+                  $status_name = $client->status_name;
+                  $color = $client->status_color;
+                  echo '<span class="lead-status label" style="color:' . $color . ';border:1px solid ' . adjust_hex_brightness($color, 0.4) . ';background:' . adjust_hex_brightness($color, 0.04) . ';">' . e($status_name) . '</span>';
+                  ?>
+              </span>
+          </td>
+      </tr>
+      <tr>
+          <td><span class="patient-value"><strong><?= _l('current_status'); ?>:</strong>
+              <?php
+              $current_status_name = $client->current_status ?? '';
+              $CI = &get_instance();
+              $CI->db->select('color, id');
+              $CI->db->where('name', $current_status_name);
+              $status = $CI->db->get(db_prefix() . 'leads_status')->row();
+              if ($status) {
+                echo '<span class="lead-status-' . $status->id . ' label" style="color:' . $status->color . ';border:1px solid ' . adjust_hex_brightness($status->color, 0.4) . ';background:' . adjust_hex_brightness($status->color, 0.04) . ';">' . e($current_status_name) . '</span>';
+              } else {
+                echo '-';
+              }
+              ?>
+          </span></td>
+          <td><span class="patient-value"><strong><?= _l('registration_date'); ?>:</strong>
+              <?php
+              if (!empty($client->registration_start_date) && $client->registration_start_date != '1970-01-01' && !empty($customer_new_fields->mr_no)) {
+                echo _d($client->registration_start_date);
+              } else {
+                echo "-";
+              }
+              ?>
+          </span></td>
+      </tr>
     
-    <?php if ($total_estimates > 1): ?>
-        <tr>
-            <td><span class="patient-value"><strong><?= _l('renewal_start_date'); ?>:</strong> <?= $renewal_start_date ? _d($renewal_start_date) : '-'; ?></span></td>
-            <td><span class="patient-value"><strong><?= _l('renewal_end_date'); ?>:</strong> <?= $renewal_end_date ? _d($renewal_end_date) : '-'; ?></span></td>
-        </tr>
-    <?php else: ?>
-        <tr>
-            <td><span class="patient-value"><strong><?= _l('registration_end_date'); ?>:</strong>
-                <?php
+      <?php if ($total_estimates > 1): ?>
+            <tr>
+                <td><span class="patient-value"><strong><?= _l('renewal_start_date'); ?>:</strong> <?= $renewal_start_date ? _d($renewal_start_date) : '-'; ?></span></td>
+                <td><span class="patient-value"><strong><?= _l('renewal_end_date'); ?>:</strong> <?= $renewal_end_date ? _d($renewal_end_date) : '-'; ?></span></td>
+            </tr>
+      <?php else: ?>
+            <tr>
+                <td><span class="patient-value"><strong><?= _l('registration_end_date'); ?>:</strong>
+                    <?php
                     if (!empty($client->registration_end_date) && $client->registration_end_date != '1970-01-01' && !empty($customer_new_fields->mr_no)) {
-                        echo _d($client->registration_end_date);
+                      echo _d($client->registration_end_date);
                     } else {
-                        echo "-";
+                      echo "-";
                     }
-                ?>
-            </span></td>
-            <td></td>
-        </tr>
-    <?php endif; ?>
-    <tr>
-        <td><span class="patient-value"><strong><?= _l('treatment'); ?>:</strong>
-            <?php
-                $latest_doctor_id = null;
-                $latest_treatment = null;
-                $latest_time = 0;
-                foreach ($appointment_data as $row) {
-                    $appointment_time = strtotime($row['appointment_date']);
-                    if ($appointment_time > $latest_time) {
-                        $latest_time = $appointment_time;
-                        $latest_doctor_id = $row['enquiry_doctor_id'];
-                        $latest_treatment = $row['description'];
-                    }
+                    ?>
+                </span></td>
+                <td></td>
+            </tr>
+      <?php endif; ?>
+      <tr>
+          <td><span class="patient-value"><strong><?= _l('treatment'); ?>:</strong>
+              <?php
+              $latest_doctor_id = null;
+              $latest_treatment = null;
+              $latest_time = 0;
+              foreach ($appointment_data as $row) {
+                $appointment_time = strtotime($row['appointment_date']);
+                if ($appointment_time > $latest_time) {
+                  $latest_time = $appointment_time;
+                  $latest_doctor_id = $row['enquiry_doctor_id'];
+                  $latest_treatment = $row['description'];
                 }
-                echo $latest_treatment;
-            ?>
-        </span></td>
-        <td><span class="patient-value"><strong><?= _l('doctor'); ?>:</strong> <?= get_staff_full_name($latest_doctor_id); ?></span></td>
+              }
+              echo $latest_treatment;
+              ?>
+          </span></td>
+          <td><span class="patient-value"><strong><?= _l('doctor'); ?>:</strong> <?= get_staff_full_name($latest_doctor_id); ?></span></td>
+      </tr>
+    <tr>
+      <td><span class="patient-value"><strong><?= _l('branch'); ?>:</strong>
+        <?= $client->branch_name ?>
+      </span></td>
+      <td><span class="patient-value"><strong><?= _l('pro_ownership'); ?>:</strong>
+        <?PHP
+        if ($client->pro_ownership) {
+          echo get_staff_full_name($client->pro_ownership);
+        }
+        ?>
+      </span></td>
     </tr>
-	<tr>
-		<td><span class="patient-value"><strong><?= _l('branch'); ?>:</strong>
-			<?= $client->branch_name ?>
-		</span></td>
-		<td><span class="patient-value"><strong><?= _l('pro_ownership'); ?>:</strong>
-			<?PHP
-			if($client->pro_ownership){
-				echo get_staff_full_name($client->pro_ownership);
-			}
-			 ?>
-		</span></td>
-	</tr>
-	<tr>
-		<td><span class="patient-value"><strong><?= _l('alternate_number'); ?>:</strong>
-			<?= $client->alt_number1 ?>
-		</span></td>
-		<td><span class="patient-value"><strong><?= _l('consultation_fee'); ?>:</strong>
-			<?PHP
-			echo $first_appointment->total;
-			 ?>
-		</span></td>
-	</tr>
-	<tr>
-		<td><span class="patient-value"><strong><?= _l('medicine_end_date'); ?>:</strong>
-			<?php
-			if (!empty($latest_casesheet->followup_date) && $latest_casesheet->followup_date != '0000-00-00') {
-				echo date("d-m-Y", strtotime($latest_casesheet->followup_date));
-			}
-			?>
+    <tr>
+      <td><span class="patient-value"><strong><?= _l('alternate_number'); ?>:</strong>
+        <?= $client->alt_number1 ?>
+      </span></td>
+      <td><span class="patient-value"><strong><?= _l('consultation_fee'); ?>:</strong>
+        <?PHP
+        echo $first_appointment->total;
+        ?>
+      </span></td>
+    </tr>
+    <tr>
+      <td><span class="patient-value"><strong><?= _l('medicine_end_date'); ?>:</strong>
+        <?php
+        if (!empty($latest_casesheet->followup_date) && $latest_casesheet->followup_date != '0000-00-00') {
+          echo date("d-m-Y", strtotime($latest_casesheet->followup_date));
+        }
+        ?>
 
-		</span></td>
-		<td><span class="patient-value"><strong></strong>
-			<?PHP
-			
-			 ?>
-		</span></td>
-	</tr>
-</table>
+      </span></td>
+      <td><span class="patient-value"><strong></strong>
+        <?PHP
+
+        ?>
+      </span></td>
+    </tr>
+  </table>
 
 
-          <!-- Section 2: Patient Payment Summary -->
-       <div class="d-flex justify-content-between align-items-center mt-4 mb-2">
-  <div class="row">
-  <div class="col-md-10">
-  <h5 class="patient-section-title mb-0"><?= _l('patient_treatment_summary'); ?></h5>
-  </div>
-  <div class="col-md-2">
-  <button id="toggleSummary" class="btn btn-success btn-sm">
-    Show Total Summary
-  </button>
+            <!-- Section 2: Patient Payment Summary -->
+         <div class="d-flex justify-content-between align-items-center mt-4 mb-2">
+    <div class="row">
+    <div class="col-md-10">
+    <h5 class="patient-section-title mb-0"><?= _l('patient_treatment_summary'); ?></h5>
+    </div>
+    <div class="col-md-2">
+    <button id="toggleSummary" class="btn btn-success btn-sm">
+      Show Total Summary
+    </button>
   
-</div>
-</div>
-</div>
+  </div>
+  </div>
+  </div>
 
-		  
+      
 
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    const toggleBtn = document.getElementById('toggleSummary');
-    const totalBlocks = document.querySelectorAll('.total-summary');
-    const latestBlocks = document.querySelectorAll('.latest-summary');
+  <script>
+  document.addEventListener('DOMContentLoaded', function () {
+      const toggleBtn = document.getElementById('toggleSummary');
+      const totalBlocks = document.querySelectorAll('.total-summary');
+      const latestBlocks = document.querySelectorAll('.latest-summary');
 
-    toggleBtn.addEventListener('click', function () {
-        totalBlocks.forEach(el => el.style.display = el.style.display === 'none' ? 'block' : 'none');
-        latestBlocks.forEach(el => el.style.display = el.style.display === 'none' ? 'block' : 'none');
-        toggleBtn.textContent = toggleBtn.textContent.includes('Total') ? 'Show Latest Package' : 'Show Total Summary';
-    });
+      toggleBtn.addEventListener('click', function () {
+          totalBlocks.forEach(el => el.style.display = el.style.display === 'none' ? 'block' : 'none');
+          latestBlocks.forEach(el => el.style.display = el.style.display === 'none' ? 'block' : 'none');
+          toggleBtn.textContent = toggleBtn.textContent.includes('Total') ? 'Show Latest Package' : 'Show Total Summary';
+      });
 
-    // Initially hide total summary
-    totalBlocks.forEach(el => el.style.display = 'none');
-});
-</script>
+      // Initially hide total summary
+      totalBlocks.forEach(el => el.style.display = 'none');
+  });
+  </script>
 
-          <br>
-		  <div class="total-summary">
-          <?php
-		 // print_r($patient_treatment);
-		  foreach($patient_treatment as $treatments_1){
-			  
-			  $estimation_ids = json_decode($treatments_1['estimation_id'], true);
-			  
-						if (!is_array($estimation_ids)) {
-							$estimation_ids = array_filter(array_map('intval', explode(',', $treatments_1['estimation_id'])));
-						}
-						$total_package = 0;
-						$total_paid    = 0;
-						$total_dues    = 0;
-						$currency      = ''; // to use the first non-empty currency
-						$total_days      = 0;
-						$total_completed = 0;
-						$total_remaining = 0;
+            <br>
+        <div class="total-summary">
+            <?php
+            // print_r($patient_treatment);
+            foreach ($patient_treatment as $treatments_1) {
 
-						$today = new DateTime();
+              $estimation_ids = json_decode($treatments_1['estimation_id'], true);
 
-						foreach ($estimation_ids as $estimation_id) {
-							$summary = get_estimation_payment_summary($estimation_id);
-							
-							$total_package += $summary['total'];
-							$total_paid    += $summary['paid'];
-							$total_dues    += $summary['dues'];
+              if (!is_array($estimation_ids)) {
+                $estimation_ids = array_filter(array_map('intval', explode(',', $treatments_1['estimation_id'])));
+              }
+              $total_package = 0;
+              $total_paid = 0;
+              $total_dues = 0;
+              $currency = ''; // to use the first non-empty currency
+              $total_days = 0;
+              $total_completed = 0;
+              $total_remaining = 0;
 
-							// Set currency once if available
-							if (empty($currency) && !empty($summary['currency'])) {
-								$currency = $summary['currency'];
-							}
-							
-							$start = !empty($summary['date']) ? new DateTime($summary['date']) : null;
-							$end   = !empty($summary['expirydate']) ? new DateTime($summary['expirydate']) : null;
-							
-							if ($start && $end) {
-								$total_days += $start->diff($end)->days;
+              $today = new DateTime();
 
-								// Completed days: from start to today (but not beyond expiry)
-								if ($today > $start) {
-									$completed = $start->diff(min($today, $end))->days;
-									$total_completed += $completed;
-								}
+              foreach ($estimation_ids as $estimation_id) {
+                $summary = get_estimation_payment_summary($estimation_id);
 
-								// Remaining days: from today to end (if future)
-								if ($today < $end) {
-									$remaining = $today->diff($end)->days;
-									$total_remaining += $remaining;
-								}
-							}
-						}
+                $total_package += $summary['total'];
+                $total_paid += $summary['paid'];
+                $total_dues += $summary['dues'];
 
-						if($total_package>0){
-					
-			  ?>
-			  <table class="patient-table">
-              <tr>
-              <td>
-                  <span class="patient-value">
-                    <strong><?= _l('treatment'); ?>:</strong> 
-                    <?php 
-                      echo $treatments_1['treatment_name']; 
-                    ?>  
-                  </span>
-                </td>
-                <td>
-                  <span class="patient-value">
-                    <strong><?= _l('treatment_duration_period'); ?>:</strong> 
-                     <?php 
-                      echo $total_days.' days';
-                    ?>
-                  </span>
-                </td>
-                <td>
-                  <span class="patient-value">
-                    <strong><?= _l('treatment_completed_duration'); ?>:</strong> 
-                    <?php 
-                      echo $total_completed.' days';
-                    ?>
-                  </span>
-                </td>
+                // Set currency once if available
+                if (empty($currency) && !empty($summary['currency'])) {
+                  $currency = $summary['currency'];
+                }
+
+                $start = !empty($summary['date']) ? new DateTime($summary['date']) : null;
+                $end = !empty($summary['expirydate']) ? new DateTime($summary['expirydate']) : null;
+
+                if ($start && $end) {
+                  $total_days += $start->diff($end)->days;
+
+                  // Completed days: from start to today (but not beyond expiry)
+                  if ($today > $start) {
+                    $completed = $start->diff(min($today, $end))->days;
+                    $total_completed += $completed;
+                  }
+
+                  // Remaining days: from today to end (if future)
+                  if ($today < $end) {
+                    $remaining = $today->diff($end)->days;
+                    $total_remaining += $remaining;
+                  }
+                }
+              }
+
+              if ($total_package > 0) {
+
+                ?>
+              <table class="patient-table">
+                    <tr>
+                    <td>
+                        <span class="patient-value">
+                          <strong><?= _l('treatment'); ?>:</strong> 
+                          <?php
+                          echo $treatments_1['treatment_name'];
+                          ?>  
+                        </span>
+                      </td>
+                      <td>
+                        <span class="patient-value">
+                          <strong><?= _l('treatment_duration_period'); ?>:</strong> 
+                           <?php
+                           echo $total_days . ' days';
+                           ?>
+                        </span>
+                      </td>
+                      <td>
+                        <span class="patient-value">
+                          <strong><?= _l('treatment_completed_duration'); ?>:</strong> 
+                          <?php
+                          echo $total_completed . ' days';
+                          ?>
+                        </span>
+                      </td>
                 
-              </tr>
-              <tr>
-			  
-              <td>
-                  <span class="patient-value">
-                    <strong><?= _l('treatment_duration_left'); ?>:</strong> 
-                   <?php 
-                      echo $total_remaining.' days';
-                    ?>
-                  </span>
-                </td>
+                    </tr>
+                    <tr>
+        
+                    <td>
+                        <span class="patient-value">
+                          <strong><?= _l('treatment_duration_left'); ?>:</strong> 
+                         <?php
+                         echo $total_remaining . ' days';
+                         ?>
+                        </span>
+                      </td>
              
                
                  
                 
              
                 
-                <td>
-                  <span class="patient-value">
-					<span class="patient-value"><strong><?= _l('total_package'); ?>:</strong> <?= app_format_money_custom($total_package, $currency); ?></span>
-                  </span>
-                </td>
-                <td>
-                  <span class="patient-value">
-                    <span class="patient-value"><strong><?= _l('total_paid'); ?>:</strong> <?= app_format_money_custom($total_paid, $currency); ?></span>
-                  </span>
-                </td>
+                      <td>
+                        <span class="patient-value">
+                <span class="patient-value"><strong><?= _l('total_package'); ?>:</strong> <?= app_format_money_custom($total_package, $currency); ?></span>
+                        </span>
+                      </td>
+                      <td>
+                        <span class="patient-value">
+                          <span class="patient-value"><strong><?= _l('total_paid'); ?>:</strong> <?= app_format_money_custom($total_paid, $currency); ?></span>
+                        </span>
+                      </td>
                 
-              </tr>
-              <tr>
-              <td>
-                  <span class="patient-value">
-                    <span class="patient-value"><strong><?= _l('total_dues'); ?>:</strong> <?= app_format_money_custom($total_dues, $currency); ?></span>
-                  </span>
-                </td>
-                <td><span class="patient-value"><strong><?= _l('cob_with_refund'); ?>:</strong> -</span></td>
-                <td><span class="patient-value"><strong><?= _l('normal_refund'); ?>:</strong> -</span></td>
+                    </tr>
+                    <tr>
+                    <td>
+                        <span class="patient-value">
+                          <span class="patient-value"><strong><?= _l('total_dues'); ?>:</strong> <?= app_format_money_custom($total_dues, $currency); ?></span>
+                        </span>
+                      </td>
+                      <td><span class="patient-value"><strong><?= _l('cob_with_refund'); ?>:</strong> -</span></td>
+                      <td><span class="patient-value"><strong><?= _l('normal_refund'); ?>:</strong> -</span></td>
                 
-              </tr>
-            </table>
-			  <?PHP
-						}
-		  }
-          
-?>
-</div>
-<div class="latest-summary">
-<?php
-foreach ($patient_treatment as $treatments_1) {
+                    </tr>
+                  </table>
+              <?PHP
+              }
+            }
+
+            ?>
+  </div>
+  <div class="latest-summary">
+  <?php
+  foreach ($patient_treatment as $treatments_1) {
 
     $estimation_ids = json_decode($treatments_1['estimation_id'], true);
 
     if (!is_array($estimation_ids)) {
-        $estimation_ids = array_filter(array_map('intval', explode(',', $treatments_1['estimation_id'])));
+      $estimation_ids = array_filter(array_map('intval', explode(',', $treatments_1['estimation_id'])));
     }
 
     $latest_summary = null;
@@ -1101,113 +1142,114 @@ foreach ($patient_treatment as $treatments_1) {
     $today = new DateTime();
 
     foreach ($estimation_ids as $estimation_id) {
-        $summary = get_estimation_payment_summary($estimation_id);
-        $summary_date = !empty($summary['date']) ? new DateTime($summary['date']) : null;
+      $summary = get_estimation_payment_summary($estimation_id);
+      $summary_date = !empty($summary['date']) ? new DateTime($summary['date']) : null;
 
-        if ($summary_date && (!$latest_date || $summary_date > $latest_date)) {
-            $latest_date = $summary_date;
-            $latest_summary = $summary;
-        }
+      if ($summary_date && (!$latest_date || $summary_date > $latest_date)) {
+        $latest_date = $summary_date;
+        $latest_summary = $summary;
+      }
     }
 
     if ($latest_summary) {
-        $start = !empty($latest_summary['date']) ? new DateTime($latest_summary['date']) : null;
-        $end   = !empty($latest_summary['expirydate']) ? new DateTime($latest_summary['expirydate']) : null;
+      $start = !empty($latest_summary['date']) ? new DateTime($latest_summary['date']) : null;
+      $end = !empty($latest_summary['expirydate']) ? new DateTime($latest_summary['expirydate']) : null;
 
-        if ($start && $end) {
-            $total_days = $start->diff($end)->days;
+      if ($start && $end) {
+        $total_days = $start->diff($end)->days;
 
-            // Completed days
-            if ($today > $start) {
-                $total_completed = $start->diff(min($today, $end))->days;
-            }
-
-            // Remaining days
-            if ($today < $end) {
-                $total_remaining = $today->diff($end)->days;
-            }
+        // Completed days
+        if ($today > $start) {
+          $total_completed = $start->diff(min($today, $end))->days;
         }
 
-        $currency = $latest_summary['currency'] ?? '';
+        // Remaining days
+        if ($today < $end) {
+          $total_remaining = $today->diff($end)->days;
+        }
+      }
 
-        ?>
-        <table class="patient-table">
-            <tr>
-                <td>
-                    <span class="patient-value">
-                        <strong><?= _l('treatment'); ?>:</strong> <?= $treatments_1['treatment_name']; ?>
-                    </span>
-                </td>
-                <td>
-                    <span class="patient-value">
-                        <strong><?= _l('treatment_duration_period'); ?>:</strong> <?= $total_days ?> days
-                    </span>
-                </td>
-                <td>
-                    <span class="patient-value">
-                        <strong><?= _l('treatment_completed_duration'); ?>:</strong> <?= $total_completed ?> days
-                    </span>
-                </td>
-            </tr>
-            <tr>
-                <td>
-                    <span class="patient-value">
-                        <strong><?= _l('treatment_duration_left'); ?>:</strong> <?= $total_remaining ?> days
-                    </span>
-                </td>
-                <td>
-                    <span class="patient-value">
-                        <strong><?= _l('total_package'); ?>:</strong> <?= app_format_money_custom($latest_summary['total'], $currency); ?>
-                    </span>
-                </td>
-                <td>
-                    <span class="patient-value">
-                        <strong><?= _l('total_paid'); ?>:</strong> <?= app_format_money_custom($latest_summary['paid'], $currency); ?>
-                    </span>
-                </td>
-            </tr>
-            <tr>
-                <td>
-                    <span class="patient-value">
-                        <strong><?= _l('total_dues'); ?>:</strong> <?= app_format_money_custom($latest_summary['dues'], $currency); ?>
-                    </span>
-                </td>
-                <td><span class="patient-value"><strong><?= _l('cob_with_refund'); ?>:</strong> -</span></td>
-                <td><span class="patient-value"><strong><?= _l('normal_refund'); ?>:</strong> -</span></td>
-            </tr>
-        </table>
-        <?php
+      $currency = $latest_summary['currency'] ?? '';
+
+      ?>
+              <table class="patient-table">
+                  <tr>
+                      <td>
+                          <span class="patient-value">
+                              <strong><?= _l('treatment'); ?>:</strong> <?= $treatments_1['treatment_name']; ?>
+                          </span>
+                      </td>
+                      <td>
+                          <span class="patient-value">
+                              <strong><?= _l('treatment_duration_period'); ?>:</strong> <?= $total_days ?> days
+                          </span>
+                      </td>
+                      <td>
+                          <span class="patient-value">
+                              <strong><?= _l('treatment_completed_duration'); ?>:</strong> <?= $total_completed ?> days
+                          </span>
+                      </td>
+                  </tr>
+                  <tr>
+                      <td>
+                          <span class="patient-value">
+                              <strong><?= _l('treatment_duration_left'); ?>:</strong> <?= $total_remaining ?> days
+                          </span>
+                      </td>
+                      <td>
+                          <span class="patient-value">
+                              <strong><?= _l('total_package'); ?>:</strong> <?= app_format_money_custom($latest_summary['total'], $currency); ?>
+                          </span>
+                      </td>
+                      <td>
+                          <span class="patient-value">
+                              <strong><?= _l('total_paid'); ?>:</strong> <?= app_format_money_custom($latest_summary['paid'], $currency); ?>
+                          </span>
+                      </td>
+                  </tr>
+                  <tr>
+                      <td>
+                          <span class="patient-value">
+                              <strong><?= _l('total_dues'); ?>:</strong> <?= app_format_money_custom($latest_summary['dues'], $currency); ?>
+                          </span>
+                      </td>
+                      <td><span class="patient-value"><strong><?= _l('cob_with_refund'); ?>:</strong> -</span></td>
+                      <td><span class="patient-value"><strong><?= _l('normal_refund'); ?>:</strong> -</span></td>
+                  </tr>
+              </table>
+              <?php
     }
-}
-?>
+  }
+  ?>
 
-</div>
-</div>
+  </div>
+  </div>
 
 
 
-          </div>
-<?PHP
-}if (staff_can('view_prescription', 'customers')) {
-?>
-          <div role="tabpanel" class="tab-pane" id="tab_prescription">
-  <?php if (staff_can('create_prescription', 'customers')): ?>
-    <!-- Future prescription form button -->
-  <?php endif; ?>
+            </div>
+  <?PHP
+     }
+     if (staff_can('view_prescription', 'customers')) {
+       ?>
+            <div role="tabpanel" class="tab-pane" id="tab_prescription">
+    <?php if (staff_can('create_prescription', 'customers')): ?>
+        <!-- Future prescription form button -->
+    <?php endif; ?>
 
-  <!-- Section Title -->
-  <div class="patient-section-title mt-4"><?= _l('doctor_prescription'); ?></div>
+    <!-- Section Title -->
+    <div class="patient-section-title mt-4"><?= _l('doctor_prescription'); ?></div>
 
-  <!-- Top Table: Medicine-wise Remarks -->
-  <!--<h4 class="mb-2"><?php echo _l('enter_medicine_wise_remarks'); ?></h4>
+    <!-- Top Table: Medicine-wise Remarks -->
+    <!--<h4 class="mb-2"><?php echo _l('enter_medicine_wise_remarks'); ?></h4>
   <table class="table table-bordered" id="medicine-remarks-table">
     <thead>
       <tr>
-	  <th>#</th>
-	  <th><?php echo _l('medicine'); ?></th>
-	  <th><?php echo _l('remark'); ?></th>
-	  <th><?php echo _l('action'); ?></th>
-	</tr>
+    <th>#</th>
+    <th><?php echo _l('medicine'); ?></th>
+    <th><?php echo _l('remark'); ?></th>
+    <th><?php echo _l('action'); ?></th>
+  </tr>
 
     </thead>
     <tbody id="medicine-remarks-body">
@@ -1215,68 +1257,68 @@ foreach ($patient_treatment as $treatments_1) {
     </tbody>
   </table>-->
 
-  <!-- Bottom DataTable: Complete Prescriptions List -->
-<?= render_datatable([
-  _l('s_no'),                  // 0
-  _l('by_doctor'),             // 1
-  _l('created_date'),          // 2
-  _l('medicine_given_by'),     // 3
-  _l('medicine_given_date'),   // 4
- // _l('remarks'),               // 5
-  _l('view'),                  // 6 (eye icon)
-], 'doctor-prescription'); ?>
+    <!-- Bottom DataTable: Complete Prescriptions List -->
+  <?= render_datatable([
+    _l('s_no'),                  // 0
+    _l('by_doctor'),             // 1
+    _l('created_date'),          // 2
+    _l('medicine_given_by'),     // 3
+    _l('medicine_given_date'),   // 4
+    // _l('remarks'),               // 5
+    _l('view'),                  // 6 (eye icon)
+  ], 'doctor-prescription'); ?>
 
 
 
 
-</div>
-<script>
-// Toggle medicine child row
-$(document).on('click', '.toggle-medicines', function () {
-  const $icon = $(this);
-  const $row = $icon.closest('tr');
-  const prescription_id = $icon.data('id');
-  const casesheet_id = $icon.data('casesheet-id');
-  const medicine_days = $icon.data('medicine-days') || '';
-  const followup_date = $icon.data('followup-date') || '';
+  </div>
+  <script>
+  // Toggle medicine child row
+  $(document).on('click', '.toggle-medicines', function () {
+    const $icon = $(this);
+    const $row = $icon.closest('tr');
+    const prescription_id = $icon.data('id');
+    const casesheet_id = $icon.data('casesheet-id');
+    const medicine_days = $icon.data('medicine-days') || '';
+    const followup_date = $icon.data('followup-date') || '';
 
-  // Toggle behavior
-  if ($row.hasClass('shown')) {
-    $row.next('.prescription-child-row').remove();
-    $row.removeClass('shown');
-    return;
-  }
+    // Toggle behavior
+    if ($row.hasClass('shown')) {
+      $row.next('.prescription-child-row').remove();
+      $row.removeClass('shown');
+      return;
+    }
 
-  // Remove other rows
-  $('.prescription-child-row').remove();
-  $('.shown').removeClass('shown');
+    // Remove other rows
+    $('.prescription-child-row').remove();
+    $('.shown').removeClass('shown');
 
-  // Parse data
-  let prescription = [], remarks = [];
-  try {
-    prescription = JSON.parse($icon.attr('data-prescription')) || [];
-    remarks = JSON.parse($icon.attr('data-remarks')) || [];
-  } catch (e) {}
+    // Parse data
+    let prescription = [], remarks = [];
+    try {
+      prescription = JSON.parse($icon.attr('data-prescription')) || [];
+      remarks = JSON.parse($icon.attr('data-remarks')) || [];
+    } catch (e) {}
 
-  // Insert row
-  const $newRow = $(`
+    // Insert row
+    const $newRow = $(`
     <tr class="prescription-child-row">
       <td colspan="${$row.find('td').length}">
         <div class="medicine-table-content p-2 text-muted text-center">Loading medicines...</div>
       </td>
     </tr>
   `);
-  $row.after($newRow);
-  $row.addClass('shown');
+    $row.after($newRow);
+    $row.addClass('shown');
 
-  const $content = $newRow.find('.medicine-table-content');
+    const $content = $newRow.find('.medicine-table-content');
 
-  if (!prescription.length) {
-    $content.html('<div class="text-danger">No medicines found.</div>');
-    return;
-  }
+    if (!prescription.length) {
+      $content.html('<div class="text-danger">No medicines found.</div>');
+      return;
+    }
 
-  let html = `
+    let html = `
     <div class="table-responsive">
       <table class="table table-bordered table-sm mb-0">
         <thead>
@@ -1293,13 +1335,13 @@ $(document).on('click', '.toggle-medicines', function () {
         </thead>
         <tbody>`;
 
-  prescription.forEach((item, i) => {
-    const cleaned = item.trim().replace(/^\d+\.\s*/, '');
-    const parts = cleaned.split(';').map(p => p.trim());
-    const remark = remarks[i] || '';
-    const isChecked = remark !== '' ? 'checked' : '';
+    prescription.forEach((item, i) => {
+      const cleaned = item.trim().replace(/^\d+\.\s*/, '');
+      const parts = cleaned.split(';').map(p => p.trim());
+      const remark = remarks[i] || '';
+      const isChecked = remark !== '' ? 'checked' : '';
 
-    html += `<tr>
+      html += `<tr>
       <td>${i + 1}</td>
       <td>${parts[0] || ''}</td>
       <td>${parts[1] || ''}</td>
@@ -1319,44 +1361,44 @@ $(document).on('click', '.toggle-medicines', function () {
   });
 
   html += `
-        </tbody>
-      </table><br>
+          </tbody>
+        </table><br>
 
-      <div class="row mt-3">
-        <div class="col-md-3">
-          <label><strong><?= _l('medicine_days'); ?>(In Days)</strong></label>
-          <input type="number" class="form-control form-control-sm medicine-days-input" 
-                 name="medicine_days" placeholder="Enter number of days"
-                 value="${medicine_days}" min=1>
-        </div>
+        <div class="row mt-3">
+          <div class="col-md-3">
+            <label><strong><?= _l('medicine_days'); ?>(In Days)</strong></label>
+            <input type="number" class="form-control form-control-sm medicine-days-input" 
+                   name="medicine_days" placeholder="Enter number of days"
+                   value="${medicine_days}" min=1>
+          </div>
 
-        <div class="col-md-3">
-          <label><strong><?= _l('followup_date'); ?></strong></label>
-          <input type="date" class="form-control form-control-sm followup-date-input" 
-                 name="followup_date"
-                 value="${followup_date}">
-        </div>
+          <div class="col-md-3">
+            <label><strong><?= _l('followup_date'); ?></strong></label>
+            <input type="date" class="form-control form-control-sm followup-date-input" 
+                   name="followup_date"
+                   value="${followup_date}">
+          </div>
 
-        <div class="col-md-2">
-          <div class="form-check" style="margin-top: 30px;">
-            <input type="checkbox" class="form-check-input notify-doctor-checkbox" id="notifyDoctor${prescription_id}">
-            <label class="form-check-label ms-1" for="notifyDoctor${prescription_id}">
-              <?= _l('notify_to_doctor'); ?>
-            </label>
+          <div class="col-md-2">
+            <div class="form-check" style="margin-top: 30px;">
+              <input type="checkbox" class="form-check-input notify-doctor-checkbox" id="notifyDoctor${prescription_id}">
+              <label class="form-check-label ms-1" for="notifyDoctor${prescription_id}">
+                <?= _l('notify_to_doctor'); ?>
+              </label>
+            </div>
+          </div>
+
+          <div class="col-md-2">
+            <div style="margin-top: 30px;">
+              <button class="btn btn-sm btn-success save-remarks-btn" 
+                      data-id="${prescription_id}" 
+                      data-casesheet-id="${casesheet_id}">
+                <?= _l('save'); ?>
+              </button>
+            </div>
           </div>
         </div>
-
-        <div class="col-md-2">
-          <div style="margin-top: 30px;">
-            <button class="btn btn-sm btn-success save-remarks-btn" 
-                    data-id="${prescription_id}" 
-                    data-casesheet-id="${casesheet_id}">
-              <?= _l('save'); ?>
-            </button>
-          </div>
-        </div>
-      </div>
-    <br></div>`;
+      <br></div>`;
 
   $content.html(html);
 });
@@ -1458,8 +1500,8 @@ $(document).on('change', '.select-all-meds', function () {
 
 
 <?php
-	  }
-	?>
+     }
+     ?>
 <script>
     function togglePrescriptionForm() {
         const form = document.getElementById('prescription-form');
@@ -1470,43 +1512,43 @@ $(document).on('change', '.select-all-meds', function () {
 
 <?PHP
 if (staff_can('view_casesheet', 'customers')) {
-?>
+  ?>
 <div role="tabpanel" class="tab-pane" id="tab_casesheet">
-	<?PHP
-	$visit_status = 0; // default
+  <?PHP
+  $visit_status = 0; // default
 
-	$today = date('Y-m-d');
+  $today = date('Y-m-d');
 
-	if (!empty($appointment_data) && is_array($appointment_data)) {
-		foreach ($appointment_data as $appointment) {
-			// Convert appointment_date to Y-m-d format
-			$appointment_day = date('Y-m-d', strtotime($appointment['appointment_date'] ?? ''));
+  if (!empty($appointment_data) && is_array($appointment_data)) {
+    foreach ($appointment_data as $appointment) {
+      // Convert appointment_date to Y-m-d format
+      $appointment_day = date('Y-m-d', strtotime($appointment['appointment_date'] ?? ''));
 
-			if ($appointment_day === $today && $appointment['visit_status'] == 1) {
-				$visit_status = 1;
-				break; // Found today's completed visit, no need to continue
-			}
-		}
-	}
+      if ($appointment_day === $today && $appointment['visit_status'] == 1) {
+        $visit_status = 1;
+        break; // Found today's completed visit, no need to continue
+      }
+    }
+  }
 
-		$casesheet_data = null;
-		if (isset($casesheet) && is_array($casesheet) && count($casesheet) > 0) {
-			$casesheet_data = $casesheet[0];
-		}
-        if (staff_can('create_casesheet', 'customers') && (!isset($casesheet_data['date']) || date('Y-m-d', strtotime($casesheet_data['date'])) != date('Y-m-d')) && $visit_status == 1) {
-        //if ($visit_status == 1) {
-        ?>
+  $casesheet_data = null;
+  if (isset($casesheet) && is_array($casesheet) && count($casesheet) > 0) {
+    $casesheet_data = $casesheet[0];
+  }
+  if (staff_can('create_casesheet', 'customers') && (!isset($casesheet_data['date']) || date('Y-m-d', strtotime($casesheet_data['date'])) != date('Y-m-d')) && $visit_status == 1) {
+    //if ($visit_status == 1) {
+    ?>
          <!--<button class="btn btn-primary btn-sm" onclick="toggleCaseSheetForm()" style="float: right; margin-top: 6px; margin-right: 5px;">
             <?= _l('add_casesheet'); ?>
           </button>-->
-          <a href="<?= admin_url('client/add_casesheet/'.$client->userid); ?>" target="_blank"><button class="btn btn-primary btn-sm" style="float: right; margin-top: 6px; margin-right: 5px;">
+          <a href="<?= admin_url('client/add_casesheet/' . $client->userid); ?>" target="_blank"><button class="btn btn-primary btn-sm" style="float: right; margin-top: 6px; margin-right: 5px;">
             <?= _l('add_casesheet'); ?>
           </button></a>
       <?php
-        }?>
+  } ?>
   <!-- Title Section -->
   <div class="patient-section-title mt-4"><?= _l('casesheet'); ?></div>
-	
+  
   <br>
 
   <!-- Prescription Form Section -->
@@ -1520,83 +1562,83 @@ if (staff_can('view_casesheet', 'customers')) {
  <input type="hidden" name="consultation_duration" id="consultation_duration" value="">
   <!-- Accordion Tabs -->
   <div class="accordion" id="casesheetAccordion">
-	
+  
     <!-- Preliminary Data Tab -->
     <div class="card">
-	<?php $isOpen = count($casesheet) > 0; ?>
-		<button class="btn <?php echo $isOpen ? '' : 'collapsed'; ?>" type="button" data-toggle="collapse" data-target="#collapsePreliminaryData"  
-		  aria-expanded="<?php echo $isOpen ? 'true' : 'false'; ?>" aria-controls="collapsePreliminaryData" style="width: 100%">
-		  <div class="card-header" id="headingPreliminaryData">
-			<h5 class="mb-0">
-			  <strong><?php echo _l('preliminary_data'); ?></strong> 
-			  <i class="fa fa-chevron-down toggle-icon" id="icon-preliminaryData"></i>
-			</h5>
-		  </div>
-		</button>
+  <?php $isOpen = count($casesheet) > 0; ?>
+    <button class="btn <?php echo $isOpen ? '' : 'collapsed'; ?>" type="button" data-toggle="collapse" data-target="#collapsePreliminaryData"  
+      aria-expanded="<?php echo $isOpen ? 'true' : 'false'; ?>" aria-controls="collapsePreliminaryData" style="width: 100%">
+      <div class="card-header" id="headingPreliminaryData">
+      <h5 class="mb-0">
+        <strong><?php echo _l('preliminary_data'); ?></strong> 
+        <i class="fa fa-chevron-down toggle-icon" id="icon-preliminaryData"></i>
+      </h5>
+      </div>
+    </button>
 
       <div id="collapsePreliminaryData" class="<?php echo $isOpen ? 'show' : ''; ?>" aria-labelledby="headingPreliminaryData" data-parent="#casesheetAccordion">
   
         <div class="card-body">
-			<!-- Treatment Dropdown -->
-			<div class="form-group">
-			<!--<label class="control-label"><?php echo _l('treatment_details'); ?></label>-->
-			<div id="treatment_rows">
+      <!-- Treatment Dropdown -->
+      <div class="form-group">
+      <!--<label class="control-label"><?php echo _l('treatment_details'); ?></label>-->
+      <div id="treatment_rows">
     <!-- Initial Row -->
     <div class="row treatment-row align-items-end mb-3">
         <div class="col-md-3">
             <?php
-			$flat_items = [];
+            $flat_items = [];
 
-			foreach ($items as $group) {
-				foreach ($group as $item) {
-					if (isset($item['group_name']) && $item['group_name'] == "Consultation Fee") {
-						continue; // Skip Consultation Fee
-					}
-					$flat_items[] = $item;
-				}
-			}
+            foreach ($items as $group) {
+              foreach ($group as $item) {
+                if (isset($item['group_name']) && $item['group_name'] == "Consultation Fee") {
+                  continue; // Skip Consultation Fee
+                }
+                $flat_items[] = $item;
+              }
+            }
 
-			$last_appointment = end($appointment_data);
-			
-			if($casesheet_data['treatment_type_id']){
-				$selected = isset($casesheet_data['treatment_type_id']) ? $casesheet_data['treatment_type_id'] : '';
-			}else{
-				$selected = isset($last_appointment['treatment_id']) ? $last_appointment['treatment_id'] : '';
-			}
-			
+            $last_appointment = end($appointment_data);
 
-			echo render_select(
-				'description',
-				$flat_items,
-				['id', 'description'],
-				'treatment_type',
-				$selected,
-				[
-					'data-none-selected-text' => _l('dropdown_non_selected_tex'),
-					//'disabled' => 'disabled',
-					'required' => 'required'
-				]
-			);
+            if ($casesheet_data['treatment_type_id']) {
+              $selected = isset($casesheet_data['treatment_type_id']) ? $casesheet_data['treatment_type_id'] : '';
+            } else {
+              $selected = isset($last_appointment['treatment_id']) ? $last_appointment['treatment_id'] : '';
+            }
 
-			// Add hidden input with actual name used in backend
-			echo '<input type="hidden" name="treatment_type[]" value="' . htmlspecialchars($selected) . '">';
-			?>
+
+            echo render_select(
+              'description',
+              $flat_items,
+              ['id', 'description'],
+              'treatment_type',
+              $selected,
+              [
+                'data-none-selected-text' => _l('dropdown_non_selected_tex'),
+                //'disabled' => 'disabled',
+                'required' => 'required'
+              ]
+            );
+
+            // Add hidden input with actual name used in backend
+            echo '<input type="hidden" name="treatment_type[]" value="' . htmlspecialchars($selected) . '">';
+            ?>
 
 
         </div>
 
        <div class="col-md-2">
-		<label><?php echo _l('duration_months');?></label>
-		
-				
-				<?php
-$duration_value = '';
-if (isset($casesheet_data['duration_value']) && $casesheet_data['duration_value'] !== '') {
-    $duration_value = $casesheet_data['duration_value'];
-} elseif (isset($patient_treatment[0]['duration_value']) && $patient_treatment[0]['duration_value'] !== '') {
-    $duration_value = $patient_treatment[0]['duration_value'];
-}
-?>
+    <label><?php echo _l('duration_months'); ?></label>
+    
+        
+        <?php
+        $duration_value = '';
+        if (isset($casesheet_data['duration_value']) && $casesheet_data['duration_value'] !== '') {
+          $duration_value = $casesheet_data['duration_value'];
+        } elseif (isset($patient_treatment[0]['duration_value']) && $patient_treatment[0]['duration_value'] !== '') {
+          $duration_value = $patient_treatment[0]['duration_value'];
+        }
+        ?>
 
 <input type="number" 
        name="duration_value" 
@@ -1605,9 +1647,9 @@ if (isset($casesheet_data['duration_value']) && $casesheet_data['duration_value'
        placeholder="Number" 
        value="<?= htmlspecialchars($duration_value) ?>">
 
-			
-			
-	</div>
+      
+      
+  </div>
 
 
         <!--<div class="col-md-2">
@@ -1618,44 +1660,44 @@ if (isset($casesheet_data['duration_value']) && $casesheet_data['duration_value'
         <div class="col-md-4">
             <label><?php echo _l('overall_progress'); ?></label>
             <div class="progress">
-			
+      
                 <div class="progress-bar bg-success" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
             </div>
         </div>-->
-		<div class="col-md-4">
-		<?PHP
-		if ($casesheet_data['suggested_diagnostics_id']) {
-			$selected_diagnostic_id = isset($casesheet_data['suggested_diagnostics_id']) ? $casesheet_data['suggested_diagnostics_id'] : '';
-		} else {
-			$selected_diagnostic_id = isset($last_appointment['suggested_diagnostics_id']) ? $last_appointment['suggested_diagnostics_id'] : '';
-		}
+    <div class="col-md-4">
+    <?PHP
+    if ($casesheet_data['suggested_diagnostics_id']) {
+      $selected_diagnostic_id = isset($casesheet_data['suggested_diagnostics_id']) ? $casesheet_data['suggested_diagnostics_id'] : '';
+    } else {
+      $selected_diagnostic_id = isset($last_appointment['suggested_diagnostics_id']) ? $last_appointment['suggested_diagnostics_id'] : '';
+    }
 
-		echo render_select(
-				'suggested_diagnostics_id',
-				$suggested_diagnostics, // This should be your array of diagnostic options
-				['suggested_diagnostics_id', 'suggested_diagnostics_name'],
-				'Suggested Diagnostics',
-				$selected_diagnostic_id, // selected value
-				[
-					'data-none-selected-text' => _l('dropdown_non_selected_tex')
-				]
-			);
+    echo render_select(
+      'suggested_diagnostics_id',
+      $suggested_diagnostics, // This should be your array of diagnostic options
+      ['suggested_diagnostics_id', 'suggested_diagnostics_name'],
+      'Suggested Diagnostics',
+      $selected_diagnostic_id, // selected value
+      [
+        'data-none-selected-text' => _l('dropdown_non_selected_tex')
+      ]
+    );
 
-		?>
+    ?>
 </div>
 <div class="col-md-3">
-	<label>Status</label>
-	<select name="treatment_status" class="form-control" style="padding: 1px" required>
-		<option value="Other">Other</option>
-		<option value="Better">Better</option>
-		<option value="Not Better">Not Better</option>
-		<option value="First Consultation">First Consultation</option>
-		<option value="SQ">SQ</option>
-	</select>
-		
-	</div>
+  <label>Status</label>
+  <select name="treatment_status" class="form-control" style="padding: 1px" required>
+    <option value="Other">Other</option>
+    <option value="Better">Better</option>
+    <option value="Not Better">Not Better</option>
+    <option value="First Consultation">First Consultation</option>
+    <option value="SQ">SQ</option>
+  </select>
+    
+  </div>
         <!--<div class="col-md-1">
-		<br>
+    <br>
             <button type="button" class="btn btn-success add-row"><i class="fa fa-plus"></i></button>
         </div>-->
     </div>
@@ -1668,50 +1710,50 @@ if (isset($casesheet_data['duration_value']) && $casesheet_data['duration_value'
 </div>
 
 
-		<!-- JavaScript to Add/Clone Rows and Update Progress -->
-		<script>
-		
-		$(document).ready(function () {
+    <!-- JavaScript to Add/Clone Rows and Update Progress -->
+    <script>
+    
+    $(document).ready(function () {
 
     // Add new row
     $('#treatment_rows').on('click', '.add-row', function () {
         var newRow = `
-        <div class="row treatment-row align-items-end mb-3">
-            <div class="col-md-3">
-                <?php
-				$selected = "";
-				echo render_select('treatment_type[]', $treatments, ['treatment_id', 'treatment_name'], '', $selected, ['data-none-selected-text' => _l('dropdown_non_selected_tex')]);
-				?>
-            </div>
+          <div class="row treatment-row align-items-end mb-3">
+              <div class="col-md-3">
+                  <?php
+                  $selected = "";
+                  echo render_select('treatment_type[]', $treatments, ['treatment_id', 'treatment_name'], '', $selected, ['data-none-selected-text' => _l('dropdown_non_selected_tex')]);
+                  ?>
+              </div>
 
-             <div class="col-md-2">
-				
-						<input type="number" name="duration_value[]" class="form-control" min="1" placeholder="Number">
-					
-					
-			</div>
+               <div class="col-md-2">
+        
+              <input type="number" name="duration_value[]" class="form-control" min="1" placeholder="Number">
+          
+          
+        </div>
 
-            <div class="col-md-2">
-                <input type="number" name="improvement[]" class="form-control improvement-input" min="0" max="100" placeholder="Enter Percentage">
-            </div>
+              <div class="col-md-2">
+                  <input type="number" name="improvement[]" class="form-control improvement-input" min="0" max="100" placeholder="Enter Percentage">
+              </div>
 
-            <div class="col-md-4">
-                <div class="progress">
-                    <div class="progress-bar bg-success" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
-                </div>
-            </div>
+              <div class="col-md-4">
+                  <div class="progress">
+                      <div class="progress-bar bg-success" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+                  </div>
+              </div>
 
-            <div class="col-md-1">
-                <button type="button" class="btn btn-danger remove-row"><i class="fa fa-minus"></i> </button>
-            </div>
-        </div>`;
+              <div class="col-md-1">
+                  <button type="button" class="btn btn-danger remove-row"><i class="fa fa-minus"></i> </button>
+              </div>
+          </div>`;
         
         // Append the new row
         $('#treatment_rows').append(newRow);
 
         // Refresh selectpicker
         $('.selectpicker').selectpicker('refresh');
-		 $('#treatment_rows .improvement-input').last().on('input', function () {
+     $('#treatment_rows .improvement-input').last().on('input', function () {
         if (this.value > 100) this.value = 100;
         if (this.value < 0) this.value = 0;
     });
@@ -1730,41 +1772,41 @@ if (isset($casesheet_data['duration_value']) && $casesheet_data['duration_value'
         var value = $(this).val();
         value = Math.max(0, Math.min(100, value)); // Ensure it's between 0 and 100
         var progressBar = $(this).closest('.treatment-row').find('.progress-bar');
-		if(value == 0 || value == ''){
-			value = 0;
-		}
-		
+    if(value == 0 || value == ''){
+      value = 0;
+    }
+    
         progressBar.css('width', value + '%').attr('aria-valuenow', value).text(value + '%');
     });
 });
 
 
-		</script>
+    </script>
 
 
 
-		<!-- Presenting Complaints -->
-		<div class="form-group mtop20">
-			<label for="presenting_complaints" class="control-label">
-				<?php echo _l('presenting_complaints'); ?>
-			</label>
-			<textarea id="presenting_complaints" name="presenting_complaints" class="form-control tinymce" rows="6"> <?php //isset($casesheet_data['presenting_complaints']) ? htmlspecialchars($casesheet_data['presenting_complaints']) : '' ?></textarea>
-		</div>
-		
-		<!-- Presenting Complaints -->
-		<div class="form-group mtop20">
-			<label for="complaint" class="control-label">
-				<?php echo _l('complaints'); ?>
-			</label>
-			<textarea id="complaint" name="complaint" class="form-control tinymce" rows="6"> <?php //isset($casesheet_data['complaint']) ? htmlspecialchars($casesheet_data['complaint']) : '' ?></textarea>
-		</div>
+    <!-- Presenting Complaints -->
+    <div class="form-group mtop20">
+      <label for="presenting_complaints" class="control-label">
+        <?php echo _l('presenting_complaints'); ?>
+      </label>
+      <textarea id="presenting_complaints" name="presenting_complaints" class="form-control tinymce" rows="6"> <?php //isset($casesheet_data['presenting_complaints']) ? htmlspecialchars($casesheet_data['presenting_complaints']) : '' ?></textarea>
+    </div>
+    
+    <!-- Presenting Complaints -->
+    <div class="form-group mtop20">
+      <label for="complaint" class="control-label">
+        <?php echo _l('complaints'); ?>
+      </label>
+      <textarea id="complaint" name="complaint" class="form-control tinymce" rows="6"> <?php //isset($casesheet_data['complaint']) ? htmlspecialchars($casesheet_data['complaint']) : '' ?></textarea>
+    </div>
         </div>
       </div>
     </div>
 
     <!-- Clinical Observation Tab -->
     <div class="card">
-	<button class="btn collapsed" type="button" data-toggle="collapse" data-target="#collapseClinicalObservation" aria-expanded="false" aria-controls="collapseClinicalObservation" style="width: 100%">
+  <button class="btn collapsed" type="button" data-toggle="collapse" data-target="#collapseClinicalObservation" aria-expanded="false" aria-controls="collapseClinicalObservation" style="width: 100%">
       <div class="card-header" id="headingClinicalObservation">
         <h5 class="mb-0">
           
@@ -1772,10 +1814,10 @@ if (isset($casesheet_data['duration_value']) && $casesheet_data['duration_value'
          
         </h5>
       </div>
-	   </button>
+     </button>
       <div id="collapseClinicalObservation" class="<?php echo $isOpen ? 'show' : ''; ?>" aria-labelledby="headingClinicalObservation" data-parent="#casesheetAccordion">
-	  
-	  
+    
+    
         <div class="card-body">
           <!-- Clinical Observation Content -->
           <div class="row mtop10">
@@ -1794,7 +1836,7 @@ if (isset($casesheet_data['duration_value']) && $casesheet_data['duration_value'
 
     <!-- Personal History Tab -->
     <div class="card">
-	<button class="btn collapsed" type="button" data-toggle="collapse" data-target="#collapsePersonalHistory" aria-expanded="false" aria-controls="collapsePersonalHistory" style="width: 100%">
+  <button class="btn collapsed" type="button" data-toggle="collapse" data-target="#collapsePersonalHistory" aria-expanded="false" aria-controls="collapsePersonalHistory" style="width: 100%">
       <div class="card-header" id="headingPersonalHistory">
         <h5 class="mb-0">
           
@@ -1802,316 +1844,316 @@ if (isset($casesheet_data['duration_value']) && $casesheet_data['duration_value'
           
         </h5>
       </div>
-	  </button>
+    </button>
       <div id="collapsePersonalHistory" class=" <?php echo $isOpen ? 'show' : ''; ?>" aria-labelledby="headingPersonalHistory" data-parent="#casesheetAccordion">
         <div class="card-body">
-		  <div class="row">
+      <div class="row">
 
-			<!-- Row 1 -->
-			<div class="col-md-4 mb-3">
-			  <label><?= _l('appetite'); ?>:</label>
-			  <input type="text" name="appetite" class="form-control" placeholder="<?= _l('appetite'); ?>"
-					 value="<?= isset($casesheet_data['appetite']) ? htmlspecialchars($casesheet_data['appetite']) : '' ?>">
-			</div>
+      <!-- Row 1 -->
+      <div class="col-md-4 mb-3">
+        <label><?= _l('appetite'); ?>:</label>
+        <input type="text" name="appetite" class="form-control" placeholder="<?= _l('appetite'); ?>"
+           value="<?= isset($casesheet_data['appetite']) ? htmlspecialchars($casesheet_data['appetite']) : '' ?>">
+      </div>
 
-			<!-- Row 1 -->
-			<div class="col-md-4 mb-3">
-			  <label><?= _l('thirst'); ?>:</label>
-			  <input type="text" name="thirst" class="form-control" placeholder="<?= _l('thirst'); ?>"
-					 value="<?= isset($casesheet_data['thirst']) ? htmlspecialchars($casesheet_data['thirst']) : '' ?>">
-			</div>
+      <!-- Row 1 -->
+      <div class="col-md-4 mb-3">
+        <label><?= _l('thirst'); ?>:</label>
+        <input type="text" name="thirst" class="form-control" placeholder="<?= _l('thirst'); ?>"
+           value="<?= isset($casesheet_data['thirst']) ? htmlspecialchars($casesheet_data['thirst']) : '' ?>">
+      </div>
 
-			<div class="col-md-4 mb-3">
-			  <label><?= _l('desires'); ?>:</label>
-			  <input type="text" name="desires" class="form-control" placeholder="<?= _l('desires'); ?>"
-					 value="<?= isset($casesheet_data['desires']) ? htmlspecialchars($casesheet_data['desires']) : '' ?>">
-			</div>
+      <div class="col-md-4 mb-3">
+        <label><?= _l('desires'); ?>:</label>
+        <input type="text" name="desires" class="form-control" placeholder="<?= _l('desires'); ?>"
+           value="<?= isset($casesheet_data['desires']) ? htmlspecialchars($casesheet_data['desires']) : '' ?>">
+      </div>
 
-			<div class="col-md-4 mb-3">
-			  <label><?= _l('aversion'); ?>:</label>
-			  <input type="text" name="aversion" class="form-control" placeholder="<?= _l('aversion'); ?>"
-					 value="<?= isset($casesheet_data['aversion']) ? htmlspecialchars($casesheet_data['aversion']) : '' ?>">
-			</div>
+      <div class="col-md-4 mb-3">
+        <label><?= _l('aversion'); ?>:</label>
+        <input type="text" name="aversion" class="form-control" placeholder="<?= _l('aversion'); ?>"
+           value="<?= isset($casesheet_data['aversion']) ? htmlspecialchars($casesheet_data['aversion']) : '' ?>">
+      </div>
 
-			<!-- Row 2 -->
-			<div class="col-md-4 mb-3">
-			  <br>
-			  <label><?= _l('tongue'); ?>:</label>
-			  <input type="text" name="tongue" class="form-control" placeholder="<?= _l('tongue'); ?>"
-					 value="<?= isset($casesheet_data['tongue']) ? htmlspecialchars($casesheet_data['tongue']) : '' ?>">
-			</div>
+      <!-- Row 2 -->
+      <div class="col-md-4 mb-3">
+        <br>
+        <label><?= _l('tongue'); ?>:</label>
+        <input type="text" name="tongue" class="form-control" placeholder="<?= _l('tongue'); ?>"
+           value="<?= isset($casesheet_data['tongue']) ? htmlspecialchars($casesheet_data['tongue']) : '' ?>">
+      </div>
 
-			<div class="col-md-4 mb-3">
-			  <br>
-			  <label><?= _l('urine'); ?>:</label>
-			  <input type="text" name="urine" class="form-control" placeholder="<?= _l('urine'); ?>"
-					 value="<?= isset($casesheet_data['urine']) ? htmlspecialchars($casesheet_data['urine']) : '' ?>">
-			</div>
+      <div class="col-md-4 mb-3">
+        <br>
+        <label><?= _l('urine'); ?>:</label>
+        <input type="text" name="urine" class="form-control" placeholder="<?= _l('urine'); ?>"
+           value="<?= isset($casesheet_data['urine']) ? htmlspecialchars($casesheet_data['urine']) : '' ?>">
+      </div>
 
-			<div class="col-md-4 mb-3">
-			  <br>
-			  <label><?= _l('bowels'); ?>:</label>
-			  <input type="text" name="bowels" class="form-control" placeholder="<?= _l('bowels'); ?>"
-					 value="<?= isset($casesheet_data['bowels']) ? htmlspecialchars($casesheet_data['bowels']) : '' ?>">
-			</div>
+      <div class="col-md-4 mb-3">
+        <br>
+        <label><?= _l('bowels'); ?>:</label>
+        <input type="text" name="bowels" class="form-control" placeholder="<?= _l('bowels'); ?>"
+           value="<?= isset($casesheet_data['bowels']) ? htmlspecialchars($casesheet_data['bowels']) : '' ?>">
+      </div>
 
-			<!-- Row 3 -->
-			<div class="col-md-4 mb-3">
-			  <br>
-			  <label><?= _l('sweat'); ?>:</label>
-			  <input type="text" name="sweat" class="form-control" placeholder="<?= _l('sweat'); ?>"
-					 value="<?= isset($casesheet_data['sweat']) ? htmlspecialchars($casesheet_data['sweat']) : '' ?>">
-			</div>
+      <!-- Row 3 -->
+      <div class="col-md-4 mb-3">
+        <br>
+        <label><?= _l('sweat'); ?>:</label>
+        <input type="text" name="sweat" class="form-control" placeholder="<?= _l('sweat'); ?>"
+           value="<?= isset($casesheet_data['sweat']) ? htmlspecialchars($casesheet_data['sweat']) : '' ?>">
+      </div>
 
-			<div class="col-md-4 mb-3">
-			  <br>
-			  <label><?= _l('sleep'); ?>:</label>
-			  <input type="text" name="sleep" class="form-control" placeholder="<?= _l('sleep'); ?>"
-					 value="<?= isset($casesheet_data['sleep']) ? htmlspecialchars($casesheet_data['sleep']) : '' ?>">
-			</div>
+      <div class="col-md-4 mb-3">
+        <br>
+        <label><?= _l('sleep'); ?>:</label>
+        <input type="text" name="sleep" class="form-control" placeholder="<?= _l('sleep'); ?>"
+           value="<?= isset($casesheet_data['sleep']) ? htmlspecialchars($casesheet_data['sleep']) : '' ?>">
+      </div>
 
-			<div class="col-md-4 mb-3">
-			  <br>
-			  <label><?= _l('sun_headache'); ?>:</label>
-			  <input type="text" name="sun_headache" class="form-control" placeholder="<?= _l('sun_headache'); ?>"
-					 value="<?= isset($casesheet_data['sun_headache']) ? htmlspecialchars($casesheet_data['sun_headache']) : '' ?>">
-			</div>
+      <div class="col-md-4 mb-3">
+        <br>
+        <label><?= _l('sun_headache'); ?>:</label>
+        <input type="text" name="sun_headache" class="form-control" placeholder="<?= _l('sun_headache'); ?>"
+           value="<?= isset($casesheet_data['sun_headache']) ? htmlspecialchars($casesheet_data['sun_headache']) : '' ?>">
+      </div>
 
-			<!-- Row 4 -->
-			<div class="col-md-4 mb-3">
-			  <br>
-			  <label><?= _l('thermals'); ?>:</label>
-			  <input type="text" name="thermals" class="form-control" placeholder="<?= _l('thermals'); ?>"
-					 value="<?= isset($casesheet_data['thermals']) ? htmlspecialchars($casesheet_data['thermals']) : '' ?>">
-			</div>
+      <!-- Row 4 -->
+      <div class="col-md-4 mb-3">
+        <br>
+        <label><?= _l('thermals'); ?>:</label>
+        <input type="text" name="thermals" class="form-control" placeholder="<?= _l('thermals'); ?>"
+           value="<?= isset($casesheet_data['thermals']) ? htmlspecialchars($casesheet_data['thermals']) : '' ?>">
+      </div>
 
-			<div class="col-md-4 mb-3">
-			  <br>
-			  <label><?= _l('habits'); ?>:</label>
-			  <input type="text" name="habits" class="form-control" placeholder="<?= _l('habits'); ?>"
-					 value="<?= isset($casesheet_data['habits']) ? htmlspecialchars($casesheet_data['habits']) : '' ?>">
-			</div>
+      <div class="col-md-4 mb-3">
+        <br>
+        <label><?= _l('habits'); ?>:</label>
+        <input type="text" name="habits" class="form-control" placeholder="<?= _l('habits'); ?>"
+           value="<?= isset($casesheet_data['habits']) ? htmlspecialchars($casesheet_data['habits']) : '' ?>">
+      </div>
 
-			<!-- Row 5 -->
-			<div class="col-md-4 mb-3">
-			  <br>
-			  <label><?= _l('addiction'); ?>:</label>
-			  <input type="text" name="addiction" class="form-control" placeholder="<?= _l('addiction'); ?>"
-					 value="<?= isset($casesheet_data['addiction']) ? htmlspecialchars($casesheet_data['addiction']) : '' ?>">
-			</div>
+      <!-- Row 5 -->
+      <div class="col-md-4 mb-3">
+        <br>
+        <label><?= _l('addiction'); ?>:</label>
+        <input type="text" name="addiction" class="form-control" placeholder="<?= _l('addiction'); ?>"
+           value="<?= isset($casesheet_data['addiction']) ? htmlspecialchars($casesheet_data['addiction']) : '' ?>">
+      </div>
 
-			<div class="col-md-4 mb-3">
-			  <br>
-			  <label><?= _l('side'); ?>:</label>
-			  <input type="text" name="side" class="form-control" placeholder="<?= _l('side'); ?>"
-					 value="<?= isset($casesheet_data['side']) ? htmlspecialchars($casesheet_data['side']) : '' ?>">
-			</div>
+      <div class="col-md-4 mb-3">
+        <br>
+        <label><?= _l('side'); ?>:</label>
+        <input type="text" name="side" class="form-control" placeholder="<?= _l('side'); ?>"
+           value="<?= isset($casesheet_data['side']) ? htmlspecialchars($casesheet_data['side']) : '' ?>">
+      </div>
 
-			<div class="col-md-4 mb-3">
-			  <br>
-			  <label><?= _l('dreams'); ?>:</label>
-			  <textarea name="dreams" class="form-control" placeholder="<?= _l('dreams'); ?>"><?= isset($casesheet_data['dreams']) ? htmlspecialchars($casesheet_data['dreams']) : '' ?></textarea>
-			</div>
+      <div class="col-md-4 mb-3">
+        <br>
+        <label><?= _l('dreams'); ?>:</label>
+        <textarea name="dreams" class="form-control" placeholder="<?= _l('dreams'); ?>"><?= isset($casesheet_data['dreams']) ? htmlspecialchars($casesheet_data['dreams']) : '' ?></textarea>
+      </div>
 
-			<!-- Row 6 -->
-			<div class="col-md-4 mb-3">
-			  <br>
-			  <label><?= _l('diabetes'); ?>:</label>
-			  <textarea name="diabetes" class="form-control" placeholder="<?= _l('diabetes'); ?>"><?= isset($casesheet_data['diabetes']) ? htmlspecialchars($casesheet_data['diabetes']) : '' ?></textarea>
-			</div>
+      <!-- Row 6 -->
+      <div class="col-md-4 mb-3">
+        <br>
+        <label><?= _l('diabetes'); ?>:</label>
+        <textarea name="diabetes" class="form-control" placeholder="<?= _l('diabetes'); ?>"><?= isset($casesheet_data['diabetes']) ? htmlspecialchars($casesheet_data['diabetes']) : '' ?></textarea>
+      </div>
 
-			<div class="col-md-4 mb-3">
-			  <br>
-			  <label><?= _l('thyroid'); ?>:</label>
-			  <textarea name="thyroid" class="form-control" placeholder="<?= _l('thyroid'); ?>"><?= isset($casesheet_data['thyroid']) ? htmlspecialchars($casesheet_data['thyroid']) : '' ?></textarea>
-			</div>
+      <div class="col-md-4 mb-3">
+        <br>
+        <label><?= _l('thyroid'); ?>:</label>
+        <textarea name="thyroid" class="form-control" placeholder="<?= _l('thyroid'); ?>"><?= isset($casesheet_data['thyroid']) ? htmlspecialchars($casesheet_data['thyroid']) : '' ?></textarea>
+      </div>
 
-			<div class="col-md-4 mb-3">
-			  <br>
-			  <label><?= _l('hypertension'); ?>:</label>
-			  <textarea name="hypertension" class="form-control" placeholder="<?= _l('hypertension'); ?>"><?= isset($casesheet_data['hypertension']) ? htmlspecialchars($casesheet_data['hypertension']) : '' ?></textarea>
-			</div>
+      <div class="col-md-4 mb-3">
+        <br>
+        <label><?= _l('hypertension'); ?>:</label>
+        <textarea name="hypertension" class="form-control" placeholder="<?= _l('hypertension'); ?>"><?= isset($casesheet_data['hypertension']) ? htmlspecialchars($casesheet_data['hypertension']) : '' ?></textarea>
+      </div>
 
-			<!-- Row 7 -->
-			<div class="col-md-4 mb-3">
-			  <br>
-			  <label><?= _l('hyperlipidemia'); ?>:</label>
-			  <textarea name="hyperlipidemia" class="form-control" placeholder="<?= _l('hyperlipidemia'); ?>"><?= isset($casesheet_data['hyperlipidemia']) ? htmlspecialchars($casesheet_data['hyperlipidemia']) : '' ?></textarea>
-			</div>
+      <!-- Row 7 -->
+      <div class="col-md-4 mb-3">
+        <br>
+        <label><?= _l('hyperlipidemia'); ?>:</label>
+        <textarea name="hyperlipidemia" class="form-control" placeholder="<?= _l('hyperlipidemia'); ?>"><?= isset($casesheet_data['hyperlipidemia']) ? htmlspecialchars($casesheet_data['hyperlipidemia']) : '' ?></textarea>
+      </div>
 
-			<div class="col-md-4 mb-3">
-			  <br>
-			  <label><?= _l('menstrual_obstetric_history'); ?>:</label>
-			  <textarea name="menstrual_obstetric_history" class="form-control" placeholder="<?= _l('menstrual_obstetric_history'); ?>"><?= isset($casesheet_data['menstrual_obstetric_history']) ? htmlspecialchars($casesheet_data['menstrual_obstetric_history']) : '' ?></textarea>
-			</div>
+      <div class="col-md-4 mb-3">
+        <br>
+        <label><?= _l('menstrual_obstetric_history'); ?>:</label>
+        <textarea name="menstrual_obstetric_history" class="form-control" placeholder="<?= _l('menstrual_obstetric_history'); ?>"><?= isset($casesheet_data['menstrual_obstetric_history']) ? htmlspecialchars($casesheet_data['menstrual_obstetric_history']) : '' ?></textarea>
+      </div>
 
-			<div class="col-md-4 mb-3">
-			  <br>
-			  <label><?= _l('family_history'); ?>:</label>
-			  <textarea name="family_history" class="form-control" placeholder="<?= _l('family_history'); ?>"><?= isset($casesheet_data['family_history']) ? htmlspecialchars($casesheet_data['family_history']) : '' ?></textarea>
-			</div>
+      <div class="col-md-4 mb-3">
+        <br>
+        <label><?= _l('family_history'); ?>:</label>
+        <textarea name="family_history" class="form-control" placeholder="<?= _l('family_history'); ?>"><?= isset($casesheet_data['family_history']) ? htmlspecialchars($casesheet_data['family_history']) : '' ?></textarea>
+      </div>
 
-			<!-- Final Row -->
-			<div class="col-md-4 mb-3">
-			  <br>
-			  <label><?= _l('past_treatment_history'); ?>:</label>
-			  <textarea name="past_treatment_history" class="form-control" placeholder="<?= _l('past_treatment_history'); ?>"><?= isset($casesheet_data['past_treatment_history']) ? htmlspecialchars($casesheet_data['past_treatment_history']) : '' ?></textarea>
-			</div>
+      <!-- Final Row -->
+      <div class="col-md-4 mb-3">
+        <br>
+        <label><?= _l('past_treatment_history'); ?>:</label>
+        <textarea name="past_treatment_history" class="form-control" placeholder="<?= _l('past_treatment_history'); ?>"><?= isset($casesheet_data['past_treatment_history']) ? htmlspecialchars($casesheet_data['past_treatment_history']) : '' ?></textarea>
+      </div>
 
-		  </div>
-		</div>
+      </div>
+    </div>
 
       </div>
     </div>
 
     <!-- General Examination Tab -->
     <div class="card">
-	<button class="btn collapsed" type="button" data-toggle="collapse" data-target="#collapseGeneralExamination" aria-expanded="false" aria-controls="collapseGeneralExamination" style="width: 100%">
+  <button class="btn collapsed" type="button" data-toggle="collapse" data-target="#collapseGeneralExamination" aria-expanded="false" aria-controls="collapseGeneralExamination" style="width: 100%">
       <div class="card-header" id="headingGeneralExamination">
         <h5 class="mb-0">
             <strong><?php echo _l('general_examination'); ?></strong> <i class="fa fa-chevron-down toggle-icon" id="icon-generalExamination"></i>
          
         </h5>
       </div>
-	   </button>
+     </button>
       <div id="collapseGeneralExamination" class="<?php echo $isOpen ? 'show' : ''; ?>" aria-labelledby="headingGeneralExamination" data-parent="#casesheetAccordion">
         <div class="card-body">
           <!-- General Examination Content -->
           <div class="row">
-			<div class="col-md-2">
-				<label><?php echo _l('bp'); ?>:</label>
-				<input type="text" name="bp" class="form-control" placeholder="120/80">
-			</div>
-			<div class="col-md-2">
-				<label><?php echo _l('pulse'); ?>:</label>
-				<input type="text" name="pulse" class="form-control" placeholder="Pulse">
-			</div>
-			<div class="col-md-2">
-				<label><?php echo _l('weight'); ?>:</label>
-				<input type="text" name="weight" class="form-control" placeholder="WT.(KG)">
-			</div>
-			<div class="col-md-2">
-				<label><?php echo _l('height'); ?>:</label>
-				<input type="text" name="height" class="form-control" placeholder="HT.">
-			</div>
-			<div class="col-md-2">
-				<label><?php echo _l('temperature'); ?>:</label>
-				<input type="text" name="temperature" class="form-control" placeholder="TEMP.">
-			</div>
-			<div class="col-md-2">
-				<label><?php echo _l('bmi'); ?>:</label>
-				<input type="text" name="bmi" class="form-control" placeholder="BMI">
-			</div>
-		</div>
+      <div class="col-md-2">
+        <label><?php echo _l('bp'); ?>:</label>
+        <input type="text" name="bp" class="form-control" placeholder="120/80">
+      </div>
+      <div class="col-md-2">
+        <label><?php echo _l('pulse'); ?>:</label>
+        <input type="text" name="pulse" class="form-control" placeholder="Pulse">
+      </div>
+      <div class="col-md-2">
+        <label><?php echo _l('weight'); ?>:</label>
+        <input type="text" name="weight" class="form-control" placeholder="WT.(KG)">
+      </div>
+      <div class="col-md-2">
+        <label><?php echo _l('height'); ?>:</label>
+        <input type="text" name="height" class="form-control" placeholder="HT.">
+      </div>
+      <div class="col-md-2">
+        <label><?php echo _l('temperature'); ?>:</label>
+        <input type="text" name="temperature" class="form-control" placeholder="TEMP.">
+      </div>
+      <div class="col-md-2">
+        <label><?php echo _l('bmi'); ?>:</label>
+        <input type="text" name="bmi" class="form-control" placeholder="BMI">
+      </div>
+    </div>
 
 
-		<?php
-		$fields = [
-			['mental_generals', 'pg', 'particulars'],
-			['miasmatic_diagnosis', 'analysis_evaluation', 'reportorial_result'],
-			['management', 'diet', 'exercise'],
-			['critical', 'level_of_assent', 'dos_and_donts'],
-			['level_of_assurance', 'criteria_future_plan_rx', 'nutrition']
-		];
+    <?php
+    $fields = [
+      ['mental_generals', 'pg', 'particulars'],
+      ['miasmatic_diagnosis', 'analysis_evaluation', 'reportorial_result'],
+      ['management', 'diet', 'exercise'],
+      ['critical', 'level_of_assent', 'dos_and_donts'],
+      ['level_of_assurance', 'criteria_future_plan_rx', 'nutrition']
+    ];
 
-		$labels = [];
-		foreach (array_merge(...$fields) as $field) {
-			$labels[$field] = _l($field);
-		}
-		?>
+    $labels = [];
+    foreach (array_merge(...$fields) as $field) {
+      $labels[$field] = _l($field);
+    }
+    ?>
 
 
-		<?php foreach ($fields as $row): ?>
-		<div class="row mtop15">
-			<?php foreach ($row as $field): ?>
-				<div class="col-md-4">
-					<label><?php echo _l($labels[$field]); ?>:</label>
-					<?php if ($field == 'nutrition'): ?>
-						<select name="nutrition" class="form-control">
-						  <option value=""><?php echo _l('select'); ?></option>
-						  <option value="normal"><?php echo _l('normal'); ?></option>
-						  <option value="poor"><?php echo _l('poor'); ?></option>
-						  <option value="excessive"><?php echo _l('excessive'); ?></option>
-						</select>
+    <?php foreach ($fields as $row): ?>
+    <div class="row mtop15">
+      <?php foreach ($row as $field): ?>
+        <div class="col-md-4">
+          <label><?php echo _l($labels[$field]); ?>:</label>
+          <?php if ($field == 'nutrition'): ?>
+            <select name="nutrition" class="form-control">
+              <option value=""><?php echo _l('select'); ?></option>
+              <option value="normal"><?php echo _l('normal'); ?></option>
+              <option value="poor"><?php echo _l('poor'); ?></option>
+              <option value="excessive"><?php echo _l('excessive'); ?></option>
+            </select>
 
-					<?php else: ?>
-						<textarea name="<?php echo $field; ?>" class="form-control" rows="2" placeholder="<?php echo $labels[$field]; ?>"></textarea>
-					<?php endif; ?>
-				</div>
-			<?php endforeach; ?>
-		</div>
-		<?php endforeach; ?>
+          <?php else: ?>
+            <textarea name="<?php echo $field; ?>" class="form-control" rows="2" placeholder="<?php echo $labels[$field]; ?>"></textarea>
+          <?php endif; ?>
+        </div>
+      <?php endforeach; ?>
+    </div>
+    <?php endforeach; ?>
         </div>
       </div>
     </div>
 
     <!-- Mind Tab -->
     <div class="card">
-	<button class="btn collapsed" type="button" data-toggle="collapse" data-target="#collapseMind" aria-expanded="false" aria-controls="collapseMind" style="width: 100%">
+  <button class="btn collapsed" type="button" data-toggle="collapse" data-target="#collapseMind" aria-expanded="false" aria-controls="collapseMind" style="width: 100%">
       <div class="card-header" id="headingMind">
         <h5 class="mb-0">
             <strong><?php echo _l('mind'); ?></strong> <i class="fa fa-chevron-down toggle-icon" id="icon-mind"></i>
           
         </h5>
       </div>
-	  </button>
+    </button>
       <div id="collapseMind" class="<?php echo $isOpen ? 'show' : ''; ?>" aria-labelledby="headingMind" data-parent="#casesheetAccordion">
         <div class="card-body">
           <!-- Mind Content -->
           <div class="form-group mtop20">
-			<label for="mind" class="control-label">
-				<?php echo _l('mind'); ?>
-			</label>
-			<textarea id="mind" name="mind" class="form-control tinymce" rows="6"><?= isset($casesheet_data['mind']) ? htmlspecialchars($casesheet_data['mind']) : '' ?></textarea>
-		</div>
+      <label for="mind" class="control-label">
+        <?php echo _l('mind'); ?>
+      </label>
+      <textarea id="mind" name="mind" class="form-control tinymce" rows="6"><?= isset($casesheet_data['mind']) ? htmlspecialchars($casesheet_data['mind']) : '' ?></textarea>
+    </div>
         </div>
       </div>
     </div>
-	
-	
-	<div class="card">
-	<style>
-	  .prescription-medicine-table td select.form-control {
-		height: auto !important;
-		min-height: 36px;
-		padding: 6px;
-	  }
-	</style>
+  
+  
+  <div class="card">
+  <style>
+    .prescription-medicine-table td select.form-control {
+    height: auto !important;
+    min-height: 36px;
+    padding: 6px;
+    }
+  </style>
 
-	<button class="btn collapsed" type="button" data-toggle="collapse" data-target="#collapsePrescription" aria-expanded="false" aria-controls="collapsePrescription" style="width: 100%">
+  <button class="btn collapsed" type="button" data-toggle="collapse" data-target="#collapsePrescription" aria-expanded="false" aria-controls="collapsePrescription" style="width: 100%">
       <div class="card-header" id="headingPrescription">
         <h5 class="mb-0">
             <strong><?php echo _l('prescription'); ?></strong> <i class="fa fa-chevron-down toggle-icon" id="icon-mind"></i>
           
         </h5>
       </div>
-	  </button>
+    </button>
       <div id="collapsePrescription" class="<?php echo $isOpen ? 'show' : ''; ?>" aria-labelledby="headingPrescription" data-parent="#casesheetAccordion">
         <div class="card-body">
          
       <?php
-	/* $medicine_options = [];
-	foreach ($medicines as $m) {
-		$medicine_options[] = ['id' => $m['medicine_name'], 'name' => $m['medicine_name']];
-	}
+      /* $medicine_options = [];
+      foreach ($medicines as $m) {
+        $medicine_options[] = ['id' => $m['medicine_name'], 'name' => $m['medicine_name']];
+      }
 
-	$potency_options = [];
-	foreach ($potencies as $p) {
-		$potency_options[] = ['id' => $p['medicine_potency_name'], 'name' => $p['medicine_potency_name']];
-	}
+      $potency_options = [];
+      foreach ($potencies as $p) {
+        $potency_options[] = ['id' => $p['medicine_potency_name'], 'name' => $p['medicine_potency_name']];
+      }
 
-	$dose_options = [];
-	foreach ($doses as $d) {
-		$dose_options[] = ['id' => $d['medicine_dose_name'], 'name' => $d['medicine_dose_name']];
-	}
+      $dose_options = [];
+      foreach ($doses as $d) {
+        $dose_options[] = ['id' => $d['medicine_dose_name'], 'name' => $d['medicine_dose_name']];
+      }
 
-	$timing_options = [];
-	foreach ($timings as $t) {
-		$timing_options[] = ['id' => $t['medicine_timing_name'], 'name' => $t['medicine_timing_name']];
-	} */
-	?>
+      $timing_options = [];
+      foreach ($timings as $t) {
+        $timing_options[] = ['id' => $t['medicine_timing_name'], 'name' => $t['medicine_timing_name']];
+      } */
+      ?>
 
-	<!--<table class="prescription-medicine-table table" id="prescriptionMedicineTable">
+  <!--<table class="prescription-medicine-table table" id="prescriptionMedicineTable">
   <thead>
     <tr>
       <th><?= _l('medicine_name'); ?></th>
@@ -2187,19 +2229,19 @@ if (isset($casesheet_data['duration_value']) && $casesheet_data['duration_value'
   const timingOpts = buildOptions(timingOptions);
 
   return `
-    <tr>
-      <td><select name="prescription_medicine_name[]" class="form-control prescription-medicine-name" style="width: 100%">${medicineOpts}</select></td>
-      <td><select name="prescription_medicine_potency[]" class="form-control prescription-medicine-potency" style="width: 100%">${potencyOpts}</select></td>
-      <td><select name="prescription_medicine_dose[]" class="form-control prescription-medicine-dose" style="width: 100%">${doseOpts}</select></td>
-      <td><select name="prescription_medicine_timings[]" class="form-control prescription-medicine-timings" style="width: 100%">${timingOpts}</select></td>
-      <td><input type="text" name="prescription_medicine_remarks[]" class="form-control prescription-medicine-remarks" /></td>
-      <td class="text-center">
-        <button type="button" class="btn btn-danger btn-sm remove-row-btn">
-          <i class="fa fa-minus"></i>
-        </button>
-      </td>
-    </tr>
-  `;
+      <tr>
+        <td><select name="prescription_medicine_name[]" class="form-control prescription-medicine-name" style="width: 100%">${medicineOpts}</select></td>
+        <td><select name="prescription_medicine_potency[]" class="form-control prescription-medicine-potency" style="width: 100%">${potencyOpts}</select></td>
+        <td><select name="prescription_medicine_dose[]" class="form-control prescription-medicine-dose" style="width: 100%">${doseOpts}</select></td>
+        <td><select name="prescription_medicine_timings[]" class="form-control prescription-medicine-timings" style="width: 100%">${timingOpts}</select></td>
+        <td><input type="text" name="prescription_medicine_remarks[]" class="form-control prescription-medicine-remarks" /></td>
+        <td class="text-center">
+          <button type="button" class="btn btn-danger btn-sm remove-row-btn">
+            <i class="fa fa-minus"></i>
+          </button>
+        </td>
+      </tr>
+    `;
 }
 
 
@@ -2209,9 +2251,9 @@ if (isset($casesheet_data['duration_value']) && $casesheet_data['duration_value'
       document.getElementById('prescriptionMedicineBody').insertAdjacentHTML('beforeend', createNewRow());
       // Initialize any JS plugins if needed here
     });
-	
-	
-	document.getElementById('prescriptionMedicineBody').addEventListener('change', function (e) {
+  
+  
+  document.getElementById('prescriptionMedicineBody').addEventListener('change', function (e) {
   if (e.target.classList.contains('prescription-medicine-timings')) {
     const row = e.target.closest('tr');
     const allFilled = Array.from(row.querySelectorAll('select')).every(sel => sel.value !== '');
@@ -2223,11 +2265,11 @@ if (isset($casesheet_data['duration_value']) && $casesheet_data['duration_value'
 
 
     // Delegate remove row event (handles dynamically added rows)
-	document.getElementById('prescriptionMedicineBody').addEventListener('click', function (e) {
-	  if (e.target.closest('.remove-row-btn')) {
-		e.target.closest('tr').remove();
-	  }
-	});
+  document.getElementById('prescriptionMedicineBody').addEventListener('click', function (e) {
+    if (e.target.closest('.remove-row-btn')) {
+    e.target.closest('tr').remove();
+    }
+  });
 
   });
 </script>
@@ -2236,43 +2278,43 @@ if (isset($casesheet_data['duration_value']) && $casesheet_data['duration_value'
 
 
 <div class="row">
-			<div class="col-md-4">
+      <div class="col-md-4">
               <label for="documents"><?php echo _l('documents'); ?></label>
               <input type="file" name="documents[]" id="documents" class="form-control" multiple>
             </div>
             <div class="col-md-4">
-              <label for="medicine_days"><?php echo _l('medicine_period').'(In Days)'; ?><!-- <span class="text-danger">*</span> --></label>
+              <label for="medicine_days"><?php echo _l('medicine_period') . '(In Days)'; ?><!-- <span class="text-danger">*</span> --></label>
               <input type="number" name="medicine_days" id="medicine_days" class="form-control" min="1">
             </div>
-			<div class="col-md-4">
-			<?PHP
-			foreach($master_settings as $master){
-				if($master['title'] == 'medicine_followup_days'){
-					$medicine_followup_days = $master['options'];
-				}
-				
-			}
-			?>
-              <label for="followup_date"><?php echo _l('followup_date').': ('.$medicine_followup_days.' Days)'; ?></label>
-			  <input type="date" name="followup_date" id="followup_date" class="form-control" readonly>
+      <div class="col-md-4">
+      <?PHP
+      foreach ($master_settings as $master) {
+        if ($master['title'] == 'medicine_followup_days') {
+          $medicine_followup_days = $master['options'];
+        }
+
+      }
+      ?>
+              <label for="followup_date"><?php echo _l('followup_date') . ': (' . $medicine_followup_days . ' Days)'; ?></label>
+        <input type="date" name="followup_date" id="followup_date" class="form-control" readonly>
 
             </div>
             <!--<div class="col-md-4">
-			<br>
+      <br>
                <?php
-			$selected = "";
-			echo render_select('patient_status', $patient_status, ['patient_status_id', 'patient_status_name'], ''. _l('patient_status').'', $selected, ['data-none-selected-text' => _l('dropdown_non_selected_tex')]);
-			?>
+               $selected = "";
+               echo render_select('patient_status', $patient_status, ['patient_status_id', 'patient_status_name'], '' . _l('patient_status') . '', $selected, ['data-none-selected-text' => _l('dropdown_non_selected_tex')]);
+               ?>
             </div>-->
-		</div>
+    </div>
 
 
         </div>
-		
-		
+    
+    
       </div>
-	  
-	  
+    
+    
     </div>
 
   </div> <!-- End of Accordion -->
@@ -2281,25 +2323,25 @@ if (isset($casesheet_data['duration_value']) && $casesheet_data['duration_value'
   <div class="form-actions">
   <?PHP
   /* if($callback_url){
-	  ?>
-	    <a href="<?php echo admin_url('client/'.$callback_url.'/' . $client->userid . '/tab_casesheet');?>"><button type="button" class="btn btn-primary"><?= _l('back'); ?></button></a>
-	  <?PHP
+    ?>
+      <a href="<?php echo admin_url('client/'.$callback_url.'/' . $client->userid . '/tab_casesheet');?>"><button type="button" class="btn btn-primary"><?= _l('back'); ?></button></a>
+    <?PHP
   }else{ */
-	 
-	   ?>
-	   <?php if (!$is_break){ ?>
-	   <button type="button" class="btn btn-primary" id="saveCasesheetBtn">
+
+  ?>
+     <?php if (!$is_break) { ?>
+     <button type="button" class="btn btn-primary" id="saveCasesheetBtn">
   <?= _l('save'); ?>
 </button>
-	   <button type="button" class="btn btn-primary" id="saveCallNextBtn">
+     <button type="button" class="btn btn-primary" id="saveCallNextBtn">
   <?= _l('save_and_call_next_patient'); ?>
 </button>
 
 <?PHP
-	   //}
-	  
-  }
-  ?>
+     //}
+ 
+   }
+   ?>
   
     <!--<button type="button" class="btn btn-secondary" onclick="toggleCaseSheetForm()"><?= _l('cancel'); ?></button>-->
   </div>
@@ -2311,19 +2353,19 @@ if (isset($casesheet_data['duration_value']) && $casesheet_data['duration_value'
   </div>
 
     <br>
-	
+  
 <?= render_datatable([
-		_l('s_no'),
-		_l('consulted_date'),
-		_l('doctor_name'),
-		_l('clinical_observation'),
-		_l('suggested_diagnostics'),
-		//_l('appointment_type'),
-		_l('medicine_days'), 
-		_l('pharmacy_medicine_days'), 
-		_l('prescription'),
-		_l('action'),
-	], 'casesheet'); ?>
+      _l('s_no'),
+      _l('consulted_date'),
+      _l('doctor_name'),
+      _l('clinical_observation'),
+      _l('suggested_diagnostics'),
+      //_l('appointment_type'),
+      _l('medicine_days'),
+      _l('pharmacy_medicine_days'),
+      _l('prescription'),
+      _l('action'),
+    ], 'casesheet'); ?>
    
 
 </div>
@@ -2335,89 +2377,90 @@ if (isset($casesheet_data['duration_value']) && $casesheet_data['duration_value'
 let consultationStartTime = null;
 let consultationInterval = null;
     function toggleCaseSheetForm() {
-	   consultationStartTime = new Date(); // start timer
-		document.getElementById('consultation_timer_container').style.display = 'inline-block'; // show timer
-		startConsultationTimer(); // start counter
-		const form = document.getElementById('casesheet-form');
+     consultationStartTime = new Date(); // start timer
+    document.getElementById('consultation_timer_container').style.display = 'inline-block'; // show timer
+    startConsultationTimer(); // start counter
+    const form = document.getElementById('casesheet-form');
         form.style.display = form.style.display === 'none' ? 'block' : 'none';
     }
-	
-	function startConsultationTimer() {
-		const timerElement = document.getElementById('consultation_timer');
+  
+  function startConsultationTimer() {
+    const timerElement = document.getElementById('consultation_timer');
 
-		// Clear any existing interval (avoid duplicates)
-		if (consultationInterval) clearInterval(consultationInterval);
+    // Clear any existing interval (avoid duplicates)
+    if (consultationInterval) clearInterval(consultationInterval);
 
-		consultationInterval = setInterval(() => {
-			const now = new Date();
-			const durationSeconds = Math.floor((now - consultationStartTime) / 1000);
-			const minutes = Math.floor(durationSeconds / 60);
-			const seconds = durationSeconds % 60;
+    consultationInterval = setInterval(() => {
+      const now = new Date();
+      const durationSeconds = Math.floor((now - consultationStartTime) / 1000);
+      const minutes = Math.floor(durationSeconds / 60);
+      const seconds = durationSeconds % 60;
 
-			// Format as MM:SS
-			timerElement.textContent = `${pad(minutes)}:${pad(seconds)}`;
+      // Format as MM:SS
+      timerElement.textContent = `${pad(minutes)}:${pad(seconds)}`;
 
-			// Update hidden input for form submission
-			const hiddenField = document.getElementById('consultation_duration');
-			if (hiddenField) {
-				hiddenField.value = durationSeconds;
-			}
-		}, 1000);
-	}
+      // Update hidden input for form submission
+      const hiddenField = document.getElementById('consultation_duration');
+      if (hiddenField) {
+        hiddenField.value = durationSeconds;
+      }
+    }, 1000);
+  }
 
-	function pad(value) {
-		return value < 10 ? '0' + value : value;
-	}
+  function pad(value) {
+    return value < 10 ? '0' + value : value;
+  }
 </script>
 
 
 
 <?PHP
 if (staff_can('view_visits', 'customers')) {
-?>
+  ?>
 
 <div role="tabpanel" class="tab-pane" id="tab_visits">
     <div>
         <div class="patient-section-title mt-4"><?= _l('visits'); ?></div><br>
 
 <?= render_datatable([
-    _l('s_no'),
-    _l('visit_id'),
-    _l('appointment_date'),
-    _l('treatment'),
-    _l('visit_status'),
-    _l('consulted_date'),
-    _l('medicine_given_days'),
-    _l('appointment_type'),
-    _l('consulted_doctor'),
-], 'visit-appointment-table'); ?>
+      _l('s_no'),
+      _l('visit_id'),
+      _l('appointment_date'),
+      _l('treatment'),
+      _l('visit_status'),
+      _l('consulted_date'),
+      _l('medicine_given_days'),
+      _l('appointment_type'),
+      _l('consulted_doctor'),
+    ], 'visit-appointment-table'); ?>
 
     </div>
 </div>
 <?PHP
-}if (staff_can('create', 'estimates')) {
-	
-?>
+}
+if (staff_can('create', 'estimates')) {
+
+  ?>
 
 <div role="tabpanel" class="tab-pane" id="tab_estimation">
 
-	<div class="table-responsive">
+  <div class="table-responsive">
                 <?php
-                if(staff_can('create_estimation', 'customers')){
+                if (staff_can('create_estimation', 'customers')) {
                   ?>
-                <button class="btn btn-primary btn-sm" onclick="toggleEstimationForm()" style="float: right; margin-top: 6px; margin-right: 5px;">+<?php echo _l('add_package');?></button>
+                <button class="btn btn-primary btn-sm" onclick="toggleEstimationForm()" style="float: right; margin-top: 6px; margin-right: 5px;">+<?php echo _l('add_package'); ?></button>
                   <?php
                 }
                 ?>
                 <!-- Title Section -->
-              <div class="patient-section-title mt-4"><?php echo _l('package');?></div>
+              <div class="patient-section-title mt-4"><?php echo _l('package'); ?></div>
                 <br>
 
                 <!-- Hidden Form -->
                 
-				<div id="estimation-form" class="card p-3 mb-4" style="display: none; margin-top: -19px;">
-				
-				<div class="col-md-12 form-group">
+        <div id="estimation-form" class="card p-3 mb-4" style="display: none; margin-top: -19px;">
+        
+        <div class="col-md-12 form-group">
   <label><strong><?php echo _l('package_summary'); ?></strong></label>
  
   <div id="durationInfo" class="alert alert-success" style="font-weight: 500;">
@@ -2464,14 +2507,14 @@ if (staff_can('view_visits', 'customers')) {
 
     <!-- Styled Buttons -->
     <label class="action-toggle-btn" for="actionCallback" id="btnCallback"><?php echo _l('get_back'); ?></label>
-	<?PHP
-	$selected_duration = $latest_casesheet_package->duration_value ?? ''; 
-	if($selected_duration>0){
-	?>
+  <?PHP
+  $selected_duration = $latest_casesheet_package->duration_value ?? '';
+  if ($selected_duration > 0) {
+    ?>
     <label class="action-toggle-btn" for="actionAddPackage" id="btnAddPackage"><?php echo _l('add_package'); ?></label>
-	<?PHP
-	}
-	?>
+  <?PHP
+  }
+  ?>
   </div>
 </div>
 
@@ -2485,32 +2528,32 @@ if (staff_can('view_visits', 'customers')) {
   <div class="row">
      <div class="col-md-3">
           
-				<label for="criteria_id"><?php echo _l('patient_response'); ?></label>
-				<select class="selectpicker form-control criteria_id" data-width="100%" name="criteria_id" id="criteria_id" required>
-					<?php
-						$allowed_status_names = ['Call back'];
+        <label for="criteria_id"><?php echo _l('patient_response'); ?></label>
+        <select class="selectpicker form-control criteria_id" data-width="100%" name="criteria_id" id="criteria_id" required>
+          <?php
+          $allowed_status_names = ['Call back'];
 
-						// Convert allowed status names to lowercase once
-						$allowed_status_names_lower = array_map('strtolower', $allowed_status_names);
+          // Convert allowed status names to lowercase once
+          $allowed_status_names_lower = array_map('strtolower', $allowed_status_names);
 
-						foreach ($statuses as $status) {
-							if (in_array(strtolower($status['name']), $allowed_status_names_lower)) {
-								?>
-								<option value="<?= $status['id'] ?>"><?= $status['name'] ?></option>
-								<?php
-							}
-						}
-						?>
+          foreach ($statuses as $status) {
+            if (in_array(strtolower($status['name']), $allowed_status_names_lower)) {
+              ?>
+                <option value="<?= $status['id'] ?>"><?= $status['name'] ?></option>
+                <?php
+            }
+          }
+          ?>
 
-				</select>
-			
+        </select>
+      
 
-			  
-			</div>
-			<div class="col-md-3">
-			  <label><?php echo _l('next_calling_date'); ?></label>
-			  <input type="date" name="next_calling_date" class="form-control" required>
-			</div>
+        
+      </div>
+      <div class="col-md-3">
+        <label><?php echo _l('next_calling_date'); ?></label>
+        <input type="date" name="next_calling_date" class="form-control" required>
+      </div>
 
     <div class="col-md-12 form-group">
       <label><?php echo _l('remarks'); ?></label>
@@ -2518,9 +2561,9 @@ if (staff_can('view_visits', 'customers')) {
     </div>
   </div>
   <div class="col-md-12 text-right mt-3">
-	<button type="submit" class="btn btn-success" style="margin-top: 25px;"><?= _l('Save'); ?></button>
-	</div>
-	</form>
+  <button type="submit" class="btn btn-success" style="margin-top: 25px;"><?= _l('Save'); ?></button>
+  </div>
+  </form>
 </div>
 
 <div id="invoice-details-section" style="display: none; margin-top: 20px;" class="border p-3 rounded bg-light">
@@ -2529,41 +2572,41 @@ if (staff_can('view_visits', 'customers')) {
  <div class="row">
     <div class="col-md-4 form-group">
       <label><?php echo _l('treatment_name'); ?></label>
-      <input type="text" name="invoice_treatment_name" class="form-control" value="<?php echo $latest_casesheet_package->treatment_name;?>" readonly>
+      <input type="text" name="invoice_treatment_name" class="form-control" value="<?php echo $latest_casesheet_package->treatment_name; ?>" readonly>
     </div>
     <div class="col-md-4 form-group">
       <label><?php echo _l('dr_suggested_duration'); ?></label>
-      <input type="text" name="dr_duration" class="form-control" value="<?php echo $latest_casesheet_package->duration_value;?> Months" readonly>
+      <input type="text" name="dr_duration" class="form-control" value="<?php echo $latest_casesheet_package->duration_value; ?> Months" readonly>
     </div>
-		<?php $selected_duration = $latest_casesheet_package->duration_value ?? ''; 
-		
-		
-		foreach($master_settings as $master){
-				if($master['title'] == 'invoice_acknowledge'){
-					$invoice_acknowledge = $master['options'];
-				}
-				if($master['title'] == 'invoice_minimum_period_settings'){
-					$invoice_minimum_period_settings = $master['options'];
-				}
-				if($master['title'] == 'discount_limit_settings'){
-					$discount_limit_settings = $master['options'];
-				}
-				
-			}
-			
-		?>
+    <?php $selected_duration = $latest_casesheet_package->duration_value ?? '';
 
-	<div class="col-md-4 form-group">
-	  <label><?php echo _l('accepted_duration'); ?></label>
-	<select name="invoice_period" class="form-control" id="invoicePeriod" style="padding: 1px">
-  <?php
-    $min = (int)$invoice_minimum_period_settings;
-    $max = (int)$selected_duration;
 
-    for ($i = $max; $i >= $min; $i--) {
-        $selected = ($i == $selected_duration) ? 'selected' : '';
-        echo "<option value=\"$i\" $selected>$i Months</option>";
+    foreach ($master_settings as $master) {
+      if ($master['title'] == 'invoice_acknowledge') {
+        $invoice_acknowledge = $master['options'];
+      }
+      if ($master['title'] == 'invoice_minimum_period_settings') {
+        $invoice_minimum_period_settings = $master['options'];
+      }
+      if ($master['title'] == 'discount_limit_settings') {
+        $discount_limit_settings = $master['options'];
+      }
+
     }
+
+    ?>
+
+  <div class="col-md-4 form-group">
+    <label><?php echo _l('accepted_duration'); ?></label>
+  <select name="invoice_period" class="form-control" id="invoicePeriod" style="padding: 1px">
+  <?php
+  $min = (int) $invoice_minimum_period_settings;
+  $max = (int) $selected_duration;
+
+  for ($i = $max; $i >= $min; $i--) {
+    $selected = ($i == $selected_duration) ? 'selected' : '';
+    echo "<option value=\"$i\" $selected>$i Months</option>";
+  }
   ?>
 </select>
 <script>
@@ -2595,15 +2638,15 @@ document.addEventListener('DOMContentLoaded', function () {
 </script>
 
 
-	</div>
+  </div>
 
   </div>
 
   <div class="mt-2" id="periodWarning" style="display: none;">
      <div class="col-md-12 form-group">
       <label><?php echo _l('remarks'); ?></label>
-	  <div id="durationWarning" class="alert alert-warning" style="font-weight: 500; display: none;">
-  ⚠️ Why are you creating a <span id="selectedMonths"></span> package by invoice period when Dr.<?php echo $latest_casesheet_package->firstname.' '.$latest_casesheet_package->lastname;?> suggested for <strong><?= $selected_duration ?> months</strong>?
+    <div id="durationWarning" class="alert alert-warning" style="font-weight: 500; display: none;">
+  ⚠️ Why are you creating a <span id="selectedMonths"></span> package by invoice period when Dr.<?php echo $latest_casesheet_package->firstname . ' ' . $latest_casesheet_package->lastname; ?> suggested for <strong><?= $selected_duration ?> months</strong>?
 </div>
       <textarea name="adminnote" class="form-control" rows="3"></textarea>
     </div>
@@ -2637,121 +2680,121 @@ document.addEventListener('DOMContentLoaded', function () {
   <input type="hidden" name="clientid" id="clientid" value="<?= $client->userid; ?>">
   
   <?php
-	   $next_estimate_number = get_option('next_estimate_number');
-	   $format               = get_option('estimate_number_format');
-	
-		if (isset($estimate)) {
-			$format = $estimate->number_format;
-		}
+  $next_estimate_number = get_option('next_estimate_number');
+  $format = get_option('estimate_number_format');
 
-	   $prefix = get_option('estimate_prefix');
+  if (isset($estimate)) {
+    $format = $estimate->number_format;
+  }
 
-	   if ($format == 1) {
-		   $__number = $next_estimate_number;
-		   if (isset($estimate)) {
-			   $__number = $estimate->number;
-			   $prefix   = '<span id="prefix">' . $estimate->prefix . '</span>';
-		   }
-	   } elseif ($format == 2) {
-		   if (isset($estimate)) {
-			   $__number = $estimate->number;
-			   $prefix   = $estimate->prefix;
-			   $prefix   = '<span id="prefix">' . $prefix . '</span><span id="prefix_year">' . date('Y', strtotime($estimate->date)) . '</span>/';
-		   } else {
-			   $__number = $next_estimate_number;
-			   $prefix   = $prefix . '<span id="prefix_year">' . date('Y') . '</span>/';
-		   }
-	   } elseif ($format == 3) {
-		   if (isset($estimate)) {
-			   $yy       = date('y', strtotime($estimate->date));
-			   $__number = $estimate->number;
-			   $prefix   = '<span id="prefix">' . $estimate->prefix . '</span>';
-		   } else {
-			   $yy       = date('y');
-			   $__number = $next_estimate_number;
-		   }
-	   } elseif ($format == 4) {
-		   if (isset($estimate)) {
-			   $yyyy     = date('Y', strtotime($estimate->date));
-			   $mm       = date('m', strtotime($estimate->date));
-			   $__number = $estimate->number;
-			   $prefix   = '<span id="prefix">' . $estimate->prefix . '</span>';
-		   } else {
-			   $yyyy     = date('Y');
-			   $mm       = date('m');
-			   $__number = $next_estimate_number;
-		   }
-	   }
+  $prefix = get_option('estimate_prefix');
 
-	   $_estimate_number     = str_pad($__number, get_option('number_padding_prefixes'), '0', STR_PAD_LEFT);
-	   $isedit               = isset($estimate) ? 'true' : 'false';
-	   $data_original_number = isset($estimate) ? $estimate->number : 'false';
-	   ?>
-				   
+  if ($format == 1) {
+    $__number = $next_estimate_number;
+    if (isset($estimate)) {
+      $__number = $estimate->number;
+      $prefix = '<span id="prefix">' . $estimate->prefix . '</span>';
+    }
+  } elseif ($format == 2) {
+    if (isset($estimate)) {
+      $__number = $estimate->number;
+      $prefix = $estimate->prefix;
+      $prefix = '<span id="prefix">' . $prefix . '</span><span id="prefix_year">' . date('Y', strtotime($estimate->date)) . '</span>/';
+    } else {
+      $__number = $next_estimate_number;
+      $prefix = $prefix . '<span id="prefix_year">' . date('Y') . '</span>/';
+    }
+  } elseif ($format == 3) {
+    if (isset($estimate)) {
+      $yy = date('y', strtotime($estimate->date));
+      $__number = $estimate->number;
+      $prefix = '<span id="prefix">' . $estimate->prefix . '</span>';
+    } else {
+      $yy = date('y');
+      $__number = $next_estimate_number;
+    }
+  } elseif ($format == 4) {
+    if (isset($estimate)) {
+      $yyyy = date('Y', strtotime($estimate->date));
+      $mm = date('m', strtotime($estimate->date));
+      $__number = $estimate->number;
+      $prefix = '<span id="prefix">' . $estimate->prefix . '</span>';
+    } else {
+      $yyyy = date('Y');
+      $mm = date('m');
+      $__number = $next_estimate_number;
+    }
+  }
+
+  $_estimate_number = str_pad($__number, get_option('number_padding_prefixes'), '0', STR_PAD_LEFT);
+  $isedit = isset($estimate) ? 'true' : 'false';
+  $data_original_number = isset($estimate) ? $estimate->number : 'false';
+  ?>
+           
    <input type="hidden" name="number" class="form-control" value="<?php echo e($_estimate_number); ?>" data-isedit="<?php echo e($isedit); ?>" data-original-number="<?php echo e($data_original_number); ?>">
    <input type="hidden" name="billing_street" id="billing_street" value="1">
-	<?php
-	// Filter treatments with empty or 0 estimation_id
-	$available_treatments = array_filter($patient_treatment, function($t) {
-		return empty($t['estimation_id']) || $t['estimation_id'] == 0;
-	});
+  <?php
+  // Filter treatments with empty or 0 estimation_id
+  $available_treatments = array_filter($patient_treatment, function ($t) {
+    return empty($t['estimation_id']) || $t['estimation_id'] == 0;
+  });
 
-	$today = new DateTime();
-	if ($selected_duration > 0) {
-		$today->modify("+$selected_duration months");
-	}
-	$expiry_date = $today->format('Y-m-d');
-	?>
+  $today = new DateTime();
+  if ($selected_duration > 0) {
+    $today->modify("+$selected_duration months");
+  }
+  $expiry_date = $today->format('Y-m-d');
+  ?>
 
 
-		<input type="hidden" name="expirydate" id="expiryDate" class="form-control">
+    <input type="hidden" name="expirydate" id="expiryDate" class="form-control">
 
-	  <input type="hidden" name="currency" class="form-control" value="1">
+    <input type="hidden" name="currency" class="form-control" value="1">
 
-	  <input type="hidden" name="status" class="form-control" value="1">
+    <input type="hidden" name="status" class="form-control" value="1">
 
-	  <input type="hidden" name="sale_agent" class="form-control" value="<?php echo get_staff_user_id();?>">
+    <input type="hidden" name="sale_agent" class="form-control" value="<?php echo get_staff_user_id(); ?>">
 
-	  <input type="hidden" name="show_quantity_as" class="form-control" value="1">
-							
-		
-	<input type="hidden" name="date" class="form-control" value="<?php echo date('Y-m-d');?>">
+    <input type="hidden" name="show_quantity_as" class="form-control" value="1">
+              
+    
+  <input type="hidden" name="date" class="form-control" value="<?php echo date('Y-m-d'); ?>">
   <div class="row">
   <!--<div class="col-md-4 form-group">
-	  <label>Expiry Date</label>
-	  <input type="date" name="expirydate" class="form-control" value="<?= $expiry_date; ?>" style="width: 100%">
+    <label>Expiry Date</label>
+    <input type="date" name="expirydate" class="form-control" value="<?= $expiry_date; ?>" style="width: 100%">
 
-	</div>-->
+  </div>-->
    
-	</div>
+  </div>
 
     
-	<input type="hidden" name="newitems[1][description]" id="itemDescription" class="form-control" readonly>
+  <input type="hidden" name="newitems[1][description]" id="itemDescription" class="form-control" readonly>
  <input type="hidden" name="newitems[1][qty]" id="itemQty" class="form-control" value="1">
 
       <input type="hidden" step="0.01" name="newitems[1][rate]" id="itemRate" class="form-control" readonly>
     
 
     
- <?php 
- //echo $latest_casesheet->treatment_type_id;?>
+ <?php
+   //echo $latest_casesheet->treatment_type_id; ?>
   <div class="row mt-3">
    <?php
-$show_package_dropdown = false;
-$matched_package_item = null;
+   $show_package_dropdown = false;
+   $matched_package_item = null;
 
-foreach ($items as $_group_items) {
-    if (isset($_group_items[0]['group_name']) && $_group_items[0]['group_name'] == 'Package') {
-        foreach ($_group_items as $item) {
-            if ($item['id'] == $latest_casesheet_package->treatment_type_id) {
-                $show_package_dropdown = true;
-                $matched_package_item = $item;
-                break 2; // Exit both loops
-            }
-        }
-    }
-}
-?>
+   foreach ($items as $_group_items) {
+     if (isset($_group_items[0]['group_name']) && $_group_items[0]['group_name'] == 'Package') {
+       foreach ($_group_items as $item) {
+         if ($item['id'] == $latest_casesheet_package->treatment_type_id) {
+           $show_package_dropdown = true;
+           $matched_package_item = $item;
+           break 2; // Exit both loops
+         }
+       }
+     }
+   }
+   ?>
 
 <?php if ($show_package_dropdown && $matched_package_item): ?>
   <div class="col-md-4 form-group">
@@ -2769,9 +2812,9 @@ foreach ($items as $_group_items) {
       <label><?php echo _l('company_price'); ?></label>
       <input type="text" name="subtotal" id="itemTotal" class="form-control" readonly>
     </div>
-	<?PHP
-	/*
-	?>
+  <?PHP
+  /*
+  ?>
    <div class="col-md-4 form-group">
   <label><?php echo _l('coupon_discount'); ?></label>
   <div class="input-group" id="discount-wrapper">
@@ -2812,16 +2855,16 @@ foreach ($items as $_group_items) {
 </div>
 <?PHP
 */
-?>
+  ?>
 <div class="col-md-4 form-group">
   <label><?php echo _l('coupon_discount'); ?></label>
   <div class="input-group" id="discount-wrapper">
     <!-- Percentage Input -->
     <?php
-  $max_discount = isset($discount_limit_settings) && $discount_limit_settings > 0
-    ? $discount_limit_settings
-    : 100; // default fallback
-?>
+    $max_discount = isset($discount_limit_settings) && $discount_limit_settings > 0
+      ? $discount_limit_settings
+      : 100; // default fallback
+    ?>
 
 <input type="number"
   class="form-control input-discount-percent"
@@ -2865,38 +2908,38 @@ foreach ($items as $_group_items) {
       <label><?php echo _l('suggested_price'); ?></label>
       <input type="text" class="form-control" name="total" id="finalTotalField" readonly>
     </div>
-	
-	
-	  <!-- Pay Now Field -->
-	  <div class="col-md-4 form-group">
-		<label><?php echo _l('pay_now'); ?></label>
-		<input type="number" class="form-control" name="paying_amount" value="0" id="paying_amount"
-		<?= ($invoice_acknowledge === 'before_payment') ? 'readonly' : ''; ?>>
+  
+  
+    <!-- Pay Now Field -->
+    <div class="col-md-4 form-group">
+    <label><?php echo _l('pay_now'); ?></label>
+    <input type="number" class="form-control" name="paying_amount" value="0" id="paying_amount"
+    <?= ($invoice_acknowledge === 'before_payment') ? 'readonly' : ''; ?>>
 
-	  </div>
-	  
-	  <div class="col-md-4 form-group">
+    </div>
+    
+    <div class="col-md-4 form-group">
       <label><?php echo _l('utr_no'); ?></label>
       <input type="text" name="utr_no" id="utr_no" class="form-control">
     </div>
-	<div class="col-md-4">
-		  <div class="form-group">
-		  <label><span style="color: #f00">*</span> <?= _l('payment_category'); ?></label>
-			  <select class="form-control selectpicker" name="appointment_type_id" id="appointment_type_id" data-live-search="true" required>
-				<option value=""></option>
-				<?php foreach ($appointment_type as $app): ?>
-				  <option value="<?= $app['appointment_type_id']; ?>"><?= $app['appointment_type_name']; ?></option>
-				<?php endforeach; ?>
-			  </select>
-		  </div>
-		</div>
-	  
-	  <input type="hidden" name="invoice_acknowledge" value="<?php echo $invoice_acknowledge;?>">
-		
-	 <div class="col-md-4 form-group">
+  <div class="col-md-4">
+      <div class="form-group">
+      <label><span style="color: #f00">*</span> <?= _l('payment_category'); ?></label>
+        <select class="form-control selectpicker" name="appointment_type_id" id="appointment_type_id" data-live-search="true" required>
+        <option value=""></option>
+        <?php foreach ($appointment_type as $app): ?>
+          <option value="<?= $app['appointment_type_id']; ?>"><?= $app['appointment_type_name']; ?></option>
+        <?php endforeach; ?>
+        </select>
+      </div>
+    </div>
+    
+    <input type="hidden" name="invoice_acknowledge" value="<?php echo $invoice_acknowledge; ?>">
+    
+   <div class="col-md-4 form-group">
   <label for="paymentmode" class="control-label">
     <?= _l('payment_mode'); ?>
-    <?php if ($invoice_acknowledge != 'before_payment') : ?>
+    <?php if ($invoice_acknowledge != 'before_payment'): ?>
       <span class="text-danger">*</span>
     <?php endif; ?>
   </label>
@@ -2919,26 +2962,26 @@ foreach ($items as $_group_items) {
   </select>
 </div>
 <div class="col-md-3">
-	 <?= render_select(
-			'branch_id', // name
-			$branch,   // options array
-			['id', 'name'], // option keys
-			_l('branch') . '*', // label
-			isset($home_branch_id) ? $home_branch_id : ($patient['groupid'] ?? ''), // selected
-			[
-				'id' => 'branch_id', // 👈 Add your ID here
-				'data-none-selected-text' => _l('dropdown_non_selected_tex'),
-				'required' => 'required'
-			]
-		) ?>
+   <?= render_select(
+     'branch_id', // name
+     $branch,   // options array
+     ['id', 'name'], // option keys
+     _l('branch') . '*', // label
+     isset($home_branch_id) ? $home_branch_id : ($patient['groupid'] ?? ''), // selected
+     [
+       'id' => 'branch_id', // 👈 Add your ID here
+       'data-none-selected-text' => _l('dropdown_non_selected_tex'),
+       'required' => 'required'
+     ]
+   ) ?>
 
-	  </div>
+    </div>
 
 
-	  <!-- Submit Button -->
-	 <div class="col-md-4 form-group">
-	 <br>
-	 
+    <!-- Submit Button -->
+   <div class="col-md-4 form-group">
+   <br>
+   
   <button type="submit" class="btn btn-success" style="margin-top: 6px"><?php echo _l('save_and_pay'); ?></button>
 </div>
   </div>
@@ -3118,53 +3161,53 @@ foreach ($items as $_group_items) {
   });
 </script>
   <script>
-				const itemData = <?= json_encode(array_column(array_merge(...array_values($items)), null, 'id')); ?>;
+        const itemData = <?= json_encode(array_column(array_merge(...array_values($items)), null, 'id')); ?>;
 
-				document.getElementById('itemSelect').addEventListener('change', function () {
-				  const selectedId = this.value;
-				  if (itemData[selectedId]) {
-					const item = itemData[selectedId];
-					document.getElementById('itemDescription').value = item.description;
-					document.getElementById('itemRate').value = item.rate;
+        document.getElementById('itemSelect').addEventListener('change', function () {
+          const selectedId = this.value;
+          if (itemData[selectedId]) {
+          const item = itemData[selectedId];
+          document.getElementById('itemDescription').value = item.description;
+          document.getElementById('itemRate').value = item.rate;
 
-					const qty = parseFloat(document.getElementById('itemQty').value) || 1;
-					document.getElementById('itemTotal').value = (qty * parseFloat(item.rate)).toFixed(2);
-				  } else {
-					document.getElementById('itemDescription').value = '';
-					document.getElementById('itemRate').value = '';
-					document.getElementById('itemTotal').value = '';
-				  }
-				});
+          const qty = parseFloat(document.getElementById('itemQty').value) || 1;
+          document.getElementById('itemTotal').value = (qty * parseFloat(item.rate)).toFixed(2);
+          } else {
+          document.getElementById('itemDescription').value = '';
+          document.getElementById('itemRate').value = '';
+          document.getElementById('itemTotal').value = '';
+          }
+        });
 
-				document.getElementById('itemQty').addEventListener('input', function () {
-				  const selectedId = document.getElementById('itemSelect').value;
-				  if (itemData[selectedId]) {
-					const qty = parseFloat(this.value) || 1;
-					const rate = parseFloat(itemData[selectedId].rate);
-					document.getElementById('itemTotal').value = (qty * rate).toFixed(2);
-				  }
-				});
-				</script>
-				<script>
-					$(document).ready(function () {
-					  $('#treatmentSelect').on('change', function () {
-						const selectedOption = $(this).find('option:selected');
-						const duration = parseInt(selectedOption.data('duration'));
+        document.getElementById('itemQty').addEventListener('input', function () {
+          const selectedId = document.getElementById('itemSelect').value;
+          if (itemData[selectedId]) {
+          const qty = parseFloat(this.value) || 1;
+          const rate = parseFloat(itemData[selectedId].rate);
+          document.getElementById('itemTotal').value = (qty * rate).toFixed(2);
+          }
+        });
+        </script>
+        <script>
+          $(document).ready(function () {
+            $('#treatmentSelect').on('change', function () {
+            const selectedOption = $(this).find('option:selected');
+            const duration = parseInt(selectedOption.data('duration'));
 
-						if (!isNaN(duration)) {
-						  const today = new Date();
-						  today.setMonth(today.getMonth() + duration);
+            if (!isNaN(duration)) {
+              const today = new Date();
+              today.setMonth(today.getMonth() + duration);
 
-						  const yyyy = today.getFullYear();
-						  const mm = String(today.getMonth() + 1).padStart(2, '0');
-						  const dd = String(today.getDate()).padStart(2, '0');
+              const yyyy = today.getFullYear();
+              const mm = String(today.getMonth() + 1).padStart(2, '0');
+              const dd = String(today.getDate()).padStart(2, '0');
 
-						  const newExpiryDate = `${yyyy}-${mm}-${dd}`;
-						  $('input[name="expirydate"]').val(newExpiryDate);
-						}
-					  });
-					});
-					</script>
+              const newExpiryDate = `${yyyy}-${mm}-${dd}`;
+              $('input[name="expirydate"]').val(newExpiryDate);
+            }
+            });
+          });
+          </script>
 
 </div>
 
@@ -3172,31 +3215,32 @@ foreach ($items as $_group_items) {
               </div>
 
                 <br>
-				<?= render_datatable([
-				_l('estimate_dt_table_heading_number'),
-				_l('estimate_dt_table_heading_amount'),
-				_l('branch_name'),
-				_l('treatment'),
-				_l('payment_category'),
-				// _l('estimate_dt_table_heading_client'), // optional, currently commented
-				_l('estimate_dt_table_heading_date'),
-				_l('estimate_dt_table_heading_expirydate'),
-				_l('estimate_dt_table_heading_status'),
-				_l('remarks'),
-				_l('action'),
-			], 'estimates-table'); ?>
+        <?= render_datatable([
+          _l('estimate_dt_table_heading_number'),
+          _l('estimate_dt_table_heading_amount'),
+          _l('branch_name'),
+          _l('treatment'),
+          _l('payment_category'),
+          // _l('estimate_dt_table_heading_client'), // optional, currently commented
+          _l('estimate_dt_table_heading_date'),
+          _l('estimate_dt_table_heading_expirydate'),
+          _l('estimate_dt_table_heading_status'),
+          _l('remarks'),
+          _l('action'),
+        ], 'estimates-table'); ?>
 
 
               </div>
 
 <?PHP
-}if (staff_can('view_payments', 'customers')) {
-?>
+}
+if (staff_can('view_payments', 'customers')) {
+  ?>
 <div role="tabpanel" class="tab-pane" id="tab_payments">
     <!--<p><?= _l('no_payments_recorded'); ?></p>-->
     <div class="table-responsive">
         <div class="patient-section-title mt-4"><?= _l('invoice'); ?></div><br>
-		<div id="invoicePaymentFormSection" style="display: none;">
+    <div id="invoicePaymentFormSection" style="display: none;">
   <div class="text-end mb-3">
     <button type="button" class="btn btn-secondary" id="btnBackToTable">← <?php echo _l('back_to_list'); ?>
 </button>
@@ -3205,7 +3249,7 @@ foreach ($items as $_group_items) {
   <?= form_open(admin_url('invoices/record_payment'), ['id' => 'invoice_payment_form', 'target' => '_blank']); ?>
 
     
-	<input type="hidden" name="invoiceid" id="invoice_id_hidden">
+  <input type="hidden" name="invoiceid" id="invoice_id_hidden">
     <div class="row">
       <div class="form-group col-md-4" app-field-wrapper="amount">
         <label for="invoice_payment_amount" class="control-label">
@@ -3224,7 +3268,7 @@ foreach ($items as $_group_items) {
       <!--<div class="form-group col-md-4">
         <?= render_date_input('date', 'Payment Date', _d(date('Y-m-d'))); ?>
       </div>-->
-	 
+   
       <div class="form-group col-md-4">
     <label for="payment_method" class="control-label">
         <span style="color: #f00">*</span><?php echo _l('payment_method'); ?>
@@ -3252,7 +3296,7 @@ foreach ($items as $_group_items) {
 $(document).ready(function () {
     function toggleUtrRequirement() {
         var selected = $('#paymentmode option:selected').data('name');
-		//alert(selected);
+    //alert(selected);
         if (selected === "Cash") {
             $('#utr_no').prop('required', false);
         } else {
@@ -3274,9 +3318,9 @@ $(document).ready(function () {
       <div class="form-group col-md-3">
         <?= render_input('note', 'Note'); ?>
       </div>
-		  <div class="form-group">
-		  <button type="submit" class="btn btn-success"  style="margin-top: 26px"><?php echo _l('submit_payment'); ?> </button>
-		</div>
+      <div class="form-group">
+      <button type="submit" class="btn btn-success"  style="margin-top: 26px"><?php echo _l('submit_payment'); ?> </button>
+    </div>
     </div>
 
     
@@ -3284,41 +3328,41 @@ $(document).ready(function () {
 </div>
 
 
-		
+    
 
-		<div id="payment_table">
-		<?= render_datatable([
-			_l('S.No'),
-			_l('invoice_number'),
-			_l('branch_name'),
-			_l('payment_category'),
-			_l('amount'),
-			_l('paid_amount'),
-			_l('due_amount'),
-			_l('date'),
-			_l('package'),
-			_l('due_date'),
-			_l('status'),
-			_l('action'),
-		], 'invoice-payments'); ?>
+    <div id="payment_table">
+    <?= render_datatable([
+      _l('S.No'),
+      _l('invoice_number'),
+      _l('branch_name'),
+      _l('payment_category'),
+      _l('amount'),
+      _l('paid_amount'),
+      _l('due_amount'),
+      _l('date'),
+      _l('package'),
+      _l('due_date'),
+      _l('status'),
+      _l('action'),
+    ], 'invoice-payments'); ?>
         
 
         <br>
-		
+    
         <div class="patient-section-title mt-4"><?= _l('payment_receipts'); ?></div><br>
 <?= render_datatable([
-    _l('payment_number'),
-    _l('branch'),
-    _l('utr_no'),
-    _l('receipt_no'),
-    _l('payment_mode'),
-    _l('date'),
-    _l('received_by'),
-    _l('amount'),
-    _l('action'),
-], 'payment-table'); ?>
+      _l('payment_number'),
+      _l('branch'),
+      _l('utr_no'),
+      _l('receipt_no'),
+      _l('payment_mode'),
+      _l('date'),
+      _l('received_by'),
+      _l('amount'),
+      _l('action'),
+    ], 'payment-table'); ?>
        
-		</div>
+    </div>
     </div>
 </div>
 
@@ -3426,107 +3470,108 @@ $(document).ready(function () {
 
 <?PHP
 
-}if (staff_can('view_feedback', 'customers')) {
-?>
+}
+if (staff_can('view_feedback', 'customers')) {
+  ?>
           <div role="tabpanel" class="tab-pane" id="tab_feedback" style="min-height: 300px;">
 
             
                 <button class="btn btn-primary btn-sm" onclick="toggleFeedbackForm()" style="float: right; margin-top: 6px; margin-right: 5px;"><?php echo _l('send_request'); ?>
 </button>
 
-				<!-- Title Section -->
-				<div class="patient-section-title mt-4"><?php echo _l('feedback'); ?>
+        <!-- Title Section -->
+        <div class="patient-section-title mt-4"><?php echo _l('feedback'); ?>
 </div>
 
-				<div id="feedback-form" class="card p-3 mb-4" style="display: none;">
-				<br>
-				  <form id="feedbackEntryForm" method="post">
-					<input type="hidden" name="<?= $this->security->get_csrf_token_name(); ?>" value="<?= $this->security->get_csrf_hash(); ?>">
-					<input type="hidden" name="patientid" value="<?= $client->userid; ?>">
-				
-					<div class="row">
-					  <div class="col-md-3">
-						<label><strong><?php echo _l('do_you_want_to_send_email'); ?>
+        <div id="feedback-form" class="card p-3 mb-4" style="display: none;">
+        <br>
+          <form id="feedbackEntryForm" method="post">
+          <input type="hidden" name="<?= $this->security->get_csrf_token_name(); ?>" value="<?= $this->security->get_csrf_hash(); ?>">
+          <input type="hidden" name="patientid" value="<?= $client->userid; ?>">
+        
+          <div class="row">
+            <div class="col-md-3">
+            <label><strong><?php echo _l('do_you_want_to_send_email'); ?>
 </strong></label><br>
-						<div class="form-check form-check-inline">
-						  <input class="form-check-input" type="radio" name="send_email" value="1" id="emailYes">
-						  <label class="form-check-label" for="emailYes"><?php echo _l('yes'); ?>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="radio" name="send_email" value="1" id="emailYes">
+              <label class="form-check-label" for="emailYes"><?php echo _l('yes'); ?>
 </label>
-						   <input class="form-check-input" type="radio" name="send_email" value="0" id="emailNo" checked>
-						  <label class="form-check-label" for="emailNo"><?php echo _l('no'); ?>
+               <input class="form-check-input" type="radio" name="send_email" value="0" id="emailNo" checked>
+              <label class="form-check-label" for="emailNo"><?php echo _l('no'); ?>
 </label>
-						</div>
-					  </div>
+            </div>
+            </div>
 
-					  <div class="col-md-3">
-						<label><strong><?php echo _l('do_you_want_to_send_sms'); ?>
+            <div class="col-md-3">
+            <label><strong><?php echo _l('do_you_want_to_send_sms'); ?>
 </strong></label><br>
-						<div class="form-check form-check-inline">
-						  <input class="form-check-input" type="radio" name="send_sms" value="1" id="smsYes">
-						  <label class="form-check-label" for="smsYes"><?php echo _l('yes'); ?>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="radio" name="send_sms" value="1" id="smsYes">
+              <label class="form-check-label" for="smsYes"><?php echo _l('yes'); ?>
 </label>
-						    <input class="form-check-input" type="radio" name="send_sms" value="0" id="smsNo" checked>
-						  <label class="form-check-label" for="smsNo"><?php echo _l('no'); ?>
+                <input class="form-check-input" type="radio" name="send_sms" value="0" id="smsNo" checked>
+              <label class="form-check-label" for="smsNo"><?php echo _l('no'); ?>
 </label>
-						</div>
-					  </div>
+            </div>
+            </div>
 
-					  <div class="col-md-3">
-						<label><strong><?php echo _l('do_you_want_to_send_whatsapp'); ?>
+            <div class="col-md-3">
+            <label><strong><?php echo _l('do_you_want_to_send_whatsapp'); ?>
 </strong></label><br>
-						<div class="form-check form-check-inline">
-						  <input class="form-check-input" type="radio" name="send_whatsapp" value="1" id="whatsappYes">
-						  <label class="form-check-label" for="whatsappYes"><?php echo _l('yes'); ?>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="radio" name="send_whatsapp" value="1" id="whatsappYes">
+              <label class="form-check-label" for="whatsappYes"><?php echo _l('yes'); ?>
 </label>
-						  <input class="form-check-input" type="radio" name="send_whatsapp" value="0" id="whatsappNo" checked>
-						  <label class="form-check-label" for="whatsappNo"><?php echo _l('no'); ?>
+              <input class="form-check-input" type="radio" name="send_whatsapp" value="0" id="whatsappNo" checked>
+              <label class="form-check-label" for="whatsappNo"><?php echo _l('no'); ?>
 </label>
-						</div>
-					  </div>
-					  <?php
-						echo render_select(
-						  'feedback_id',                     // Name
-						  $testimonials,                     // Options array
-						  ['id', ['title']],           // Value field, Label field
-						  'Select Feedback',                 // Label text
-						  '',                                // Selected value
-						  ['required' => 'required'],        // Select attributes (required here)
-						  [],                                // Label attributes
-						  'col-md-3'                         // Wrapper class
-						);
-						?>
+            </div>
+            </div>
+            <?php
+            echo render_select(
+              'feedback_id',                     // Name
+              $testimonials,                     // Options array
+              ['id', ['title']],           // Value field, Label field
+              'Select Feedback',                 // Label text
+              '',                                // Selected value
+              ['required' => 'required'],        // Select attributes (required here)
+              [],                                // Label attributes
+              'col-md-3'                         // Wrapper class
+            );
+            ?>
 
-					</div>
+          </div>
 
-					<div class="row">
-					<br>
-					  <div class="col-md-12 text-right">
-						<button type="submit" id="feedbackButton" class="btn btn-success"><?= _l('share'); ?></button>
-					  </div>
-					</div>
+          <div class="row">
+          <br>
+            <div class="col-md-12 text-right">
+            <button type="submit" id="feedbackButton" class="btn btn-success"><?= _l('share'); ?></button>
+            </div>
+          </div>
 
-				  </form>
-				</div>
+          </form>
+        </div>
 <?= render_datatable([
-    _l('feedback_title'),
-    _l('feedback_description'),
-    _l('view'),
-], 'feedback-table'); ?>
+      _l('feedback_title'),
+      _l('feedback_description'),
+      _l('view'),
+    ], 'feedback-table'); ?>
 
-				
+        
 
-			
+      
           </div>
 <?PHP
 }
 if (staff_can('view_call_log', 'customers')) {
-	?>
+  ?>
           <div role="tabpanel" class="tab-pane" id="tab_calls">
               <div class="table-responsive">
                 <?php
-                if(staff_can('create_call_log', 'customers')){
+                if (staff_can('create_call_log', 'customers')) {
                   ?>
-                <!--<a href="<?= admin_url('client/add_client/'.$client->userid.'/Patient'); ?>"><button class="btn btn-success btn-sm" style="float: right; margin-top: 6px; margin-right: 3px;"><?php echo _l('book_appointment'); ?>
+                <!--<a href="<?= admin_url('client/add_client/' . $client->userid . '/Patient'); ?>"><button class="btn btn-success btn-sm" style="float: right; margin-top: 6px; margin-right: 3px;"><?php echo _l('book_appointment'); ?>
 </button></a>-->
                 <button class="btn btn-primary btn-sm" onclick="toggleCallLogForm()" style="float: right; margin-top: 6px; margin-right: 5px;"><?php echo _l('add_call'); ?>
 </button>
@@ -3545,139 +3590,139 @@ if (staff_can('view_call_log', 'customers')) {
                   <input type="hidden" name="patientid" value="<?= $client->userid; ?>">
                   <div class="row">
                     <div class="col-md-3">
-				<?= render_select(
-				'groupid',
-				$branch,
-				['id', 'name'],
-				_l('branch') . '*',
-				isset($current_branch_id) ? $current_branch_id : ($patient['groupid'] ?? ''),
-				['data-none-selected-text' => _l('dropdown_non_selected_tex'), 'required' => 'required']
-			) ?>
+        <?= render_select(
+          'groupid',
+          $branch,
+          ['id', 'name'],
+          _l('branch') . '*',
+          isset($current_branch_id) ? $current_branch_id : ($patient['groupid'] ?? ''),
+          ['data-none-selected-text' => _l('dropdown_non_selected_tex'), 'required' => 'required']
+        ) ?>
             </div>
                     <?PHP
-					$select_options = array_map(function ($type) {
-						return [
-							'id' => $type['criteria_id'],
-							'name' => $type['criteria_name'],
-						];
-					}, $criteria);
-					?>
-					<div class="col-md-3">
+                    $select_options = array_map(function ($type) {
+                      return [
+                        'id' => $type['criteria_id'],
+                        'name' => $type['criteria_name'],
+                      ];
+                    }, $criteria);
+                    ?>
+          <div class="col-md-3">
     <label for="criteria_id">
         <span style="color: #f00">*</span> <?php echo _l('call_type'); ?>
     </label>
     <select class="form-control criteria_id_val" name="criteria_id" style="padding:6px 8px; line-height:1.5;"  id="criteria_id" required>
         <option value=""><?php echo _l('select_call_type'); ?></option>
         <?php
-            // Example: allow only specific call types
-            $allowed_call_types = ['General Calling', 'Medicine Calling', 'Feedback Calling'];
+        // Example: allow only specific call types
+        $allowed_call_types = ['General Calling', 'Medicine Calling', 'Feedback Calling'];
 
-            // Convert allowed names to lowercase once
-            $allowed_call_types_lower = array_map('strtolower', $allowed_call_types);
+        // Convert allowed names to lowercase once
+        $allowed_call_types_lower = array_map('strtolower', $allowed_call_types);
 
-            foreach ($select_options as $option) {
-                //if (in_array(strtolower($option['name']), $allowed_call_types_lower)) {
-                    ?>
+        foreach ($select_options as $option) {
+          //if (in_array(strtolower($option['name']), $allowed_call_types_lower)) {
+          ?>
                     <option value="<?= $option['id'] ?>"
                         <?= (isset($selected_criteria) && $selected_criteria == $option['id']) ? 'selected' : '' ?>>
                         <?= $option['name'] ?>
                     </option>
                     <?php
-                //}
-            }
+          //}
+        }
         ?>
     </select>
 </div>
 
-					<!-- Container where dynamic fields will be added -->
-					<div id="medicine-calling-fields" class="row" style="display:none; margin-top:10px;">
-						<div class="col-md-3">
-							<label>Pharmacy Medicine Days <span style="color:red;">*</span></label>
-							<input type="number" name="pharmacy_medicine_days" id="pharmacy_medicine_days" class="form-control">
-						</div>
-						<div class="col-md-3">
-							<label>Patient Took Medicine Days <span style="color:red;">*</span></label>
-							<input type="number" name="patient_took_medicine_days" id="patient_took_medicine_days" class="form-control">
-						</div>
-					</div>
+          <!-- Container where dynamic fields will be added -->
+          <div id="medicine-calling-fields" class="row" style="display:none; margin-top:10px;">
+            <div class="col-md-3">
+              <label>Pharmacy Medicine Days <span style="color:red;">*</span></label>
+              <input type="number" name="pharmacy_medicine_days" id="pharmacy_medicine_days" class="form-control">
+            </div>
+            <div class="col-md-3">
+              <label>Patient Took Medicine Days <span style="color:red;">*</span></label>
+              <input type="number" name="patient_took_medicine_days" id="patient_took_medicine_days" class="form-control">
+            </div>
+          </div>
 
 
-					<script>
-					$(document).ready(function() {
-						$('.criteria_id_val').on('change', function() {
-							var selectedText = $.trim($(".criteria_id_val option:selected").text()); // ✅ trim spaces
+          <script>
+          $(document).ready(function() {
+            $('.criteria_id_val').on('change', function() {
+              var selectedText = $.trim($(".criteria_id_val option:selected").text()); // ✅ trim spaces
 
-							if (selectedText === "Medicine Calling") {
-								$("#medicine-calling-fields").show();
-								$("#pharmacy_medicine_days, #patient_took_medicine_days").attr("required", true);
-							} else {
-								$("#medicine-calling-fields").hide();
-								$("#pharmacy_medicine_days, #patient_took_medicine_days").removeAttr("required");
-							}
-						});
-					});
-					</script>
+              if (selectedText === "Medicine Calling") {
+                $("#medicine-calling-fields").show();
+                $("#pharmacy_medicine_days, #patient_took_medicine_days").attr("required", true);
+              } else {
+                $("#medicine-calling-fields").hide();
+                $("#pharmacy_medicine_days, #patient_took_medicine_days").removeAttr("required");
+              }
+            });
+          });
+          </script>
 
-					
-					<div class="col-md-3">
-						<label for="patient_response_id"><span style="color: #f00">*</span> <?php echo _l('patient_response');
-						 ?>
+          
+          <div class="col-md-3">
+            <label for="patient_response_id"><span style="color: #f00">*</span> <?php echo _l('patient_response');
+            ?>
 </label>
-						<select class="form-control patient_response_id" name="patient_response_id" style="padding: 0" id="patient_response_id_1" required>
-							<option value=""><?php echo _l('select_response'); ?>
+            <select class="form-control patient_response_id" name="patient_response_id" style="padding: 0" id="patient_response_id_1" required>
+              <option value=""><?php echo _l('select_response'); ?>
 </option>
-							<?php
-							
-								if($staff_data->role_name == "Service Doctor"){
-									
-									$allowed_status_names = ['No Response', 'Call back', 'No Feedback', 'On Appointment', 'Call Received'];
-								}else{
-								
-									$allowed_status_names = ['No Response', 'Call back', 'No Feedback', 'On Appointment', 'Paid Appointment', 'Call Received'];	
-								}
+              <?php
 
-								// Convert allowed status names to lowercase once
-								$allowed_status_names_lower = array_map('strtolower', $allowed_status_names);
+              if ($staff_data->role_name == "Service Doctor") {
 
-								foreach ($statuses as $status) {
-									if (in_array(strtolower($status['name']), $allowed_status_names_lower)) {
-										?>
-										<option value="<?= $status['id'] ?>"><?= $status['name'] ?></option>
-										<?php
-									}
-								}
-								?>
+                $allowed_status_names = ['No Response', 'Call back', 'No Feedback', 'On Appointment', 'Call Received'];
+              } else {
 
-						</select>
-					</div>
+                $allowed_status_names = ['No Response', 'Call back', 'No Feedback', 'On Appointment', 'Paid Appointment', 'Call Received'];
+              }
+
+              // Convert allowed status names to lowercase once
+              $allowed_status_names_lower = array_map('strtolower', $allowed_status_names);
+
+              foreach ($statuses as $status) {
+                if (in_array(strtolower($status['name']), $allowed_status_names_lower)) {
+                  ?>
+                    <option value="<?= $status['id'] ?>"><?= $status['name'] ?></option>
+                    <?php
+                }
+              }
+              ?>
+
+            </select>
+          </div>
                     <div class="col-md-3">
                       <label><?php echo _l('next_calling_date'); ?>
 
-					  <span id="next_calling_required_indicator" style="color:red; display: none;">*</span>
-					  </label>
-					  <?php
-						$now = date('Y-m-d\TH:i'); // Correct format for datetime-local input
-						?>
+            <span id="next_calling_required_indicator" style="color:red; display: none;">*</span>
+            </label>
+            <?php
+            $now = date('Y-m-d\TH:i'); // Correct format for datetime-local input
+            ?>
                       <input type="datetime-local" name="next_calling_date" id="next_calling_date" class="form-control" min="<?php echo $now; ?>">
                     </div>
-					
-		
+          
+    
                    
                   <div class="col-md-3">
                       <?php
-						$options = [
-							['id' => 'Satisfied Patient (80%, 90% & 100%)', 'name' => 'Satisfied Patient (80%, 90% & 100%)'],
-							['id' => 'Happy Patient (50%, 60% & 70%)', 'name' => 'Happy Patient (50%, 60% & 70%)'],
-							['id' => 'Unsatisfied Patient (30% & 40%)', 'name' => 'Unsatisfied Patient (30% & 40%)'],
-							['id' => 'Dissatisfied Patient (0%, 10% & 20%)', 'name' => 'Dissatisfied Patient (0%, 10% & 20%)'],
-						];
+                      $options = [
+                        ['id' => 'Satisfied Patient (80%, 90% & 100%)', 'name' => 'Satisfied Patient (80%, 90% & 100%)'],
+                        ['id' => 'Happy Patient (50%, 60% & 70%)', 'name' => 'Happy Patient (50%, 60% & 70%)'],
+                        ['id' => 'Unsatisfied Patient (30% & 40%)', 'name' => 'Unsatisfied Patient (30% & 40%)'],
+                        ['id' => 'Dissatisfied Patient (0%, 10% & 20%)', 'name' => 'Dissatisfied Patient (0%, 10% & 20%)'],
+                      ];
 
-						echo render_select('better_patient', $options, ['id', 'name'], 'Better Patient', isset($patient) ? $patient->better_patient : '', []);
-						?>
+                      echo render_select('better_patient', $options, ['id', 'name'], 'Better Patient', isset($patient) ? $patient->better_patient : '', []);
+                      ?>
 
                       
                     </div>
-					<style>
+          <style>
 .lead_with_doctor_section.hide,
 .appointment_payment_section.hide {
     display: none;
@@ -3686,7 +3731,7 @@ if (staff_can('view_call_log', 'customers')) {
 </style>
 
 <div class="lead_with_doctor_section" style="margin-top:-10px; margin-left: 10px">
-	<div class="row" style="padding: 10px;">
+  <div class="row" style="padding: 10px;">
   <!-- Doctor -->
   <div class="col-md-3">
     <div class="form-group">
@@ -3705,9 +3750,9 @@ if (staff_can('view_call_log', 'customers')) {
   <div class="form-group">
   <label class="form-label"><span style="color: #f00">*</span> <?= _l('appointment_date') ?></label>
      <?php
-	$now = date('Y-m-d\TH:i'); // Correct format for datetime-local input
-	?>
-	<input type="datetime-local" class="form-control" name="appointment_date" value="<?php echo $now; ?>" min="<?php echo $now; ?>" required>
+     $now = date('Y-m-d\TH:i'); // Correct format for datetime-local input
+     ?>
+  <input type="datetime-local" class="form-control" name="appointment_date" value="<?php echo $now; ?>" min="<?php echo $now; ?>" required>
   </div>
 </div>
 
@@ -3743,40 +3788,40 @@ if (staff_can('view_call_log', 'customers')) {
   <!-- Consultation Fee -->
   <div class="col-md-3">
   <div class="form-group">
-	<label><span style="color: #f00">*</span> <?= _l('consultation_fees'); ?></label>
-	<?php
-	$has_consultation_fee = false;
-	foreach ($items as $_group_items) {
-	  if (isset($_group_items[0]['group_name']) && $_group_items[0]['group_name'] == "Consultation Fee") {
-		$has_consultation_fee = true;
-		break;
-	  }
-	}
-	?>
-	<select name="item_select" class="form-control selectpicker" data-live-search="true" id="consultation_fee_id_1">
-	  <option value=""></option>
-	  <?php foreach ($items as $group_id => $_items) {
-		$group_name = $_items[0]['group_name'] ?? '';
-		if ($has_consultation_fee && $group_name != "Consultation Fee") {
-		  continue;
-		} ?>
-		<optgroup data-group-id="<?= e($group_id); ?>" label="<?= $group_name; ?>">
-		 <?php foreach ($_items as $item) { 
-		  if($staff_data->role_name == "Service Doctor"){
-			if($item['rate'] != "0.00"){
-				continue;
-			}  
-		  }
-		  ?>
-			<option value="<?= e($item['rate']); ?>"
-					data-rate="<?= e($item['rate']); ?>"
-					data-subtext="<?= strip_tags(mb_substr($item['long_description'], 0, 200)); ?>">
-						<?= e(app_format_number($item['rate'])); ?>
-			</option>
-		  <?php } ?>
-		</optgroup>
-	  <?php } ?>
-	</select>
+  <label><span style="color: #f00">*</span> <?= _l('consultation_fees'); ?></label>
+  <?php
+  $has_consultation_fee = false;
+  foreach ($items as $_group_items) {
+    if (isset($_group_items[0]['group_name']) && $_group_items[0]['group_name'] == "Consultation Fee") {
+      $has_consultation_fee = true;
+      break;
+    }
+  }
+  ?>
+  <select name="item_select" class="form-control selectpicker" data-live-search="true" id="consultation_fee_id_1">
+    <option value=""></option>
+    <?php foreach ($items as $group_id => $_items) {
+      $group_name = $_items[0]['group_name'] ?? '';
+      if ($has_consultation_fee && $group_name != "Consultation Fee") {
+        continue;
+      } ?>
+    <optgroup data-group-id="<?= e($group_id); ?>" label="<?= $group_name; ?>">
+     <?php foreach ($_items as $item) {
+       if ($staff_data->role_name == "Service Doctor") {
+         if ($item['rate'] != "0.00") {
+           continue;
+         }
+       }
+       ?>
+      <option value="<?= e($item['rate']); ?>"
+          data-rate="<?= e($item['rate']); ?>"
+          data-subtext="<?= strip_tags(mb_substr($item['long_description'], 0, 200)); ?>">
+            <?= e(app_format_number($item['rate'])); ?>
+      </option>
+      <?php } ?>
+    </optgroup>
+    <?php } ?>
+  </select>
   </div>
 </div>
 
@@ -3784,8 +3829,8 @@ if (staff_can('view_call_log', 'customers')) {
   <!-- Payment Amount -->
   <div class="col-md-3">
     <div class="form-group">
-	
-	   <span id="payment_amount_required_indicator" style="color:red; display: none;">*</span>
+  
+     <span id="payment_amount_required_indicator" style="color:red; display: none;">*</span>
       <label><?= _l('payment_amount'); ?></label>
       <input type="number" class="form-control" id="paying_amount_1" name="payment_amount" min="0" step="0.01"
              placeholder="<?= _l('enter_payment_amount'); ?>">
@@ -3807,7 +3852,7 @@ if (staff_can('view_call_log', 'customers')) {
   <!-- Payment Mode -->
   <div class="col-md-3">
     <div class="form-group">
-	 <span id="payment_mode_required_indicator" style="color:red; display: none;">*</span>
+   <span id="payment_mode_required_indicator" style="color:red; display: none;">*</span>
       <label><?= _l('payment_mode'); ?></label>
       <select class="selectpicker form-control" name="paymentmode" data-width="100%"
               data-none-selected-text="<?= _l('dropdown_non_selected_tex'); ?>">
@@ -3824,11 +3869,11 @@ if (staff_can('view_call_log', 'customers')) {
 </div>
 
 </div>
-					<div class="col-md-6">
-						<label for="comments"><?php echo _l('comments'); ?>
+          <div class="col-md-6">
+            <label for="comments"><?php echo _l('comments'); ?>
 </label>
-						<textarea name="comments" class="form-control" rows="2" placeholder="<?= _l('enter_comments'); ?>"></textarea>
-					</div>
+            <textarea name="comments" class="form-control" rows="2" placeholder="<?= _l('enter_comments'); ?>"></textarea>
+          </div>
 
                   <div class="col-md-3">
                   <label>&nbsp;<br></label>
@@ -3892,7 +3937,7 @@ $(document).ready(function() {
 $(function () {
     function toggleFieldsByResponse() {
         const response = $('#patient_response_id_1 option:selected').text().toLowerCase().trim();
-		//alert(response);
+    //alert(response);
         // Common mandatory fields
         const doctor = $('#doctor_id_1');
         const appointmentDate = $('#appointment_date_1');
@@ -3930,8 +3975,8 @@ $(function () {
             paymentSection.show();
             paymentAmount.attr('required', true);
             paymentMode.attr('required', true);
-			$('#payment_amount_required_indicator').show();
-			$('#payment_mode_required_indicator').show();
+      $('#payment_amount_required_indicator').show();
+      $('#payment_mode_required_indicator').show();
         }
     }
 
@@ -3942,41 +3987,42 @@ $(function () {
 </script>
 
                 <br>
-				<?= render_datatable([
-    _l('s_no'),
-    _l('called_by'),
-    _l('call_type'),
-    _l('next_calling_date'),
-    _l('better_patient'),
-    _l('pharmacy_medicine_days'),
-    _l('patient_took_medicine_days'),
-    _l('created_date'),
-    _l('comments'),
-], 'call-logs-table'); ?>
+        <?= render_datatable([
+          _l('s_no'),
+          _l('called_by'),
+          _l('call_type'),
+          _l('next_calling_date'),
+          _l('better_patient'),
+          _l('pharmacy_medicine_days'),
+          _l('patient_took_medicine_days'),
+          _l('created_date'),
+          _l('comments'),
+        ], 'call-logs-table'); ?>
                 <!-- Table -->
                 
 
               </div>
             </div>
 <?PHP
-}if (staff_can('view_message_log', 'customers')) {
-	?>
+}
+if (staff_can('view_message_log', 'customers')) {
+  ?>
           <div role="tabpanel" class="tab-pane" id="message_log">
               
-			  
-			  <?php if (staff_can('view_call_log', 'customers')) : ?>
-			<?= render_datatable([
-				_l('s_no'),
-				_l('status'),
-				_l('message_type'),
-				_l('message'),
-				_l('response'),
-				_l('datetime'),
-			], 'message-log-table'); ?>
+        
+        <?php if (staff_can('view_call_log', 'customers')): ?>
+      <?= render_datatable([
+        _l('s_no'),
+        _l('status'),
+        _l('message_type'),
+        _l('message'),
+        _l('response'),
+        _l('datetime'),
+      ], 'message-log-table'); ?>
 
-		<?php endif; ?>
-			  
-	<script>
+    <?php endif; ?>
+        
+  <script>
 function toggleCallLogForm() {
     const form = document.getElementById('call-log-form');
     form.style.display = form.style.display === 'none' ? 'block' : 'none';
@@ -4056,9 +4102,9 @@ $(document).ready(function () {
 }
 ?>
 <div role="tabpanel" class="tab-pane" id="patient_reminders">
-	
-	<?php render_datatable([_l('reminder_description'), _l('reminder_date'), _l('reminder_staff'), _l('reminder_is_notified')], 'patient-remainders-table');
-	?>
+  
+  <?php render_datatable([_l('reminder_description'), _l('reminder_date'), _l('reminder_staff'), _l('reminder_is_notified')], 'patient-remainders-table');
+  ?>
 </div>
 
 <script>
@@ -4102,14 +4148,14 @@ $(function () {
 
 <?php
 if (staff_can('view_activity_log', 'customers')) {
-?>
+  ?>
 
             <div role="tabpanel" class="tab-pane" id="tab_activity">
             <div class="activity-feed">
               <div class="patient-section-title mt-4"><?= _l('patient_activity_logs'); ?></div><br>
-              <?php 
-              if(staff_can('view_activity_log', 'customers')){
-              foreach ($patient_activity_log as $log) { ?>
+              <?php
+              if (staff_can('view_activity_log', 'customers')) {
+                foreach ($patient_activity_log as $log) { ?>
                 <div class="feed-item">
                   <div class="date">
                     <span class="text-has-action" data-toggle="tooltip" data-title="<?= _dt($log['date']); ?>">
@@ -4124,28 +4170,28 @@ if (staff_can('view_activity_log', 'customers')) {
                     <?php } ?>
                     <?= e($log['full_name']) . ' - '; ?>
                     <?= ($log['custom_activity'] == 0) ? _l($log['description']) : process_text_content_for_display($log['description']); ?>
-					
-					<?php 
-					if (!empty($log['additional_data'])) {
-					$changes = json_decode($log['additional_data'], true);
+          
+          <?php
+          if (!empty($log['additional_data'])) {
+            $changes = json_decode($log['additional_data'], true);
 
-					if (is_array($changes)) {
-						echo "<ul style='margin: 0; padding-left: 18px;'>";
-						foreach ($changes as $field => $change) {
-							$field_label = ucwords(str_replace('_', ' ', $field));
-							$old = isset($change['old']) ? $change['old'] : '';
-							$new = isset($change['new']) ? $change['new'] : '';
+            if (is_array($changes)) {
+              echo "<ul style='margin: 0; padding-left: 18px;'>";
+              foreach ($changes as $field => $change) {
+                $field_label = ucwords(str_replace('_', ' ', $field));
+                $old = isset($change['old']) ? $change['old'] : '';
+                $new = isset($change['new']) ? $change['new'] : '';
 
-							echo "<li><strong>$field_label</strong> changed from <em>\"$old\"</em> to <em>\"$new\"</em></li>";
-						}
-						echo "</ul>";
-					} else {
-						// fallback to raw output if not JSON
-						echo "<br>" . $log['additional_data'];
-					}
-				}
+                echo "<li><strong>$field_label</strong> changed from <em>\"$old\"</em> to <em>\"$new\"</em></li>";
+              }
+              echo "</ul>";
+            } else {
+              // fallback to raw output if not JSON
+              echo "<br>" . $log['additional_data'];
+            }
+          }
 
-					?>
+          ?>
                   </div>
                 </div>
               <?php }
@@ -4229,7 +4275,7 @@ $(document).ready(function () {
   function toggleEstimationForm() {
     const form = document.getElementById('estimation-form');
     form.style.display = form.style.display === 'none' ? 'block' : 'none';
-	
+  
   }
 
  
@@ -4312,16 +4358,16 @@ $("body").on("submit", "#requestcallLogEntryForm", function (e) {
       response = JSON.parse(response);
 
       if (response.success) {
-		  var admin_url = "<?= admin_url(); ?>";
-		  var selectedClientId = <?= $client->userid; ?>;
-			var callback_url = "<?= isset($callback_url) ? $callback_url : ''; ?>";
-			if (selectedClientId) {
-				if (callback_url) {
-					window.location.href = admin_url + "client/" + callback_url + "/" + selectedClientId + "/tab_calls";
-				} else {
-					window.location.href = admin_url + "client/get_patient_list/" + selectedClientId + "/tab_calls";
-				}
-			}
+      var admin_url = "<?= admin_url(); ?>";
+      var selectedClientId = <?= $client->userid; ?>;
+      var callback_url = "<?= isset($callback_url) ? $callback_url : ''; ?>";
+      if (selectedClientId) {
+        if (callback_url) {
+          window.location.href = admin_url + "client/" + callback_url + "/" + selectedClientId + "/tab_calls";
+        } else {
+          window.location.href = admin_url + "client/get_patient_list/" + selectedClientId + "/tab_calls";
+        }
+      }
         //window.location.href = response.redirect;
       } else {
         alert_float("danger", response.message || "Failed to save call log.");
@@ -4569,7 +4615,7 @@ $('#saveCallNextBtn').on('click', function () {
 
 // Optional: Custom function to handle update (AJAX version)
 function updateCaseSheet(id) {
-	tinyMCE.triggerSave(); // Sync editor to textarea
+  tinyMCE.triggerSave(); // Sync editor to textarea
 let formData = $('#casesheetForm').serialize();
   //const formData = $('#casesheetForm').serialize();
   $.ajax({
@@ -4577,7 +4623,7 @@ let formData = $('#casesheetForm').serialize();
     type: 'POST',
     data: formData,
     success: function (res) {
-		$('.table-casesheet').DataTable().ajax.reload(null, false);
+    $('.table-casesheet').DataTable().ajax.reload(null, false);
       console.log('Case sheet updated');
     }
   });
@@ -4613,8 +4659,8 @@ $("body").on("submit", "#casesheetForm", function (e) {
     .done(function (response) {
       let res = JSON.parse(response);
       if (res.success) {
-		  //alert(res.id);
-		  $('#record_id').val(res.id); // sets value in the hidden input
+      //alert(res.id);
+      $('#record_id').val(res.id); // sets value in the hidden input
 
         
       } else {
@@ -4720,15 +4766,15 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Create Timing dropdown
     const tdTiming = document.createElement("td");
-	const timingSelect = createSearchableSelect(timingOptions, "medicine-timing");
+  const timingSelect = createSearchableSelect(timingOptions, "medicine-timing");
 
-	timingSelect.addEventListener('change', function(event) {
-		//alert();
-	  addMedicineRow();
-	});
+  timingSelect.addEventListener('change', function(event) {
+    //alert();
+    addMedicineRow();
+  });
 
-	tdTiming.appendChild(timingSelect);
-		
+  tdTiming.appendChild(timingSelect);
+    
 
     // Create Remarks textarea
     const tdRemarks = document.createElement("td");
@@ -4739,39 +4785,39 @@ document.addEventListener("DOMContentLoaded", function () {
     tdRemarks.appendChild(remarks);
 
     // Create Remove Button
-	// Create Action Buttons Cell
-	const tdAction = document.createElement("td");
-	const btnGroup = document.createElement("div");
-	btnGroup.className = "btn-group";
+  // Create Action Buttons Cell
+  const tdAction = document.createElement("td");
+  const btnGroup = document.createElement("div");
+  btnGroup.className = "btn-group";
 
-	// Remove (-) button
-	const removeBtn = document.createElement("button");
-	removeBtn.type = "button";
-	removeBtn.className = "btn btn-danger btn-sm remove-row";
-	removeBtn.innerHTML = '<i class="fa fa-minus"></i>';
-	removeBtn.onclick = () => tr.remove();
+  // Remove (-) button
+  const removeBtn = document.createElement("button");
+  removeBtn.type = "button";
+  removeBtn.className = "btn btn-danger btn-sm remove-row";
+  removeBtn.innerHTML = '<i class="fa fa-minus"></i>';
+  removeBtn.onclick = () => tr.remove();
 
-	// Add (+) button that calls `addMedicineRow()`
-	const addBtn = document.createElement("button");
-	addBtn.type = "button";
-	addBtn.className = "btn btn-success btn-sm add-row";
-	addBtn.innerHTML = '<i class="fa fa-plus"></i>';
-	addBtn.onclick = () => addMedicineRow();
+  // Add (+) button that calls `addMedicineRow()`
+  const addBtn = document.createElement("button");
+  addBtn.type = "button";
+  addBtn.className = "btn btn-success btn-sm add-row";
+  addBtn.innerHTML = '<i class="fa fa-plus"></i>';
+  addBtn.onclick = () => addMedicineRow();
 
-	// Append buttons to button group
-	btnGroup.appendChild(removeBtn);
-	btnGroup.appendChild(addBtn);
+  // Append buttons to button group
+  btnGroup.appendChild(removeBtn);
+  btnGroup.appendChild(addBtn);
 
-	// Append button group to action cell
-	tdAction.appendChild(btnGroup);
+  // Append button group to action cell
+  tdAction.appendChild(btnGroup);
 
-	// Append all td elements to the row
-	tr.appendChild(tdMedicine);
-	tr.appendChild(tdPotency);
-	tr.appendChild(tdDose);
-	tr.appendChild(tdTiming);
-	tr.appendChild(tdRemarks);
-	tr.appendChild(tdAction);
+  // Append all td elements to the row
+  tr.appendChild(tdMedicine);
+  tr.appendChild(tdPotency);
+  tr.appendChild(tdDose);
+  tr.appendChild(tdTiming);
+  tr.appendChild(tdRemarks);
+  tr.appendChild(tdAction);
 
 
 
@@ -4897,7 +4943,7 @@ $(document).on('hidden.bs.modal', '.modal', function () {
 });
 
   // Pass PHP variable to JS (make sure this outputs a number, fallback 0)
-  const medicine_followup_days = <?php echo isset($medicine_followup_days) ? (int)$medicine_followup_days : 0; ?>;
+  const medicine_followup_days = <?php echo isset($medicine_followup_days) ? (int) $medicine_followup_days : 0; ?>;
 
   document.getElementById('medicine_days').addEventListener('input', function () {
     let days = parseInt(this.value);
@@ -4939,8 +4985,8 @@ $(document).ready(function() {
             if (this.value < 0) this.value = 0;
         });
     });
-	
-	function convertToInvoice(estimateId) {
+  
+  function convertToInvoice(estimateId) {
   if (!confirm('Are you sure you want to accept and convert this estimate?')) {
     return;
   }
@@ -4949,25 +4995,25 @@ $(document).ready(function() {
     url: admin_url + 'estimates/convert_to_invoice/' + estimateId,
     type: 'GET',
     success: function(response) {
-	  // Show floating success message
-	  alert_float("success", 'Estimate converted to invoice successfully.');
-	var selectedClientId = <?= $client->userid; ?>;
-	$.post(admin_url + "client/log_patient_journey", {
+    // Show floating success message
+    alert_float("success", 'Estimate converted to invoice successfully.');
+  var selectedClientId = <?= $client->userid; ?>;
+  $.post(admin_url + "client/log_patient_journey", {
         userid: selectedClientId,
         status: 'package_accepted',
         remarks: 'Estimation ID:' + estimateId
       });
-	  // Wait for 1 second (1000ms), then reload the page
-	  setTimeout(function() {
-		location.reload();
-	  }, 1000);
-	},
+    // Wait for 1 second (1000ms), then reload the page
+    setTimeout(function() {
+    location.reload();
+    }, 1000);
+  },
     error: function(xhr) {
       alert('Failed to convert estimate.');
     }
   });
 }
-	function convertToInvoice1(estimateId) {
+  function convertToInvoice1(estimateId) {
   if (!confirm('Are you sure you want to accept and convert this estimate?')) {
     return;
   }
@@ -4976,19 +5022,19 @@ $(document).ready(function() {
     url: admin_url + 'estimates/convert_to_invoice/' + estimateId,
     type: 'GET',
     success: function(response) {
-	  // Show floating success message
-	  alert_float("success", 'Estimate converted to invoice successfully.');
-	var selectedClientId = <?= $client->userid; ?>;
-	$.post(admin_url + "client/log_patient_journey", {
+    // Show floating success message
+    alert_float("success", 'Estimate converted to invoice successfully.');
+  var selectedClientId = <?= $client->userid; ?>;
+  $.post(admin_url + "client/log_patient_journey", {
         userid: selectedClientId,
         status: 'package_accepted',
         remarks: 'Estimation ID:' + estimateId
       });
-	  // Wait for 1 second (1000ms), then reload the page
-	  setTimeout(function() {
-		location.reload();
-	  }, 1000);
-	},
+    // Wait for 1 second (1000ms), then reload the page
+    setTimeout(function() {
+    location.reload();
+    }, 1000);
+  },
     error: function(xhr) {
       alert('Failed to convert estimate.');
     }
@@ -5020,37 +5066,37 @@ $('body').on('submit', '#record_payment_form', function(e) {
   $.post($form.attr('action'), formData)
     .done(function(response) {
       alert_float('success', 'Payment recorded successfully.');
-	  
-	$.post(admin_url + "client/log_patient_journey", {
+    
+  $.post(admin_url + "client/log_patient_journey", {
         userid: selectedClientId,
         status: 'payment_done',
         remarks: 'Invoice ID:' + invoiceId
       });
-	  
-	  
-	  $.post(admin_url + "client/trigger_communication_event/" + selectedClientId + "/payment_done", formData, function(response) {
-			console.log('Server Response:', response);
-		});
+    
+    
+    $.post(admin_url + "client/trigger_communication_event/" + selectedClientId + "/payment_done", formData, function(response) {
+      console.log('Server Response:', response);
+    });
 
-	  
-	$.post(admin_url + "client/register_patient", {
+    
+  $.post(admin_url + "client/register_patient", {
         userid: selectedClientId,
         invoiceId: invoiceId,
       });
-	  
+    
        setTimeout(function() {
         $('#paymentFormContainer').hide();
-		$('#payment_table').show();
-		 //window.location.href = admin_url + "client/get_patient_list/" + selectedClientId + "/tab_payments"; 
-		 var admin_url = "<?= admin_url(); ?>";
-		var callback_url = "<?= isset($callback_url) ? $callback_url : ''; ?>";
-		if (selectedClientId) {
-			if (callback_url) {
-				window.location.href = admin_url + "client/" + callback_url + "/" + selectedClientId + "/tab_payments";
-			} else {
-				window.location.href = admin_url + "client/get_patient_list/" + selectedClientId + "/tab_payments";
-			}
-		}
+    $('#payment_table').show();
+     //window.location.href = admin_url + "client/get_patient_list/" + selectedClientId + "/tab_payments"; 
+     var admin_url = "<?= admin_url(); ?>";
+    var callback_url = "<?= isset($callback_url) ? $callback_url : ''; ?>";
+    if (selectedClientId) {
+      if (callback_url) {
+        window.location.href = admin_url + "client/" + callback_url + "/" + selectedClientId + "/tab_payments";
+      } else {
+        window.location.href = admin_url + "client/get_patient_list/" + selectedClientId + "/tab_payments";
+      }
+    }
       }, 1000);
     })
     .fail(function() {
@@ -5068,7 +5114,7 @@ $(document).ready(function () {
     e.preventDefault();
     var form = $(this);
     var submitBtn = $('#feedbackButton');
-	var selectedClientId = <?= $client->userid; ?>;
+  var selectedClientId = <?= $client->userid; ?>;
 
     // Disable button and update text
     submitBtn.prop('disabled', true).text('Sending...');
@@ -5086,7 +5132,7 @@ $(document).ready(function () {
           alert_float('success', 'Feedback sent successfully.');
           $('#feedback-form').hide();
           form[0].reset();
-		  setTimeout(function () {
+      setTimeout(function () {
           window.location.href = admin_url + "client/get_patient_list/" + selectedClientId + "/tab_feedback";
         }, 1000);
         } else {
@@ -5109,8 +5155,8 @@ $(document).on('click', '.view-feedback', function () {
     const $icon = $(this);
     const id = $icon.data('title');
     const $row = $icon.closest('tr');
-	
-	// JS unserialize function (very basic)
+  
+  // JS unserialize function (very basic)
 function jsUnserialize(str) {
     try {
         // only handles arrays like: a:1:{i:0;s:36:"filename.jpg";}
@@ -5250,55 +5296,55 @@ function renderStars(rating) {
 
 <script>
   function openPaymentForm(invoiceId) {
-	  // Hide the invoice table
-	  $('#invoiceTableSection').hide();
-	  $('#payment_table').hide();
+    // Hide the invoice table
+    $('#invoiceTableSection').hide();
+    $('#payment_table').hide();
 
-	  // Load invoice data
-	  $.ajax({
-		url: admin_url + 'client/ajax_get_invoice_payment_data/' + invoiceId,
-		type: 'GET',
-		dataType: 'json',
-		success: function(response) {
-		  if (response.error) {
-			alert(response.error);
-			$('#invoiceTableSection').show();
-			return;
-		  }
+    // Load invoice data
+    $.ajax({
+    url: admin_url + 'client/ajax_get_invoice_payment_data/' + invoiceId,
+    type: 'GET',
+    dataType: 'json',
+    success: function(response) {
+      if (response.error) {
+      alert(response.error);
+      $('#invoiceTableSection').show();
+      return;
+      }
 
-		  // Populate form fields
-		  $('#invoice_id_hidden').val(invoiceId);
-		  var dueAmount = parseFloat(response.amount);
-		  if (typeof updateInvoicePaymentDueAmount === 'function') {
-			updateInvoicePaymentDueAmount(!isNaN(dueAmount) ? dueAmount : null);
-		  } else {
-			var $amountInput = $('#invoice_payment_amount');
-			$amountInput.val('');
-			if (!isNaN(dueAmount)) {
-			  var formattedDue = dueAmount.toFixed(2);
-			  $amountInput.attr('data-due', formattedDue);
-			  $amountInput.attr('max', formattedDue);
-			  $('#invoice_payment_amount_hint').text("<?= _l('due_amount'); ?>: " + formattedDue).show();
-			} else {
-			  $amountInput.removeAttr('data-due');
-			  $amountInput.removeAttr('max');
-			  $('#invoice_payment_amount_hint').hide().text('');
-			}
-			$('#invoice_payment_amount_error').hide().text('');
-			$amountInput.removeClass('is-invalid');
-		  }
+      // Populate form fields
+      $('#invoice_id_hidden').val(invoiceId);
+      var dueAmount = parseFloat(response.amount);
+      if (typeof updateInvoicePaymentDueAmount === 'function') {
+      updateInvoicePaymentDueAmount(!isNaN(dueAmount) ? dueAmount : null);
+      } else {
+      var $amountInput = $('#invoice_payment_amount');
+      $amountInput.val('');
+      if (!isNaN(dueAmount)) {
+        var formattedDue = dueAmount.toFixed(2);
+        $amountInput.attr('data-due', formattedDue);
+        $amountInput.attr('max', formattedDue);
+        $('#invoice_payment_amount_hint').text("<?= _l('due_amount'); ?>: " + formattedDue).show();
+      } else {
+        $amountInput.removeAttr('data-due');
+        $amountInput.removeAttr('max');
+        $('#invoice_payment_amount_hint').hide().text('');
+      }
+      $('#invoice_payment_amount_error').hide().text('');
+      $amountInput.removeClass('is-invalid');
+      }
 
-		  $('input[name="date"]').val(response.date);
+      $('input[name="date"]').val(response.date);
 
-		  // Show the form section
-		  $('#invoicePaymentFormSection').fadeIn();
-		},
-		error: function() {
-		  alert('Error loading invoice data');
-		  $('#invoiceTableSection').show();
-		}
-	  });
-	}
+      // Show the form section
+      $('#invoicePaymentFormSection').fadeIn();
+    },
+    error: function() {
+      alert('Error loading invoice data');
+      $('#invoiceTableSection').show();
+    }
+    });
+  }
 
 
   // Back button
