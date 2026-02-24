@@ -62,7 +62,7 @@
 <?php init_tail(); ?>
 <script>
     $(function () {
-        var patientsTable = initDataTable('.table-patients', '<?= admin_url('client/get_patient_list'); ?>', [0], [0]);
+        var patientsTable = initDataTable('.table-patients', '<?= admin_url('client/get_patient_list'); ?>', [0], [0], 'undefined', [0, 'desc']);
         if (!patientsTable || !patientsTable.on) {
             patientsTable = $('.table-patients').DataTable();
         }
