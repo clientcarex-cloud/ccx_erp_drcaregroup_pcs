@@ -179,10 +179,10 @@ if ($summary_filter === 'due') {
     $totalQuery->where('new.mr_no IS NOT NULL');
 } elseif ($summary_filter === 'not_registered') {
     $totalQuery->group_start();
-	$totalQuery->where('new.mr_no IS NULL', null, false);
-	$totalQuery->or_where('new.mr_no', '');
-	$totalQuery->group_end();
-	
+    $totalQuery->where('new.mr_no IS NULL', null, false);
+    $totalQuery->or_where('new.mr_no', '');
+    $totalQuery->group_end();
+
 } elseif ($summary_filter === 'renewal') {
     $CI->db->where('new.mr_no IS NOT NULL'); // ensure registered
 
@@ -243,9 +243,9 @@ if ($summary_filter === 'due') {
     $filterQuery->where('new.mr_no IS NOT NULL');
 } elseif ($summary_filter === 'not_registered') {
     $filterQuery->group_start();
-	$filterQuery->where('new.mr_no IS NULL', null, false);
-	$filterQuery->or_where('new.mr_no', '');
-	$filterQuery->group_end();
+    $filterQuery->where('new.mr_no IS NULL', null, false);
+    $filterQuery->or_where('new.mr_no', '');
+    $filterQuery->group_end();
 
 } elseif ($summary_filter === 'renewal') {
     $CI->db->where('new.mr_no IS NOT NULL'); // ensure registered
@@ -271,8 +271,7 @@ if ($summary_filter === 'due') {
     }
 
     $CI->db->where('EXISTS (' . $subquery . ')', null, false);
-}
- elseif ($summary_filter === 'new_patients') {
+} elseif ($summary_filter === 'new_patients') {
     $filterQuery->where('new.mr_no IS NOT NULL');
 }
 
@@ -334,15 +333,15 @@ if ($summary_filter === 'due') {
         WHERE i.clientid = c.userid
         AND i.status != 2
     )');
-}elseif ($summary_filter === 'registered') {
+} elseif ($summary_filter === 'registered') {
     $CI->db->where('new.mr_no IS NOT NULL');
 } elseif ($summary_filter === 'not_registered') {
     $CI->db->group_start();
-	$CI->db->where('new.mr_no IS NULL', null, false);
-	$CI->db->or_where('new.mr_no', '');
-	$CI->db->group_end();
+    $CI->db->where('new.mr_no IS NULL', null, false);
+    $CI->db->or_where('new.mr_no', '');
+    $CI->db->group_end();
 
-}elseif ($summary_filter === 'renewal') {
+} elseif ($summary_filter === 'renewal') {
     $CI->db->where('new.mr_no IS NOT NULL'); // ensure registered
 
     $today = date('Y-m-d');
@@ -366,7 +365,7 @@ if ($summary_filter === 'due') {
     }
 
     $CI->db->where('EXISTS (' . $subquery . ')', null, false);
-}elseif ($summary_filter === 'new_patients') {
+} elseif ($summary_filter === 'new_patients') {
     $CI->db->where('new.mr_no IS NOT NULL');
 }
 
@@ -378,42 +377,44 @@ $userIds = array_column($results, 'userid');
 $treatmentMap = $doctorMap = $callLogMap = $leadStatuses = [];
 
 if (!empty($userIds)) {
-		// Latest appointment
-		$treatmentMap = [];
-		$doctorMap    = [];
+    // Latest appointment
+    $userIdsStr = implode(',', $userIds);
 
-		$CI->db->select('
+    $treatmentMap = [];
+    $doctorMap = [];
+
+    $CI->db->select('
 			a.userid,
 			a.enquiry_doctor_id,
 			i.description AS treatment_name,
 			CONCAT_WS(" ", s.firstname, s.lastname) AS doctor_name
 		');
-		$CI->db->from(db_prefix() . 'appointment a');
-		$CI->db->join(
-			'(SELECT MAX(appointment_id) AS max_id, userid FROM ' . db_prefix() . 'appointment GROUP BY userid) AS latest',
-			'a.appointment_id = latest.max_id',
-			'INNER'
-		);
-		$CI->db->join(db_prefix() . 'items i', 'i.id = a.treatment_id', 'LEFT');
-		$CI->db->join(db_prefix() . 'staff s', 's.staffid = a.enquiry_doctor_id', 'LEFT');
-		$CI->db->where_in('a.userid', $userIds);
+    $CI->db->from(db_prefix() . 'appointment a');
+    $CI->db->join(
+        '(SELECT MAX(appointment_id) AS max_id, userid FROM ' . db_prefix() . 'appointment WHERE userid IN (' . $userIdsStr . ') GROUP BY userid) AS latest',
+        'a.appointment_id = latest.max_id',
+        'INNER'
+    );
+    $CI->db->join(db_prefix() . 'items i', 'i.id = a.treatment_id', 'LEFT');
+    $CI->db->join(db_prefix() . 'staff s', 's.staffid = a.enquiry_doctor_id', 'LEFT');
+    $CI->db->where_in('a.userid', $userIds);
 
-		$appointments = $CI->db->get()->result_array();
+    $appointments = $CI->db->get()->result_array();
 
-		foreach ($appointments as $app) {
-			$treatmentMap[$app['userid']] = $app['treatment_name'] ?? '-';
-			$doctorMap[$app['userid']] = [
-				'id'   => $app['enquiry_doctor_id'],
-				'name' => $app['doctor_name'] ?? '-',
-			];
-		}
+    foreach ($appointments as $app) {
+        $treatmentMap[$app['userid']] = $app['treatment_name'] ?? '-';
+        $doctorMap[$app['userid']] = [
+            'id' => $app['enquiry_doctor_id'],
+            'name' => $app['doctor_name'] ?? '-',
+        ];
+    }
 
 
 
     // Latest call logs
     $CI->db->select('c.patientid, c.created_date as last_calling_date, c.next_calling_date');
     $CI->db->from(db_prefix() . 'patient_call_logs c');
-    $CI->db->join("(SELECT MAX(id) as max_id, patientid FROM " . db_prefix() . "patient_call_logs GROUP BY patientid) as latest", 'c.id = latest.max_id', 'inner');
+    $CI->db->join("(SELECT MAX(id) as max_id, patientid FROM " . db_prefix() . "patient_call_logs WHERE patientid IN (" . $userIdsStr . ") GROUP BY patientid) as latest", 'c.id = latest.max_id', 'inner');
     $CI->db->where_in('c.patientid', $userIds);
     $callLogs = $CI->db->get()->result_array();
     foreach ($callLogs as $log) {
@@ -450,7 +451,7 @@ $CI->db->select('name, color, id');
 $statuses = $CI->db->get(db_prefix() . 'leads_status')->result_array();
 foreach ($statuses as $statusRow) {
     $statusColorMap[$statusRow['name']] = [
-        'id'    => $statusRow['id'],
+        'id' => $statusRow['id'],
         'color' => $statusRow['color']
     ];
 }
@@ -469,26 +470,26 @@ foreach ($results as $row) {
     }
     $company .= '</div>';
 
-    $phonenumber = (staff_can('mobile_masking', 'customers') && !is_admin()) 
-        ? mask_last_5_digits_1($row['phonenumber']) 
+    $phonenumber = (staff_can('mobile_masking', 'customers') && !is_admin())
+        ? mask_last_5_digits_1($row['phonenumber'])
         : $row['phonenumber'];
 
     $callLog = $callLogMap[$row['userid']] ?? ['last_calling_date' => '', 'next_calling_date' => ''];
     $status = $leadStatuses[$row['userid']] ?? ['status' => 1, 'status_name' => 'Unknown', 'status_color' => '#7cb342'];
     $color = $status['status_color'];
     $statusLabel = '<span class="lead-status-' . $status['status'] . ' label" style="color:' . $color . ';border:1px solid ' . adjust_hex_brightness($color, 0.4) . ';background: ' . adjust_hex_brightness($color, 0.04) . ';">' . e($status['status_name']) . '</span>';
-	
-	
-	$currentStatusName = trim($row['current_status']);
-	$currentStatusLabel = '-';
 
-	if (!empty($currentStatusName) && isset($statusColorMap[$currentStatusName])) {
-		$statusInfo = $statusColorMap[$currentStatusName];
-		$color = $statusInfo['color'];
-		$id    = $statusInfo['id'];
 
-		$currentStatusLabel = '<span class="lead-status-' . $id . ' label" style="color:' . $color . ';border:1px solid ' . adjust_hex_brightness($color, 0.4) . ';background:' . adjust_hex_brightness($color, 0.04) . ';">' . e($currentStatusName) . '</span>';
-	}
+    $currentStatusName = trim($row['current_status']);
+    $currentStatusLabel = '-';
+
+    if (!empty($currentStatusName) && isset($statusColorMap[$currentStatusName])) {
+        $statusInfo = $statusColorMap[$currentStatusName];
+        $color = $statusInfo['color'];
+        $id = $statusInfo['id'];
+
+        $currentStatusLabel = '<span class="lead-status-' . $id . ' label" style="color:' . $color . ';border:1px solid ' . adjust_hex_brightness($color, 0.4) . ';background:' . adjust_hex_brightness($color, 0.04) . ';">' . e($currentStatusName) . '</span>';
+    }
 
 
     $dataRow[] = $i++;

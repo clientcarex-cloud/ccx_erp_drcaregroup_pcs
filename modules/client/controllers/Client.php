@@ -2246,9 +2246,6 @@ class Client extends AdminController
 		$data['consulted_from_date'] = $consulted_date;
 		$data['consulted_to_date'] = $consulted_to_date;
 
-		$data['doctors'] = $this->doctor_model->get_doctors();
-		$data['master_data'] = $this->client_model->get_master_data();
-
 		$decodeParam = static function ($value, $default = '') {
 			if ($value === null) {
 				return $default;
@@ -2342,6 +2339,9 @@ class Client extends AdminController
 		if ($this->input->is_ajax_request()) {
 			$this->app->get_table_data(module_views_path('client', 'tables/get_patient_list'), $data);
 		}
+
+		$data['doctors'] = $this->doctor_model->get_doctors();
+		$data['master_data'] = $this->client_model->get_master_data();
 
 		$statuses = $this->leads_model->get_status();
 		$data['statuses'] = $statuses;
