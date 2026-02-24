@@ -19,8 +19,6 @@ if ($CI->input->post('to_date_filter')) {
     $to_date = $CI->input->post('to_date_filter');
 }
 
-$doctor_id = $CI->input->post('doctor_id');
-
 $order_column_index = (int) ($CI->input->post('order')[0]['column'] ?? 0);
 $incoming_order_dir = strtolower($CI->input->post('order')[0]['dir'] ?? 'desc');
 $order_dir = $incoming_order_dir === 'asc' ? 'asc' : 'desc';
@@ -140,6 +138,8 @@ if (empty($branchFilterIds) && !empty($allowedBranchIds)) {
     $branchFilterIds = $allowedBranchIds;
 }
 
+$doctor_id = $CI->input->post('doctor_id');
+
 $applyBranchFilter = static function ($query) use ($branchFilterIds) {
     if (empty($branchFilterIds)) {
         return;
@@ -167,18 +167,16 @@ $applyDoctorFilter = static function ($query) use ($doctor_id) {
         return;
     }
 
-    $escaped_doctor_id = get_instance()->db->escape($doctor_id);
+    $clean_doctor_id = (int) $doctor_id;
 
-    $query->where('EXISTS (
-        SELECT 1 FROM ' . db_prefix() . 'appointment a
+    $query->where('c.userid IN (
+        SELECT a.userid FROM ' . db_prefix() . 'appointment a
         INNER JOIN (
             SELECT MAX(appointment_id) AS max_id, userid 
             FROM ' . db_prefix() . 'appointment 
-            WHERE userid = c.userid 
             GROUP BY userid
         ) AS latest ON a.appointment_id = latest.max_id
-        WHERE a.enquiry_doctor_id = ' . $escaped_doctor_id . '
-        AND a.userid = c.userid
+        WHERE a.enquiry_doctor_id = ' . $clean_doctor_id . '
     )', null, false);
 };
 
