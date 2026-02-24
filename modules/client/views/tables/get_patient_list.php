@@ -167,6 +167,8 @@ $applyDoctorFilter = static function ($query) use ($doctor_id) {
         return;
     }
 
+    $escaped_doctor_id = get_instance()->db->escape($doctor_id);
+
     $query->where('EXISTS (
         SELECT 1 FROM ' . db_prefix() . 'appointment a
         INNER JOIN (
@@ -175,7 +177,7 @@ $applyDoctorFilter = static function ($query) use ($doctor_id) {
             WHERE userid = c.userid 
             GROUP BY userid
         ) AS latest ON a.appointment_id = latest.max_id
-        WHERE a.enquiry_doctor_id = ' . $query->escape($doctor_id) . '
+        WHERE a.enquiry_doctor_id = ' . $escaped_doctor_id . '
         AND a.userid = c.userid
     )', null, false);
 };
