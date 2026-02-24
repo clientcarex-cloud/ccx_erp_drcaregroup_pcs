@@ -6,6 +6,9 @@ class Mis_reports extends AdminController
     public function __construct()
     {
         parent::__construct();
+        if (!is_admin() && !staff_can('view', 'mis_reports')) {
+            access_denied('MIS Reports');
+        }
         $this->load->model('client/client_model');
         $this->load->model('client/master_model');
         $this->load->model('client/doctor_model');

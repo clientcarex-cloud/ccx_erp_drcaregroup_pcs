@@ -18,13 +18,13 @@ function mis_reports_permissions()
 	$capabilities = [];
 
 	$capabilities['capabilities'] = [
-		'view'   => _l('permission_view') . ' (' . _l('permission_global') . ')',
+		'view' => _l('permission_view') . ' (' . _l('permission_global') . ')',
 		'create' => _l('permission_create'),
-		'edit'   => _l('permission_edit'),
+		'edit' => _l('permission_edit'),
 		'delete' => _l('permission_delete'),
 	];
 
-    register_staff_capabilities('mis_reports', $capabilities, _l('mis_reports'));
+	register_staff_capabilities('mis_reports', $capabilities, _l('mis_reports'));
 }
 
 /**
@@ -40,12 +40,12 @@ function mis_reports_module_init_menu_items()
 {
 	$CI = &get_instance();
 
-	if (staff_can('mis_reports', 'customers')) {
+	if (is_admin() || staff_can('view', 'mis_reports')) {
 		$CI->app_menu->add_sidebar_menu_item('mis_reports', [
-			'name'     => _l('mis_reports'),
-			'icon'     => 'fa fa-chart-line',
+			'name' => _l('mis_reports'),
+			'icon' => 'fa fa-chart-line',
 			'position' => 31,
-			'href'     => admin_url('mis_reports/reports/mis_reports'),
+			'href' => admin_url('mis_reports/reports/mis_reports'),
 		]);
 	}
 }
