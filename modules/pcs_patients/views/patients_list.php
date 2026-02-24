@@ -30,6 +30,37 @@
                         </div>
 
                         <hr class="hr-panel-heading" />
+                        <div class="row mbot15">
+                            <div class="col-md-3">
+                                <label for="filter_from_date"><?= _l('from_date'); ?> *</label>
+                                <div class="input-group date">
+                                    <input type="text" id="filter_from_date" name="filter_from_date" class="form-control datepicker" value="<?= date('Y-m-01'); ?>" autocomplete="off" required>
+                                    <div class="input-group-addon">
+                                        <i class="fa fa-calendar calendar-icon"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="filter_to_date"><?= _l('to_date'); ?> *</label>
+                                <div class="input-group date">
+                                    <input type="text" id="filter_to_date" name="filter_to_date" class="form-control datepicker" value="<?= date('Y-m-d'); ?>" autocomplete="off" required>
+                                    <div class="input-group-addon">
+                                        <i class="fa fa-calendar calendar-icon"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="branch_ids"><?= _l('branch'); ?></label>
+                                <select id="branch_ids" name="branch_ids[]" class="selectpicker" multiple data-width="100%" data-none-selected-text="<?= _l('dropdown_non_selected_tex'); ?>">
+                                    <?php foreach ($branches as $branch) { ?>
+                                        <option value="<?= $branch['id']; ?>"><?= $branch['name']; ?></option>
+                                    <?php } ?>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <?php echo render_select('doctor_id', $doctors, ['staffid', ['firstname', 'lastname']], 'doctor'); ?>
+                            </div>
+                        </div>
                         <div class="clearfix"></div>
 
                         <?= render_datatable([
@@ -70,10 +101,21 @@
         if (patientsTable && patientsTable.on) {
             patientsTable.on('preXhr.dt', function (e, settings, data) {
                 // Remove all custom filters since we just want the complete table
-                data.branch_ids = '';
-                data.from_date_filter = '';
-                data.to_date_filter = '';
+                data.branch_ids = $('#branch_ids').val();
+                data.from_date_filter = $('#filter_from_date').val();
+                data.to_date_filter = $('#filter_to_date').val();
+                data.doctor_id = $('#doctor_id').val();
             });
         }
+
+        $('#filter_from_date, #filter_to_date, #branch_ids, #doctor_id').on('change', function() {
+            if ($('#filter_from_date').val() !== '' && $('#filter_to_date').val() !== '') {
+                $('.table-patients').DataTable().ajax.reload();
+            } else if ($('#filter_from_date').val() === '' && $('#filter_to_date').val() === '') {
+                $('.table-patients').DataTable().ajax.reload();
+            } else {
+                // If only one date is filled but not the other, wait for both
+            }
+        });
     });
 </script>
