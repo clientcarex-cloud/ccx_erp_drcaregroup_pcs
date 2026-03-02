@@ -32,6 +32,55 @@
                         <hr class="hr-panel-heading" />
                         <div class="clearfix"></div>
 
+                        <!-- Filters -->
+                        <div class="row align-items-end" style="margin-bottom: 15px;">
+                            <!-- Branch -->
+                            <div class="col-md-3">
+                                <?php
+                                echo render_select(
+                                    'branch_filter[]',
+                                    $branch,
+                                    ['id', ['name']],
+                                    _l('lead_branch'),
+                                    '',
+                                    [
+                                        'multiple' => true,
+                                        'data-actions-box' => true,
+                                        'data-none-selected-text' => _l('dropdown_non_selected_tex'),
+                                    ]
+                                );
+                                ?>
+                            </div>
+
+                            <!-- From Date -->
+                            <div class="col-md-2">
+                                <label for="from_date_filter" class="control-label"><?= _l('from_date'); ?></label>
+                                <input class="form-control" type="date" id="from_date_filter" name="from_date_filter"
+                                    value="">
+                            </div>
+
+                            <!-- To Date -->
+                            <div class="col-md-2">
+                                <label for="to_date_filter" class="control-label"><?= _l('to_date'); ?></label>
+                                <input class="form-control" type="date" id="to_date_filter" name="to_date_filter"
+                                    value="">
+                            </div>
+
+                            <!-- Search Button -->
+                            <div class="col-md-2">
+                                <br>
+                                <button type="button" id="filterSearchBtn" class="btn btn-success"
+                                    style="width: 100%; margin-top: 5px;"><?= _l('search'); ?></button>
+                            </div>
+
+                            <!-- Reset Button -->
+                            <div class="col-md-2">
+                                <br>
+                                <button type="button" id="filterResetBtn" class="btn btn-default"
+                                    style="width: 100%; margin-top: 5px;"><?= _l('reset'); ?></button>
+                            </div>
+                        </div>
+
                         <?= render_datatable([
                             _l('S.No'),
                             _l('patient_name'),
@@ -69,11 +118,32 @@
 
         if (patientsTable && patientsTable.on) {
             patientsTable.on('preXhr.dt', function (e, settings, data) {
-                // Remove all custom filters since we just want the complete table
-                data.branch_ids = '';
-                data.from_date_filter = '';
-                data.to_date_filter = '';
+                var branchSelect = $('select[name="branch_filter[]"]');
+                var branchIds = branchSelect.val() && branchSelect.val().length > 0 ? branchSelect.val().join(',') : '';
+                data.branch_ids = branchIds;
+                data.from_date_filter = $('#from_date_filter').val() || '';
+                data.to_date_filter = $('#to_date_filter').val() || '';
             });
         }
+
+        // Search button - reload table with filters
+        $('#filterSearchBtn').on('click', function () {
+            if ($.fn.DataTable.isDataTable('.table-patients')) {
+                $('.table-patients').DataTable().ajax.reload();
+            }
+        });
+
+        // Reset button - clear filters and reload
+        $('#filterResetBtn').on('click', function () {
+            $('select[name="branch_filter[]"]').val([]).trigger('change');
+            if ($('select[name="branch_filter[]"]').data('selectpicker')) {
+                $('select[name="branch_filter[]"]').selectpicker('refresh');
+            }
+            $('#from_date_filter').val('');
+            $('#to_date_filter').val('');
+            if ($.fn.DataTable.isDataTable('.table-patients')) {
+                $('.table-patients').DataTable().ajax.reload();
+            }
+        });
     });
 </script>

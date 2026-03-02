@@ -11,12 +11,34 @@ $length = intval($CI->input->post('length'));
 $search = $CI->input->post('search')['value'] ?? '';
 $from_date = $consulted_from_date ?? null;
 $to_date = $consulted_to_date ?? null;
+$branch_ids = $selected_branch_ids ?? [];
 
 $order_column_index = (int) ($CI->input->post('order')[0]['column'] ?? 0);
 $incoming_order_dir = strtolower($CI->input->post('order')[0]['dir'] ?? 'desc');
 $order_dir = $incoming_order_dir === 'asc' ? 'asc' : 'desc';
 
 $summary_filter = $CI->input->get('summary_filter');
+
+// ── Get patient IDs for selected branches ──
+$branch_patient_ids = [];
+if (!empty($branch_ids)) {
+    $CI->db->select('customer_id AS userid');
+    $CI->db->from(db_prefix() . 'customer_groups');
+    $CI->db->where_in('groupid', $branch_ids);
+    $branch_patients = $CI->db->get()->result_array();
+    $branch_patient_ids = array_column($branch_patients, 'userid');
+
+    // If branch selected but no patients found, return empty result
+    if (empty($branch_patient_ids)) {
+        echo json_encode([
+            'draw' => $draw,
+            'recordsTotal' => 0,
+            'recordsFiltered' => 0,
+            'data' => [],
+        ]);
+        exit;
+    }
+}
 
 // Map DataTable columns to actual SQL columns/aliases (null means fallback to default)
 $columns = [
@@ -96,6 +118,9 @@ $totalQuery->join(db_prefix() . 'clients_new_fields new', 'new.userid = c.userid
 $totalQuery->join(db_prefix() . 'customer_groups cc', 'cc.customer_id = c.userid', 'left');
 $totalQuery->join(db_prefix() . 'customers_groups branch', 'branch.id = cc.groupid', 'left');
 
+if (!empty($branch_patient_ids)) {
+    $totalQuery->where_in('c.userid', $branch_patient_ids);
+}
 if ($from_date && $to_date && $summary_filter != 'not_registered') {
     $totalQuery->where("DATE(new.registration_start_date) BETWEEN '$from_date' AND '$to_date'");
 }
@@ -113,6 +138,9 @@ $filterQuery->join(db_prefix() . 'leads_sources source', 'source.id = new.patien
 $filterQuery->join(db_prefix() . 'customer_groups cc', 'cc.customer_id = c.userid', 'left');
 $filterQuery->join(db_prefix() . 'customers_groups branch', 'branch.id = cc.groupid', 'left');
 
+if (!empty($branch_patient_ids)) {
+    $filterQuery->where_in('c.userid', $branch_patient_ids);
+}
 if ($from_date && $to_date && $summary_filter != 'not_registered') {
     $filterQuery->where("DATE(new.registration_start_date) BETWEEN '$from_date' AND '$to_date'");
 }
@@ -140,6 +168,9 @@ $CI->db->join(db_prefix() . 'leads_sources source', 'source.id = new.patient_sou
 $CI->db->join(db_prefix() . 'customer_groups cc', 'cc.customer_id = c.userid', 'left');
 $CI->db->join(db_prefix() . 'customers_groups branch', 'branch.id = cc.groupid', 'left');
 
+if (!empty($branch_patient_ids)) {
+    $CI->db->where_in('c.userid', $branch_patient_ids);
+}
 if ($from_date && $to_date && $summary_filter != 'not_registered') {
     $CI->db->where("DATE(new.registration_start_date) BETWEEN '$from_date' AND '$to_date'");
 }
