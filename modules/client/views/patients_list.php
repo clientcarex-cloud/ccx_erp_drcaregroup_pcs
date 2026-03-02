@@ -145,42 +145,7 @@ if ($master_data) {
 
                                 <hr class="hr-panel-heading" />
                                 <div class="row align-items-end">
-                                    <?php
-                                    if (staff_can('branch_filter', 'customers')) {
-                                        $branchOptions = $branch ?? [];
-                                        if (!empty($accessible_branch_ids ?? [])) {
-                                            $allowedIds = array_map('intval', (array) $accessible_branch_ids);
-                                            $branchOptions = array_values(array_filter($branchOptions, static function ($branchItem) use ($allowedIds) {
-                                                return isset($branchItem['id']) && in_array((int) $branchItem['id'], $allowedIds, true);
-                                            }));
-                                        }
-                                        ?>
-                                        <div class="col-md-3">
-                                            <?= render_select(
-                                                'groupid[]', // name
-                                                $branchOptions,   // options array
-                                                ['id', 'name'], // option keys
-                                                _l('branch') . '*', // label
-                                                isset($selected_branch_id) && !empty($selected_branch_id) ? $selected_branch_id : (isset($current_branch_id) ? [$current_branch_id] : []), // selected
-                                                [
-                                                    'id' => 'branch_id', // 👈 Add your ID here
-                                                    'multiple' => 'true',
-                                                    'data-actions-box' => 'true',
-                                                    'data-selected-text-format' => 'count > 2',
-                                                    'data-live-search' => 'true',
-                                                    'data-none-selected-text' => _l('dropdown_non_selected_tex'),
-                                                    'required' => 'required'
-                                                ],
-                                                [],
-                                                '',
-                                                '',
-                                                true
-                                            ) ?>
 
-                                        </div>
-                                        <?php
-                                    }
-                                    ?>
                                     <div class="col-md-3">
                                         <label><?= _l('from_date'); ?></label>
                                         <input type="date" class="form-control" name="from_date" id="from_date"
@@ -209,7 +174,6 @@ if ($master_data) {
                                     _l('treatment'),
                                     _l('assigned_doctor'),
                                     _l('source'),
-                                    _l('branch'),
                                     _l('last_calling_date'),
                                     _l('next_calling_date'),
                                     _l('current_status'),
@@ -358,7 +322,7 @@ if ($master_data) {
                                     <br>
 
                                     <?= render_datatable([
-                                                _l('patient_name'),
+                                        _l('patient_name'),
                                         _l('patient_mobile'),
                                         _l('assigned_doctor'),
                                         _l('appointment_date'),
@@ -368,7 +332,7 @@ if ($master_data) {
                                         _l('appointment_type'),
                                         _l('branch'),
                                         _l('registration_end_date'),
-                                            _l('consultation_fee'),
+                                        _l('consultation_fee'),
                                         _l('payment_status'),
                                         _l('action'),
                                     ], 'appointments'); ?>
@@ -460,34 +424,14 @@ if ($master_data) {
 
 <?php init_tail(); ?>
 <script>
-    const BRANCH_SELECT_ID = '#branch_id';
-
-    function getSelectedBranchValues() {
-        const raw = $(BRANCH_SELECT_ID).val();
-        if (!raw) {
-            return [];
-        }
-        if (Array.isArray(raw)) {
-            return raw.filter(function (value) {
-                return value !== null && value !== undefined && value !== '';
-            });
-        }
-        return raw ? [raw] : [];
-    }
-
-    function getSelectedBranchParam() {
-        const values = getSelectedBranchValues();
-        return values.length ? values.join(',') : '';
-    }
-
     $(function () {
         <?php if (isset($clientid) && $clientid): ?>
-                    $('#client-model-auto').modal({
+            $('#client-model-auto').modal({
                 backdrop: 'static',
                 keyboard: false
             });
         <?php else: ?>
-                var patientsTable = initDataTable('.table-patients', '<?= admin_url('client/get_patient_list'); ?>', [0], [0]);
+            var patientsTable = initDataTable('.table-patients', '<?= admin_url('client/get_patient_list'); ?>', [0], [0]);
             if (!patientsTable || !patientsTable.on) {
                 patientsTable = $('.table-patients').DataTable();
             }
@@ -495,15 +439,13 @@ if ($master_data) {
 
             if (patientsTable && patientsTable.on) {
                 patientsTable.on('preXhr.dt', function (e, settings, data) {
-                    data.branch_ids = getSelectedBranchParam();
                     data.from_date_filter = $('#from_date').val();
                     data.to_date_filter = $('#to_date').val();
                 });
             }
 
-            const initialBranchParam = getSelectedBranchParam();
-            loadClientSummary('', '', initialBranchParam);
-            const initialListUrl = buildPatientListUrl('', '', initialBranchParam);
+            loadClientSummary('', '');
+            const initialListUrl = buildPatientListUrl('', '');
             if ($.fn.DataTable.isDataTable('.table-patients')) {
                 var tableInstance = $('.table-patients').DataTable();
                 tableInstance.ajax.url(initialListUrl).load();
@@ -532,14 +474,6 @@ if ($master_data) {
                 appointmentsInitialized = true;
             }
         });
-
-        $(BRANCH_SELECT_ID).on('changed.bs.select', function () {
-            // reset summary filter when branches change
-            activePatientSummaryFilter = null;
-            $('#summaryCards .summary-card').removeClass('is-active').attr('aria-pressed', 'false');
-        });
-
-        $(BRANCH_SELECT_ID).selectpicker('refresh');
     });
 </script>
 
@@ -601,25 +535,23 @@ if ($master_data) {
     </div>
 `;
 
-    function buildPatientListUrl(from, to, branchParam, summaryFilter = '') {
+    function buildPatientListUrl(from, to, summaryFilter = '') {
         const safeFrom = from || '';
         const safeTo = to || '';
-        const branchSegment = branchParam || '';
-        let url = '<?= admin_url("client/get_patient_list/null/") ?>' + safeFrom + '/' + safeTo + '/null/' + branchSegment;
+        let url = '<?= admin_url("client/get_patient_list/null/") ?>' + safeFrom + '/' + safeTo;
         if (summaryFilter) {
             url += (url.indexOf('?') === -1 ? '?' : '&') + 'summary_filter=' + encodeURIComponent(summaryFilter);
         }
         return url;
     }
 
-    function loadClientSummary(from_date = '', to_date = '', branch_id = '') {
+    function loadClientSummary(from_date = '', to_date = '') {
         $.ajax({
             url: admin_url + 'client/get_client_summary',
             type: 'POST',
             data: {
                 from_date: from_date,
-                to_date: to_date,
-                branch_id: branch_id
+                to_date: to_date
             },
             dataType: 'json',
             success: function (res) {
@@ -651,10 +583,9 @@ if ($master_data) {
 
                     const from = $('#from_date').val();
                     const to = $('#to_date').val();
-                    const branchParam = getSelectedBranchParam();
 
                     if ($.fn.DataTable.isDataTable('.table-patients')) {
-                        const dataUrl = buildPatientListUrl(from, to, branchParam, filterType);
+                        const dataUrl = buildPatientListUrl(from, to, filterType);
                         var tableInstance = $('.table-patients').DataTable();
                         tableInstance.ajax.url(dataUrl).load();
                     }
@@ -676,18 +607,15 @@ if ($master_data) {
         $('#filterBtn').click(function () {
             const from = $('#from_date').val();
             const to = $('#to_date').val();
-            const branchParam = getSelectedBranchParam();
-            const appointment_type_id = $('#appointment_type_id').val();
 
             activePatientSummaryFilter = null;
 
-            loadClientSummary(from, to, branchParam);
+            loadClientSummary(from, to);
 
             if ($.fn.DataTable.isDataTable('.table-patients')) {
-                const dataUrl = buildPatientListUrl(from, to, branchParam);
+                const dataUrl = buildPatientListUrl(from, to);
                 var tableInstance = $('.table-patients').DataTable();
                 tableInstance.ajax.url(dataUrl).load();
-
             }
         });
     });

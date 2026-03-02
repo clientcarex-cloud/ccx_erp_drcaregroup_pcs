@@ -29,7 +29,6 @@ $columns = [
     null,
     null,
     'patient_source_name',
-    'branch_names',
     null,
     null,
     null,
@@ -44,123 +43,12 @@ if (empty($order_column)) {
     $order_column = 'c.userid';
 }
 // Total count
-$normalizeBranchList = static function ($value) {
-    if ($value === null) {
-        return [];
-    }
-
-    $list = is_array($value) ? $value : explode(',', (string) $value);
-    $normalized = [];
-
-    foreach ($list as $item) {
-        if ($item === null) {
-            continue;
-        }
-        $item = (string) $item;
-        if ($item === '' || strtolower($item) === 'null') {
-            continue;
-        }
-        $decoded = rawurldecode($item);
-        $decoded = (string) $decoded;
-        if ($decoded === '' || strtolower($decoded) === 'null') {
-            continue;
-        }
-        if (is_numeric($decoded)) {
-            $normalized[] = (int) $decoded;
-        }
-    }
-
-    return array_values(array_unique($normalized));
-};
-
-$branchInputValue = $CI->input->post('branch_ids');
-if ($branchInputValue === null) {
-    $branchInputValue = $CI->input->get('branch_ids');
-}
-
-$branchFilterIds = $normalizeBranchList($branchInputValue);
-$session = $CI->session ?? null;
-$sessionFilterKey = 'patient_branch_filter';
-
-$allowedBranchIds = $normalizeBranchList($accessible_branch_ids ?? []);
-$restrictToAllowedBranches = static function ($ids) use ($allowedBranchIds) {
-    if (empty($allowedBranchIds)) {
-        return $ids;
-    }
-    if (empty($ids)) {
-        return [];
-    }
-
-    $filtered = [];
-    foreach ($ids as $id) {
-        $intId = (int) $id;
-        if (in_array($intId, $allowedBranchIds, true)) {
-            $filtered[] = $intId;
-        }
-    }
-
-    return array_values(array_unique($filtered));
-};
-
-$branchFilterIds = $restrictToAllowedBranches($branchFilterIds);
-
-if (!empty($branchFilterIds) && $session) {
-    $session->set_userdata([$sessionFilterKey => implode(',', $branchFilterIds)]);
-}
-
-if (empty($branchFilterIds) && isset($branch_filter_ids) && is_array($branch_filter_ids)) {
-    $branchFilterIds = $restrictToAllowedBranches($normalizeBranchList($branch_filter_ids));
-}
-
-if (empty($branchFilterIds) && isset($selected_branch_id) && is_array($selected_branch_id)) {
-    $branchFilterIds = $restrictToAllowedBranches($normalizeBranchList($selected_branch_id));
-}
-
-if (empty($branchFilterIds) && isset($current_branch_id) && $current_branch_id) {
-    $branchFilterIds = $restrictToAllowedBranches($normalizeBranchList($current_branch_id));
-}
-
-if (empty($branchFilterIds) && $session) {
-    $savedFilter = $restrictToAllowedBranches($normalizeBranchList($session->userdata($sessionFilterKey)));
-    if (!empty($savedFilter)) {
-        $branchFilterIds = $savedFilter;
-    }
-}
-
-if (empty($branchFilterIds) && !empty($allowedBranchIds)) {
-    $branchFilterIds = $allowedBranchIds;
-}
-
-$applyBranchFilter = static function ($query) use ($branchFilterIds) {
-    if (empty($branchFilterIds)) {
-        return;
-    }
-
-    $cleanIds = array_map('intval', $branchFilterIds);
-    $cleanIds = array_filter($cleanIds, function ($value) {
-        return $value > 0;
-    });
-
-    if (empty($cleanIds)) {
-        return;
-    }
-
-    $query->where('EXISTS (
-        SELECT 1
-        FROM ' . db_prefix() . 'customer_groups cg_filter
-        WHERE cg_filter.customer_id = c.userid
-        AND cg_filter.groupid IN (' . implode(',', $cleanIds) . ')
-    )', null, false);
-};
 
 $totalQuery = $CI->db;
 $totalQuery->reset_query();
 $totalQuery->select('COUNT(DISTINCT c.userid) as total');
 $totalQuery->from(db_prefix() . 'clients c');
 $totalQuery->join(db_prefix() . 'clients_new_fields new', 'new.userid = c.userid', 'left');
-$totalQuery->join(db_prefix() . 'customer_groups group', 'group.customer_id = c.userid', 'left');
-
-$applyBranchFilter($totalQuery);
 if ($from_date && $to_date && $summary_filter != 'not_registered') {
     $totalQuery->where("DATE(new.registration_start_date) BETWEEN '$from_date' AND '$to_date'");
 }
@@ -220,10 +108,7 @@ $filterQuery->reset_query();
 $filterQuery->select('COUNT(DISTINCT c.userid) as total');
 $filterQuery->from(db_prefix() . 'clients c');
 $filterQuery->join(db_prefix() . 'clients_new_fields new', 'new.userid = c.userid', 'left');
-$filterQuery->join(db_prefix() . 'customer_groups group', 'group.customer_id = c.userid', 'left');
 $filterQuery->join(db_prefix() . 'leads_sources source', 'source.id = new.patient_source_id', 'left');
-
-$applyBranchFilter($filterQuery);
 if ($from_date && $to_date && $summary_filter != 'not_registered') {
     $filterQuery->where("DATE(new.registration_start_date) BETWEEN '$from_date' AND '$to_date'");
 }
@@ -291,18 +176,10 @@ $filteredRecords = $filterQuery->get()->row()->total;
 // Main data query
 $CI->db->reset_query();
 $CI->db->distinct();
-$CI->db->select('c.userid, c.company, c.phonenumber, c.datecreated, new.mr_no, new.age, new.gender, c.city, c.state, new.registration_start_date, new.registration_end_date, new.current_status, new.patient_status, source.name as patient_source_name,
-    (
-        SELECT GROUP_CONCAT(DISTINCT cg_names.name ORDER BY cg_names.name SEPARATOR ", ")
-        FROM ' . db_prefix() . 'customer_groups cg_rel
-        LEFT JOIN ' . db_prefix() . 'customers_groups cg_names ON cg_names.id = cg_rel.groupid
-        WHERE cg_rel.customer_id = c.userid
-    ) AS branch_names');
+$CI->db->select('c.userid, c.company, c.phonenumber, c.datecreated, new.mr_no, new.age, new.gender, c.city, c.state, new.registration_start_date, new.registration_end_date, new.current_status, new.patient_status, source.name as patient_source_name');
 $CI->db->from(db_prefix() . 'clients c');
 $CI->db->join(db_prefix() . 'clients_new_fields new', 'new.userid = c.userid', 'left');
-$CI->db->join(db_prefix() . 'customer_groups group', 'group.customer_id = c.userid', 'left');
 $CI->db->join(db_prefix() . 'leads_sources source', 'source.id = new.patient_source_id', 'left');
-$applyBranchFilter($CI->db);
 if ($from_date && $to_date && $summary_filter != 'not_registered') {
     $CI->db->where("DATE(new.registration_start_date) BETWEEN '$from_date' AND '$to_date'");
 }
@@ -524,7 +401,6 @@ foreach ($results as $row) {
     $dataRow[] = isset($doctorMap[$row['userid']]) ? $doctorMap[$row['userid']]['name'] : '-';
 
     $dataRow[] = $row['patient_source_name'];
-    $dataRow[] = !empty($row['branch_names']) ? e($row['branch_names']) : '-';
     $dataRow[] = $callLog['last_calling_date'];
     $dataRow[] = $callLog['next_calling_date'];
     $dataRow[] = $statusLabel;
