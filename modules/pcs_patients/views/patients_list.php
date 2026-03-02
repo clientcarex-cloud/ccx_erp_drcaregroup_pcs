@@ -35,32 +35,22 @@
                         <div class="row align-items-end">
                             <?php
                             $branchOptions = $branch ?? [];
-                            if (!empty($accessible_branch_ids ?? [])) {
-                                $allowedIds = array_map('intval', (array) $accessible_branch_ids);
-                                $branchOptions = array_values(array_filter($branchOptions, static function ($branchItem) use ($allowedIds) {
-                                    return isset($branchItem['id']) && in_array((int) $branchItem['id'], $allowedIds, true);
-                                }));
-                            }
                             ?>
                             <div class="col-md-3">
                                 <?= render_select(
                                     'groupid[]',
                                     $branchOptions,
-                                    ['id', 'name'],
+                                    ['id', ['name']],
                                     _l('branch') . '*',
                                     isset($current_branch_id) && !empty($current_branch_id) ? $current_branch_id : [],
                                     [
                                         'id' => 'branch_id',
-                                        'multiple' => 'true',
-                                        'data-actions-box' => 'true',
+                                        'multiple' => true,
+                                        'data-actions-box' => true,
                                         'data-selected-text-format' => 'count > 2',
-                                        'data-live-search' => 'true',
+                                        'data-live-search' => true,
                                         'data-none-selected-text' => _l('dropdown_non_selected_tex'),
-                                    ],
-                                    [],
-                                    '',
-                                    '',
-                                    true
+                                    ]
                                 ) ?>
                             </div>
                             <div class="col-md-3">
