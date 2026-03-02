@@ -9,8 +9,8 @@ $draw = intval($CI->input->post('draw'));
 $start = intval($CI->input->post('start'));
 $length = intval($CI->input->post('length'));
 $search = $CI->input->post('search')['value'] ?? '';
-$from_date = $consulted_from_date;
-$to_date = $consulted_to_date;
+$from_date = $consulted_from_date ?? null;
+$to_date = $consulted_to_date ?? null;
 
 $order_column_index = (int) ($CI->input->post('order')[0]['column'] ?? 0);
 $incoming_order_dir = strtolower($CI->input->post('order')[0]['dir'] ?? 'desc');
@@ -19,6 +19,7 @@ $order_dir = $incoming_order_dir === 'asc' ? 'asc' : 'desc';
 $summary_filter = $CI->input->get('summary_filter');
 
 // Map DataTable columns to actual SQL columns/aliases (null means fallback to default)
+// NOTE: No branch column in this independent version
 $columns = [
     'c.userid',
     'c.company',
@@ -29,7 +30,6 @@ $columns = [
     null,
     null,
     'patient_source_name',
-    'branch_names',
     null,
     null,
     null,
@@ -43,239 +43,77 @@ $order_column = $columns[$order_column_index] ?? null;
 if (empty($order_column)) {
     $order_column = 'c.userid';
 }
-// Total count
-$normalizeBranchList = static function ($value) {
-    if ($value === null) {
-        return [];
+
+// ── Helper: apply summary filter to a query builder ──
+$applySummaryFilter = static function ($query, $from_date, $to_date, $summary_filter) {
+    if ($summary_filter === 'due') {
+        $query->where('EXISTS (
+            SELECT 1 FROM ' . db_prefix() . 'invoices i
+            WHERE i.clientid = c.userid AND i.status != 2
+        )', null, false);
+    } elseif ($summary_filter === 'no_due') {
+        $query->where('NOT EXISTS (
+            SELECT 1 FROM ' . db_prefix() . 'invoices i
+            WHERE i.clientid = c.userid AND i.status != 2
+        )', null, false);
+    } elseif ($summary_filter === 'registered') {
+        $query->where('new.mr_no IS NOT NULL');
+    } elseif ($summary_filter === 'not_registered') {
+        $query->group_start();
+        $query->where('new.mr_no IS NULL', null, false);
+        $query->or_where('new.mr_no', '');
+        $query->group_end();
+    } elseif ($summary_filter === 'renewal') {
+        $query->where('new.mr_no IS NOT NULL');
+        $today = date('Y-m-d');
+        $subquery = '
+            SELECT 1 FROM ' . db_prefix() . 'invoices e
+            WHERE e.clientid = c.userid
+            AND e.duedate IS NOT NULL
+            AND e.duedate = (
+                SELECT MAX(e2.duedate)
+                FROM ' . db_prefix() . 'invoices e2
+                WHERE e2.clientid = c.userid
+            )
+        ';
+        if ($from_date && $to_date) {
+            $subquery .= ' AND DATE(e.duedate) BETWEEN "' . $from_date . '" AND "' . $to_date . '"';
+        } else {
+            $subquery .= ' AND e.duedate <= "' . $today . '"';
+        }
+        $query->where('EXISTS (' . $subquery . ')', null, false);
+    } elseif ($summary_filter === 'new_patients') {
+        $query->where('new.mr_no IS NOT NULL');
     }
-
-    $list = is_array($value) ? $value : explode(',', (string) $value);
-    $normalized = [];
-
-    foreach ($list as $item) {
-        if ($item === null) {
-            continue;
-        }
-        $item = (string) $item;
-        if ($item === '' || strtolower($item) === 'null') {
-            continue;
-        }
-        $decoded = rawurldecode($item);
-        $decoded = (string) $decoded;
-        if ($decoded === '' || strtolower($decoded) === 'null') {
-            continue;
-        }
-        if (is_numeric($decoded)) {
-            $normalized[] = (int) $decoded;
-        }
-    }
-
-    return array_values(array_unique($normalized));
 };
 
-$branchInputValue = $CI->input->post('branch_ids');
-if ($branchInputValue === null) {
-    $branchInputValue = $CI->input->get('branch_ids');
-}
-
-$branchFilterIds = $normalizeBranchList($branchInputValue);
-$session = $CI->session ?? null;
-$sessionFilterKey = 'patient_branch_filter';
-
-$allowedBranchIds = $normalizeBranchList($accessible_branch_ids ?? []);
-$restrictToAllowedBranches = static function ($ids) use ($allowedBranchIds) {
-    if (empty($allowedBranchIds)) {
-        return $ids;
-    }
-    if (empty($ids)) {
-        return [];
-    }
-
-    $filtered = [];
-    foreach ($ids as $id) {
-        $intId = (int) $id;
-        if (in_array($intId, $allowedBranchIds, true)) {
-            $filtered[] = $intId;
-        }
-    }
-
-    return array_values(array_unique($filtered));
-};
-
-$branchFilterIds = $restrictToAllowedBranches($branchFilterIds);
-
-if (!empty($branchFilterIds) && $session) {
-    $session->set_userdata([$sessionFilterKey => implode(',', $branchFilterIds)]);
-}
-
-if (empty($branchFilterIds) && isset($branch_filter_ids) && is_array($branch_filter_ids)) {
-    $branchFilterIds = $restrictToAllowedBranches($normalizeBranchList($branch_filter_ids));
-}
-
-if (empty($branchFilterIds) && isset($selected_branch_id) && is_array($selected_branch_id)) {
-    $branchFilterIds = $restrictToAllowedBranches($normalizeBranchList($selected_branch_id));
-}
-
-if (empty($branchFilterIds) && isset($current_branch_id) && $current_branch_id) {
-    $branchFilterIds = $restrictToAllowedBranches($normalizeBranchList($current_branch_id));
-}
-
-if (empty($branchFilterIds) && $session) {
-    $savedFilter = $restrictToAllowedBranches($normalizeBranchList($session->userdata($sessionFilterKey)));
-    if (!empty($savedFilter)) {
-        $branchFilterIds = $savedFilter;
-    }
-}
-
-if (empty($branchFilterIds) && !empty($allowedBranchIds)) {
-    $branchFilterIds = $allowedBranchIds;
-}
-
-$applyBranchFilter = static function ($query) use ($branchFilterIds) {
-    if (empty($branchFilterIds)) {
-        return;
-    }
-
-    $cleanIds = array_map('intval', $branchFilterIds);
-    $cleanIds = array_filter($cleanIds, function ($value) {
-        return $value > 0;
-    });
-
-    if (empty($cleanIds)) {
-        return;
-    }
-
-    $query->where('EXISTS (
-        SELECT 1
-        FROM ' . db_prefix() . 'customer_groups cg_filter
-        WHERE cg_filter.customer_id = c.userid
-        AND cg_filter.groupid IN (' . implode(',', $cleanIds) . ')
-    )', null, false);
-};
-
+// ── Total count ──
 $totalQuery = $CI->db;
 $totalQuery->reset_query();
 $totalQuery->select('COUNT(DISTINCT c.userid) as total');
 $totalQuery->from(db_prefix() . 'clients c');
 $totalQuery->join(db_prefix() . 'clients_new_fields new', 'new.userid = c.userid', 'left');
-$totalQuery->join(db_prefix() . 'customer_groups group', 'group.customer_id = c.userid', 'left');
 
-$applyBranchFilter($totalQuery);
 if ($from_date && $to_date && $summary_filter != 'not_registered') {
     $totalQuery->where("DATE(new.registration_start_date) BETWEEN '$from_date' AND '$to_date'");
 }
-
-if ($summary_filter === 'due') {
-    $totalQuery->where('EXISTS (
-        SELECT 1 FROM ' . db_prefix() . 'invoices i
-        WHERE i.clientid = c.userid AND i.status != 2
-    )', null, false);
-} elseif ($summary_filter === 'no_due') {
-    $totalQuery->where('NOT EXISTS (
-        SELECT 1 FROM ' . db_prefix() . 'invoices i
-        WHERE i.clientid = c.userid AND i.status != 2
-    )', null, false);
-} elseif ($summary_filter === 'registered') {
-    $totalQuery->where('new.mr_no IS NOT NULL');
-} elseif ($summary_filter === 'not_registered') {
-    $totalQuery->group_start();
-    $totalQuery->where('new.mr_no IS NULL', null, false);
-    $totalQuery->or_where('new.mr_no', '');
-    $totalQuery->group_end();
-
-} elseif ($summary_filter === 'renewal') {
-    $CI->db->where('new.mr_no IS NOT NULL'); // ensure registered
-
-    $today = date('Y-m-d');
-
-    $subquery = '
-        SELECT 1 FROM ' . db_prefix() . 'invoices e
-        WHERE e.clientid = c.userid
-        AND e.duedate IS NOT NULL
-        AND e.duedate = (
-            SELECT MAX(e2.duedate)
-            FROM ' . db_prefix() . 'invoices e2
-            WHERE e2.clientid = c.userid
-        )
-    ';
-
-    // Apply range or expiry check AFTER finding the max date
-    if ($from_date && $to_date) {
-        $subquery .= ' AND DATE(e.duedate) BETWEEN "' . $from_date . '" AND "' . $to_date . '"';
-    } else {
-        $subquery .= ' AND e.duedate <= "' . $today . '"';
-    }
-
-    $CI->db->where('EXISTS (' . $subquery . ')', null, false);
-} elseif ($summary_filter === 'new_patients') {
-    $totalQuery->where('new.mr_no IS NOT NULL');
-}
+$applySummaryFilter($totalQuery, $from_date, $to_date, $summary_filter);
 
 $totalRecords = $totalQuery->get()->row()->total;
 
-
-// Filtered count
+// ── Filtered count ──
 $filterQuery = $CI->db;
 $filterQuery->reset_query();
 $filterQuery->select('COUNT(DISTINCT c.userid) as total');
 $filterQuery->from(db_prefix() . 'clients c');
 $filterQuery->join(db_prefix() . 'clients_new_fields new', 'new.userid = c.userid', 'left');
-$filterQuery->join(db_prefix() . 'customer_groups group', 'group.customer_id = c.userid', 'left');
 $filterQuery->join(db_prefix() . 'leads_sources source', 'source.id = new.patient_source_id', 'left');
 
-$applyBranchFilter($filterQuery);
 if ($from_date && $to_date && $summary_filter != 'not_registered') {
     $filterQuery->where("DATE(new.registration_start_date) BETWEEN '$from_date' AND '$to_date'");
 }
+$applySummaryFilter($filterQuery, $from_date, $to_date, $summary_filter);
 
-// Apply summary filter
-if ($summary_filter === 'due') {
-    $filterQuery->where('EXISTS (
-        SELECT 1 FROM ' . db_prefix() . 'invoices i
-        WHERE i.clientid = c.userid AND i.status != 2
-    )', null, false);
-} elseif ($summary_filter === 'no_due') {
-    $filterQuery->where('NOT EXISTS (
-        SELECT 1 FROM ' . db_prefix() . 'invoices i
-        WHERE i.clientid = c.userid AND i.status != 2
-    )', null, false);
-} elseif ($summary_filter === 'registered') {
-    $filterQuery->where('new.mr_no IS NOT NULL');
-} elseif ($summary_filter === 'not_registered') {
-    $filterQuery->group_start();
-    $filterQuery->where('new.mr_no IS NULL', null, false);
-    $filterQuery->or_where('new.mr_no', '');
-    $filterQuery->group_end();
-
-} elseif ($summary_filter === 'renewal') {
-    $CI->db->where('new.mr_no IS NOT NULL'); // ensure registered
-
-    $today = date('Y-m-d');
-
-    $subquery = '
-        SELECT 1 FROM ' . db_prefix() . 'invoices e
-        WHERE e.clientid = c.userid
-        AND e.duedate IS NOT NULL
-        AND e.duedate = (
-            SELECT MAX(e2.duedate)
-            FROM ' . db_prefix() . 'invoices e2
-            WHERE e2.clientid = c.userid
-        )
-    ';
-
-    // Now apply date condition on the outer query
-    if ($from_date && $to_date) {
-        $subquery .= ' AND DATE(e.duedate) BETWEEN "' . $from_date . '" AND "' . $to_date . '"';
-    } else {
-        $subquery .= ' AND e.duedate <= "' . $today . '"';
-    }
-
-    $CI->db->where('EXISTS (' . $subquery . ')', null, false);
-} elseif ($summary_filter === 'new_patients') {
-    $filterQuery->where('new.mr_no IS NOT NULL');
-}
-
-// Apply search filters
 if (!empty($search)) {
     $filterQuery->group_start();
     $filterQuery->like('c.company', $search);
@@ -287,22 +125,14 @@ if (!empty($search)) {
 
 $filteredRecords = $filterQuery->get()->row()->total;
 
-
-// Main data query
+// ── Main data query ──
 $CI->db->reset_query();
 $CI->db->distinct();
-$CI->db->select('c.userid, c.company, c.phonenumber, c.datecreated, new.mr_no, new.age, new.gender, c.city, c.state, new.registration_start_date, new.registration_end_date, new.current_status, new.patient_status, source.name as patient_source_name,
-    (
-        SELECT GROUP_CONCAT(DISTINCT cg_names.name ORDER BY cg_names.name SEPARATOR ", ")
-        FROM ' . db_prefix() . 'customer_groups cg_rel
-        LEFT JOIN ' . db_prefix() . 'customers_groups cg_names ON cg_names.id = cg_rel.groupid
-        WHERE cg_rel.customer_id = c.userid
-    ) AS branch_names');
+$CI->db->select('c.userid, c.company, c.phonenumber, c.datecreated, new.mr_no, new.age, new.gender, c.city, c.state, new.registration_start_date, new.registration_end_date, new.current_status, new.patient_status, source.name as patient_source_name');
 $CI->db->from(db_prefix() . 'clients c');
 $CI->db->join(db_prefix() . 'clients_new_fields new', 'new.userid = c.userid', 'left');
-$CI->db->join(db_prefix() . 'customer_groups group', 'group.customer_id = c.userid', 'left');
 $CI->db->join(db_prefix() . 'leads_sources source', 'source.id = new.patient_source_id', 'left');
-$applyBranchFilter($CI->db);
+
 if ($from_date && $to_date && $summary_filter != 'not_registered') {
     $CI->db->where("DATE(new.registration_start_date) BETWEEN '$from_date' AND '$to_date'");
 }
@@ -320,55 +150,7 @@ if ($length != -1) {
     $CI->db->limit($length, $start);
 }
 
-
-if ($summary_filter === 'due') {
-    $CI->db->where('EXISTS (
-        SELECT 1 FROM ' . db_prefix() . 'invoices i
-        WHERE i.clientid = c.userid
-        AND i.status != 2
-    )');
-} elseif ($summary_filter === 'no_due') {
-    $CI->db->where('NOT EXISTS (
-        SELECT 1 FROM ' . db_prefix() . 'invoices i
-        WHERE i.clientid = c.userid
-        AND i.status != 2
-    )');
-} elseif ($summary_filter === 'registered') {
-    $CI->db->where('new.mr_no IS NOT NULL');
-} elseif ($summary_filter === 'not_registered') {
-    $CI->db->group_start();
-    $CI->db->where('new.mr_no IS NULL', null, false);
-    $CI->db->or_where('new.mr_no', '');
-    $CI->db->group_end();
-
-} elseif ($summary_filter === 'renewal') {
-    $CI->db->where('new.mr_no IS NOT NULL'); // ensure registered
-
-    $today = date('Y-m-d');
-
-    $subquery = '
-        SELECT 1 FROM ' . db_prefix() . 'invoices e
-        WHERE e.clientid = c.userid
-        AND e.duedate IS NOT NULL
-        AND e.duedate = (
-            SELECT MAX(e2.duedate)
-            FROM ' . db_prefix() . 'invoices e2
-            WHERE e2.clientid = c.userid
-        )
-    ';
-
-    // Add optional from_date and to_date condition
-    if ($from_date && $to_date) {
-        $subquery .= ' AND DATE(e.duedate) BETWEEN "' . $from_date . '" AND "' . $to_date . '"';
-    } else {
-        $subquery .= ' AND e.duedate <= "' . $today . '"';
-    }
-
-    $CI->db->where('EXISTS (' . $subquery . ')', null, false);
-} elseif ($summary_filter === 'new_patients') {
-    $CI->db->where('new.mr_no IS NOT NULL');
-}
-
+$applySummaryFilter($CI->db, $from_date, $to_date, $summary_filter);
 
 $results = $CI->db->get()->result_array();
 
@@ -377,18 +159,17 @@ $userIds = array_column($results, 'userid');
 $treatmentMap = $doctorMap = $callLogMap = $leadStatuses = [];
 
 if (!empty($userIds)) {
-    // Latest appointment
     $userIdsStr = implode(',', $userIds);
 
     $treatmentMap = [];
     $doctorMap = [];
 
     $CI->db->select('
-			a.userid,
-			a.enquiry_doctor_id,
-			i.description AS treatment_name,
-			CONCAT_WS(" ", s.firstname, s.lastname) AS doctor_name
-		');
+        a.userid,
+        a.enquiry_doctor_id,
+        i.description AS treatment_name,
+        CONCAT_WS(" ", s.firstname, s.lastname) AS doctor_name
+    ');
     $CI->db->from(db_prefix() . 'appointment a');
     $CI->db->join(
         '(SELECT MAX(appointment_id) AS max_id, userid FROM ' . db_prefix() . 'appointment WHERE userid IN (' . $userIdsStr . ') GROUP BY userid) AS latest',
@@ -408,8 +189,6 @@ if (!empty($userIds)) {
             'name' => $app['doctor_name'] ?? '-',
         ];
     }
-
-
 
     // Latest call logs
     $CI->db->select('c.patientid, c.created_date as last_calling_date, c.next_calling_date');
@@ -456,7 +235,6 @@ foreach ($statuses as $statusRow) {
     ];
 }
 
-
 foreach ($results as $row) {
     $dataRow = [];
 
@@ -501,7 +279,6 @@ foreach ($results as $row) {
     $color = $status['status_color'];
     $statusLabel = '<span class="lead-status-' . $status['status'] . ' label" style="color:' . $color . ';border:1px solid ' . adjust_hex_brightness($color, 0.4) . ';background: ' . adjust_hex_brightness($color, 0.04) . ';">' . e($status['status_name']) . '</span>';
 
-
     $currentStatusName = trim($row['current_status']);
     $currentStatusLabel = '-';
 
@@ -513,7 +290,7 @@ foreach ($results as $row) {
         $currentStatusLabel = '<span class="lead-status-' . $id . ' label" style="color:' . $color . ';border:1px solid ' . adjust_hex_brightness($color, 0.4) . ';background:' . adjust_hex_brightness($color, 0.04) . ';">' . e($currentStatusName) . '</span>';
     }
 
-
+    // 16 columns — NO branch column
     $dataRow[] = $i++;
     $dataRow[] = $company;
     $dataRow[] = !empty($row['mr_no']) ? e($row['mr_no']) : '-';
@@ -522,22 +299,17 @@ foreach ($results as $row) {
     $dataRow[] = $phonenumber;
     $dataRow[] = $treatmentMap[$row['userid']] ?? '';
     $dataRow[] = isset($doctorMap[$row['userid']]) ? $doctorMap[$row['userid']]['name'] : '-';
-
     $dataRow[] = $row['patient_source_name'];
-    $dataRow[] = !empty($row['branch_names']) ? e($row['branch_names']) : '-';
     $dataRow[] = $callLog['last_calling_date'];
     $dataRow[] = $callLog['next_calling_date'];
     $dataRow[] = $statusLabel;
     $dataRow[] = $currentStatusLabel;
-    //$dataRow[] = $row['current_status'];
     $dataRow[] = $row['registration_start_date'];
     $dataRow[] = (!empty($row['registration_end_date']) && $row['registration_end_date'] !== '1970-01-01') ? $row['registration_end_date'] : '';
     $dataRow[] = '<a href="' . admin_url('clients/client/' . $row['userid']) . '" data-toggle="tooltip" title="' . _l('view') . '">' . e($row['patient_status']) . '</a>';
 
     $output['data'][] = $dataRow;
 }
-
-
 
 echo json_encode($output);
 exit;
