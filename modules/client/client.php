@@ -69,96 +69,7 @@ function client_init_menu_items()
         ]);
     }
 
-    if (staff_can('calling', 'customers')) {
-        $CI->app_menu->add_sidebar_menu_item('calling', [
-            'name' => _l('calling'),
-            'icon' => 'fa fa-phone',
-            'href' => admin_url('client/calling'),
-            'position' => 10,
-        ]);
-
-
-    }
-
-    if (staff_can('cpot_calling', 'customers')) {
-        $CI->app_menu->add_sidebar_children_item('calling', [
-            'slug' => 'CPOT Calling',
-            'name' => _l('cpot_calling'),
-            'href' => admin_url('client/calling/cpot_calling'),
-            'position' => 1,
-            'badge' => [],
-        ]);
-    }
-
-    if (staff_can('ppot_calling', 'customers')) {
-        $CI->app_menu->add_sidebar_children_item('calling', [
-            'slug' => 'PPOT Calling',
-            'name' => _l('ppot_calling'),
-            'href' => admin_url('client/calling/ppot_calling'),
-            'position' => 2,
-            'badge' => [],
-        ]);
-    }
-
-    /* if (staff_can('fe_calling', 'customers')) {
-        $CI->app_menu->add_sidebar_children_item('calling', [
-            'slug'     => 'FE Calling',
-            'name'     => _l('fe_calling'),
-            'href'     => admin_url('client/calling/fe_calling'),
-            'position' => 3,
-            'badge'    => [],
-        ]);
-    } */
-
-    if (staff_can('reference_calling', 'customers')) {
-        $CI->app_menu->add_sidebar_children_item('calling', [
-            'slug' => 'Refernce Calling',
-            'name' => _l('reference_calling'),
-            'href' => admin_url('client/calling/reference_calling'),
-            'position' => 4,
-            'badge' => [],
-        ]);
-    }
-
-    if (staff_can('renewal_calling', 'customers')) {
-        $CI->app_menu->add_sidebar_children_item('calling', [
-            'slug' => 'Renewal Calling',
-            'name' => _l('renewal_calling'),
-            'href' => admin_url('client/calling/renewal_calling'),
-            'position' => 5,
-            'badge' => [],
-        ]);
-    }
-
-    if (staff_can('treatment_followup_calling', 'customers')) {
-        $CI->app_menu->add_sidebar_children_item('calling', [
-            'slug' => 'Treatment Followup Calling',
-            'name' => _l('treatment_followup_calling'),
-            'href' => admin_url('client/calling/treatment_followup_calling'),
-            'position' => 6,
-            'badge' => [],
-        ]);
-    }
-
-    if (staff_can('medicine_calling', 'customers')) {
-        $CI->app_menu->add_sidebar_children_item('calling', [
-            'slug' => 'Medicine Calling',
-            'name' => _l('medicine_calling'),
-            'href' => admin_url('client/calling/medicine_calling'),
-            'position' => 7,
-            'badge' => [],
-        ]);
-    }
-
-    /* if (staff_can('nroc_calling', 'customers')) {
-        $CI->app_menu->add_sidebar_children_item('calling', [
-            'slug'     => 'NROC Calling',
-            'name'     => _l('nroc_calling'),
-            'href'     => admin_url('client/calling/nroc_calling'),
-            'position' => 8,
-            'badge'    => [],
-        ]);
-    } */
+    /* Calling is now an independent module - see modules/calling/calling.php */
 
 
     /* if (staff_can('doctor_ownership_report_details', 'reports')) {
@@ -550,15 +461,7 @@ hooks()->add_filter('staff_permissions', function ($permissions) {
             'mobile_masking' => _l('permission_patient_mobile_masking'),
             'export_patients' => _l('permission_export_patients'),
             'import_patients' => _l('permission_import_patients'),
-            'calling' => _l('permission_calling'),
-            'cpot_calling' => _l('permission_cpot_calling'),
-            'ppot_calling' => _l('permission_ppot_calling'),
-            'fe_calling' => _l('permission_fe_calling'),
-            'reference_calling' => _l('permission_reference_calling'),
-            'renewal_calling' => _l('permission_renewal_calling'),
-            'treatment_followup_calling' => _l('permission_treatment_followup_calling'),
-            'medicine_calling' => _l('permission_medicine_calling'),
-            'nroc_calling' => _l('permission_nroc_calling'),
+            /* Calling permissions moved to calling module */
             'doctor_ownership_reports' => _l('permission_doctor_ownership_reports'),
             'pharmacy_report' => _l('permission_pharmacy_report'),
             'appointment_slot_report' => _l('permission_appointment_slot_report'),
