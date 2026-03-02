@@ -461,7 +461,34 @@ foreach ($results as $row) {
     $dataRow = [];
 
     $company = e(format_name($row['company'])) ?: _l('no_company_view_profile');
-    $company .= '<br><label style="font-weight: 300; font-size: 12px">' . e(_dt($row['datecreated'])) . '</label>';
+
+    // Calculate "time ago" label
+    $timeAgoLabel = '';
+    if (!empty($row['datecreated'])) {
+        $createdTime = new DateTime($row['datecreated']);
+        $now = new DateTime();
+        $diff = $now->diff($createdTime);
+
+        if ($diff->y > 0) {
+            $timeAgoLabel = $diff->y . ' year' . ($diff->y > 1 ? 's' : '') . ' ago';
+        } elseif ($diff->m > 0) {
+            $timeAgoLabel = $diff->m . ' month' . ($diff->m > 1 ? 's' : '') . ' ago';
+        } elseif ($diff->d > 0) {
+            $timeAgoLabel = $diff->d . ' day' . ($diff->d > 1 ? 's' : '') . ' ago';
+        } elseif ($diff->h > 0) {
+            $timeAgoLabel = $diff->h . ' hour' . ($diff->h > 1 ? 's' : '') . ' ago';
+        } elseif ($diff->i > 0) {
+            $timeAgoLabel = $diff->i . ' min' . ($diff->i > 1 ? 's' : '') . ' ago';
+        } else {
+            $timeAgoLabel = 'Just now';
+        }
+    }
+
+    $company .= '<br><label style="font-weight: 300; font-size: 12px">' . e(_dt($row['datecreated']));
+    if ($timeAgoLabel) {
+        $company .= ' <span style="color: #888; font-size: 11px;">(' . $timeAgoLabel . ')</span>';
+    }
+    $company .= '</label>';
     $url = admin_url('client/get_patient_list/' . $row['userid']);
     $company = '<a href="' . $url . '" class="tw-font-medium">' . $company . '</a>';
     $company .= '<div class="row-options">';
