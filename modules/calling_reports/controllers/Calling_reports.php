@@ -10,7 +10,7 @@ class Calling_reports extends AdminController
         $this->load->model('client/master_model');
         $this->load->model('leads_model');
         $this->load->model('client/doctor_model');
-        $this->load->helper('custom');
+        include_once(FCPATH . 'modules/client/helpers/custom_helper.php');
     }
 
     public function index()
