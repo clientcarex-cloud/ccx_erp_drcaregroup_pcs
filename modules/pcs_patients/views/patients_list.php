@@ -136,48 +136,35 @@ if (isset($master_data) && $master_data) {
         return values.length ? values.join(',') : '';
     }
 
-    function buildPatientListUrl(from, to, branchParam) {
+    function buildPcsTableUrl(from, to) {
         const safeFrom = from || '';
         const safeTo = to || '';
-        const branchSegment = branchParam || '';
-        return '<?= admin_url("client/get_patient_list/null/") ?>' + safeFrom + '/' + safeTo + '/null/' + branchSegment;
+        return '<?= admin_url("pcs_patients/table/null/") ?>' + safeFrom + '/' + safeTo;
     }
 
     $(function () {
-        var patientsTable = initDataTable('.table-patients', '<?= admin_url('client/get_patient_list'); ?>', [0], [0]);
+        // Initial load — no date filter, no branch filter
+        var patientsTable = initDataTable('.table-patients', '<?= admin_url("pcs_patients/table"); ?>', [0], [0]);
         if (!patientsTable || !patientsTable.on) {
             patientsTable = $('.table-patients').DataTable();
         }
 
+        // Send branch_ids via POST with every DataTable AJAX request
         if (patientsTable && patientsTable.on) {
             patientsTable.on('preXhr.dt', function (e, settings, data) {
                 data.branch_ids = getSelectedBranchParam();
-                data.from_date_filter = $('#from_date').val();
-                data.to_date_filter = $('#to_date').val();
             });
         }
 
-        const initialBranchParam = getSelectedBranchParam();
-        const initialListUrl = buildPatientListUrl('', '', initialBranchParam);
-        if ($.fn.DataTable.isDataTable('.table-patients')) {
-            var tableInstance = $('.table-patients').DataTable();
-            tableInstance.ajax.url(initialListUrl).load();
-        }
-
         $(BRANCH_SELECT_ID).selectpicker('refresh');
-    });
-</script>
 
-<script>
-    // Search / filter handler
-    $(document).ready(function () {
+        // Search button → reload table with selected filters
         $('#filterBtn').click(function () {
             const from = $('#from_date').val();
             const to = $('#to_date').val();
-            const branchParam = getSelectedBranchParam();
 
             if ($.fn.DataTable.isDataTable('.table-patients')) {
-                const dataUrl = buildPatientListUrl(from, to, branchParam);
+                const dataUrl = buildPcsTableUrl(from, to);
                 var tableInstance = $('.table-patients').DataTable();
                 tableInstance.ajax.url(dataUrl).load();
             }
