@@ -141,6 +141,8 @@
 							$mis_sections['Other Reports'][] = ['Master Renewal Report', 'v3, Master Renewal Report', admin_url('mis_reports/reports/master_renewal_report')];
 
 							$mis_sections['Other Reports'][] = ['Doctor Appointments', 'Doctor Appointments', admin_url('mis_reports/reports/doctor_appointments')];
+
+							$mis_sections['Other Reports'][] = ['Branch Payment Mode Wise Report', 'Branch-wise payment collection by payment mode.', admin_url('mis_reports/reports/branch_payment_mode_wise_report')];
 						}
 
 						if (staff_can('manager_reports', 'customers')) {
