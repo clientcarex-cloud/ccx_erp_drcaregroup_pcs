@@ -145,6 +145,8 @@
 							$mis_sections['Other Reports'][] = ['Branch Payment Mode Wise Report', 'Branch-wise payment collection by payment mode.', admin_url('mis_reports/reports/branch_payment_mode_wise_report')];
 
 							$mis_sections['Other Reports'][] = ['New GT Report (Master)', 'Branch-wise GT summary with NP visits, registrations, consultation fees & payments.', admin_url('mis_reports/reports/new_gt_report_master')];
+
+							$mis_sections['Other Reports'][] = ['New Renewal Report (Master)', 'Branch-wise renewal summary with active/inactive renewals & package amounts.', admin_url('mis_reports/reports/new_renewal_report_master')];
 						}
 
 						if (staff_can('manager_reports', 'customers')) {
