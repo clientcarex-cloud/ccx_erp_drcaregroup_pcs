@@ -2,7 +2,7 @@
 defined('BASEPATH') or exit('No direct script access allowed');
 
 $CI = &get_instance();
-$CI->load->model('client_model');
+$CI->load->model('client/client_model');
 
 // Inputs
 $draw = intval($CI->input->post('draw'));

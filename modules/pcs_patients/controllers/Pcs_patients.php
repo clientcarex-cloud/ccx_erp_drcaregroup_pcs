@@ -9,7 +9,7 @@ class Pcs_patients extends AdminController
         if (!staff_can('view', 'pcs_patients') && !is_admin()) {
             access_denied('PCS Patients');
         }
-        $this->load->model('client_model');
+        $this->load->model('client/client_model');
     }
 
     public function index()
