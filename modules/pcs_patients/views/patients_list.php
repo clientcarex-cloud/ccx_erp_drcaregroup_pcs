@@ -42,7 +42,6 @@
                             _l('treatment'),
                             _l('assigned_doctor'),
                             _l('source'),
-                            _l('branch'),
                             _l('last_calling_date'),
                             _l('next_calling_date'),
                             _l('current_status'),
