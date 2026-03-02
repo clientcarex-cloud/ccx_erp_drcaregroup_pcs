@@ -10,6 +10,8 @@ class Pcs_patients extends AdminController
             access_denied('PCS Patients');
         }
         $this->load->model('client/client_model');
+        $this->load->model('client/master_model');
+        $this->load->model('leads_model');
     }
 
     public function index()
@@ -26,11 +28,9 @@ class Pcs_patients extends AdminController
         $data['doctors'] = $this->db->get()->result_array();
 
         // Lead statuses for appointments tab
-        $this->load->model('leads_model');
         $data['statuses'] = $this->leads_model->get_status();
 
         // Appointment types
-        $this->load->model('master_model');
         $data['appointment_type'] = $this->master_model->get_all('appointment_type');
 
         $this->load->view('patients_list', $data);
