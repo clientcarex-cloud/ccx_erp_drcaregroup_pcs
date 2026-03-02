@@ -12,6 +12,7 @@ class Pcs_patients extends AdminController
         $this->load->model('client/client_model');
         $this->load->model('client/master_model');
         $this->load->model('leads_model');
+        $this->load->helper('client/custom');
     }
 
     public function index()
