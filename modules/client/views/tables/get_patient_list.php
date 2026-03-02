@@ -9,8 +9,8 @@ $draw = intval($CI->input->post('draw'));
 $start = intval($CI->input->post('start'));
 $length = intval($CI->input->post('length'));
 $search = $CI->input->post('search')['value'] ?? '';
-$from_date = $consulted_from_date;
-$to_date = $consulted_to_date;
+$from_date = $CI->input->post('from_date_filter') ?: ($consulted_from_date ?: null);
+$to_date = $CI->input->post('to_date_filter') ?: ($consulted_to_date ?: null);
 
 $order_column_index = (int) ($CI->input->post('order')[0]['column'] ?? 0);
 $incoming_order_dir = strtolower($CI->input->post('order')[0]['dir'] ?? 'desc');

@@ -536,13 +536,13 @@ if ($master_data) {
 `;
 
     function buildPatientListUrl(from, to, summaryFilter = '') {
-        const safeFrom = from || '';
-        const safeTo = to || '';
-        let url = '<?= admin_url("client/get_patient_list/null/") ?>' + safeFrom + '/' + safeTo;
-        if (summaryFilter) {
-            url += (url.indexOf('?') === -1 ? '?' : '&') + 'summary_filter=' + encodeURIComponent(summaryFilter);
-        }
-        return url;
+        let url = '<?= admin_url("client/get_patient_list") ?>';
+        const params = new URLSearchParams();
+        if (from) params.set('from_date_filter', from);
+        if (to) params.set('to_date_filter', to);
+        if (summaryFilter) params.set('summary_filter', summaryFilter);
+        const qs = params.toString();
+        return qs ? url + '?' + qs : url;
     }
 
     function loadClientSummary(from_date = '', to_date = '') {
@@ -657,10 +657,10 @@ if ($master_data) {
                 $cards.on('click', function () {
                     const $card = $(this);
                     const filterType = $card.data('filter');
-                    const from = $('#from_date').val();
-                    const to = $('#to_date').val();
+                    const from = $('#consulted_date').val();
+                    const to = $('#consulted_to_date').val();
                     const doctor_id = $('#enquiry_doctor_id').val();
-                    const branch_val = getSelectedBranchParam();
+                    const branch_val = $('#appointment_branch_id').val() || '0';
                     const appointment_type_id_val = $('#appointment_type_id').val();
 
                     $cards.removeClass('is-active').attr('aria-pressed', 'false');
