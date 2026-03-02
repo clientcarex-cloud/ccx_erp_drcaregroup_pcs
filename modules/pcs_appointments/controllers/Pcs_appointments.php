@@ -13,7 +13,7 @@ class Pcs_appointments extends AdminController
         $this->load->model('client/master_model');
         $this->load->model('client/doctor_model');
         $this->load->model('leads_model');
-        $this->load->helper('custom');
+        require_once(FCPATH . 'modules/client/helpers/custom_helper.php');
         $this->current_branch_id = $this->client_model->get_logged_in_staff_branch_id();
     }
 
