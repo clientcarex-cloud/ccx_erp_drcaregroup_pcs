@@ -1,0 +1,148 @@
+<?php defined('BASEPATH') or exit('No direct script access allowed'); ?>
+<?php init_head(); ?>
+
+<div id="wrapper">
+    <div class="content">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="panel_s">
+                    <div class="panel-body">
+                        <h4 class="no-margin">
+                            <?= _l($title); ?>
+                        </h4>
+                        <hr class="hr-panel-heading" />
+                        <div class="clearfix"></div>
+
+                        <!-- Filter Form -->
+                        <div class="row">
+                            <form method="post" id="newGTForm">
+                                <input type="hidden" name="<?= $this->security->get_csrf_token_name(); ?>"
+                                    value="<?= $this->security->get_csrf_hash(); ?>" />
+
+                                <div class="col-md-3">
+                                    <?php
+                                    $selected_branches = $this->input->post('branch') ?? (isset($branch_id) ? [$branch_id] : []);
+                                    echo render_select(
+                                        'branch[]',
+                                        $branch,
+                                        ['id', ['name']],
+                                        '<span style="color:red;">*</span> ' . _l('lead_branch'),
+                                        $selected_branches,
+                                        [
+                                            'multiple' => true,
+                                            'data-actions-box' => true,
+                                            'data-none-selected-text' => _l('dropdown_non_selected_tex'),
+                                            'required' => 'required'
+                                        ]
+                                    );
+                                    ?>
+                                </div>
+
+                                <div class="col-md-2">
+                                    <label>
+                                        <?php echo _l('from_date'); ?>
+                                    </label>
+                                    <input class="form-control" type="date" id="consulted_date" name="consulted_date"
+                                        value="<?= html_escape(set_value('consulted_date') ?: date('Y-m-d')) ?>">
+                                </div>
+
+                                <div class="col-md-2">
+                                    <label>
+                                        <?php echo _l('to_date'); ?>
+                                    </label>
+                                    <input class="form-control" type="date" id="consulted_to_date"
+                                        name="consulted_to_date"
+                                        value="<?= html_escape(set_value('consulted_to_date') ?: date('Y-m-d')) ?>">
+                                </div>
+
+                                <div class="col-md-2">
+                                    <br>
+                                    <button type="submit" class="btn btn-success" style="margin-top: 5px;"
+                                        id="searchBtn">Submit</button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <br>
+
+                        <!-- Table -->
+                        <?php
+                        $columns = [
+                            _l('branch'),
+                            'Grand Total',
+                            'New Patients Visits',
+                            'New Patient Registration',
+                            'Registration %',
+                            'Consultation Fee',
+                            'NP Paid',
+                        ];
+
+                        echo render_datatable($columns, 'new-gt-master-report');
+                        ?>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<?php init_tail(); ?>
+
+<script>
+    $(function () {
+        var tableInitialized = false;
+
+        $('#newGTForm').on('submit', function (e) {
+            e.preventDefault();
+            var branches = $('[name="branch[]"]').val();
+            if (!branches || branches.length === 0) {
+                alert_float('warning', 'Please select at least one branch.');
+                return;
+            }
+
+            var from = $('#consulted_date').val();
+            var to = $('#consulted_to_date').val();
+            var branchParam = branches.map(function (b) { return 'branch[]=' + encodeURIComponent(b); }).join('&');
+            var ajaxUrl = '<?= admin_url("mis_reports/reports/" . $type . "/1/") ?>' + from + '/' + to + '?' + branchParam;
+
+            var tableSelector = '.table-new-gt-master-report';
+            var $table = $(tableSelector);
+
+            if (tableInitialized && $.fn.DataTable.isDataTable(tableSelector)) {
+                $table.DataTable().ajax.url(ajaxUrl).load();
+            } else {
+                // Ensure tfoot exists for the totals row
+                if ($table.find('tfoot').length === 0) {
+                    var tfootHtml = '<tfoot><tr>';
+                    var numCols = $table.find('thead th').length;
+                    for (var i = 0; i < numCols; i++) {
+                        tfootHtml += '<th></th>';
+                    }
+                    tfootHtml += '</tr></tfoot>';
+                    $table.append(tfootHtml);
+                }
+
+                initDataTable(tableSelector, ajaxUrl, [0], [0]);
+
+                // Capture totals from server response
+                $table.on('xhr.dt', function (e, settings, json, xhr) {
+                    if (json && json.totals) {
+                        var $tfoot = $table.find('tfoot tr');
+                        setTimeout(function () {
+                            $.each(json.totals, function (index, value) {
+                                $tfoot.find('th').eq(index).html(value);
+                            });
+                        }, 100);
+                    }
+                });
+
+                tableInitialized = true;
+            }
+        });
+    });
+</script>
+
+</body>
+
+</html>
