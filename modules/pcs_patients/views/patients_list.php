@@ -126,42 +126,34 @@
         return values.length ? values.join(',') : '';
     }
 
+    function buildPatientListUrl(from, to, branchParam) {
+        var safeFrom = from || '';
+        var safeTo   = to   || '';
+        var branch   = branchParam || '';
+        return '<?= admin_url("client/get_patient_list/null/") ?>' + safeFrom + '/' + safeTo + '/null/' + branch;
+    }
+
+    function loadPatientsTable() {
+        var from   = $('#from_date').val()   || '';
+        var to     = $('#to_date').val()     || '';
+        var branch = getSelectedBranchParam();
+        var url    = buildPatientListUrl(from, to, branch);
+
+        // Destroy existing table if any, then re-init with new URL
+        if ($.fn.DataTable.isDataTable('.table-patients')) {
+            $('.table-patients').DataTable().destroy();
+        }
+
+        initDataTable('.table-patients', url, [0], [0], 'undefined', [0, 'desc']);
+    }
+
     $(function () {
-        var patientsTable = initDataTable('.table-patients', '<?= admin_url('client/get_patient_list'); ?>', [0], [0], 'undefined', [0, 'desc']);
-        if (!patientsTable || !patientsTable.on) {
-            patientsTable = $('.table-patients').DataTable();
-        }
+        // Initial load with default branch + today's dates
+        loadPatientsTable();
 
-        // Send branch + date filters with every DataTable AJAX request
-        if (patientsTable && patientsTable.on) {
-            patientsTable.on('preXhr.dt', function (e, settings, data) {
-                data.branch_ids = getSelectedBranchParam();
-                data.from_date_filter = $('#from_date').val();
-                data.to_date_filter = $('#to_date').val();
-            });
-        }
-
-        // Initial load with staff's default branch
-        var initialBranchParam = getSelectedBranchParam();
-        if (initialBranchParam && $.fn.DataTable.isDataTable('.table-patients')) {
-            var tableInstance = $('.table-patients').DataTable();
-            var initialUrl = '<?= admin_url("client/get_patient_list/null/") ?>' +
-                '' + '/' + '' + '/null/' + initialBranchParam;
-            tableInstance.ajax.url(initialUrl).load();
-        }
-
-        // Search button click → reload table (preXhr will attach params)
+        // Search button → reload table with selected filters
         $('#filterBtn').click(function () {
-            var from = $('#from_date').val();
-            var to = $('#to_date').val();
-            var branch = getSelectedBranchParam();
-
-            if ($.fn.DataTable.isDataTable('.table-patients')) {
-                var url = '<?= admin_url("client/get_patient_list/null/") ?>' +
-                    from + '/' + to + '/null/' + branch;
-                var t = $('.table-patients').DataTable();
-                t.ajax.url(url).load();
-            }
+            loadPatientsTable();
         });
 
         $(BRANCH_SELECT_ID).selectpicker('refresh');
