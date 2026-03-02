@@ -118,36 +118,27 @@
     }
 
     function buildPatientListUrl(from, to, branchParam) {
-        const safeFrom = from || '';
-        const safeTo = to || '';
-        const branchSegment = branchParam || '';
+        const safeFrom = from || 'null';
+        const safeTo = to || 'null';
+        const branchSegment = branchParam || 'null';
         return '<?= admin_url("client/get_patient_list/null/") ?>' + safeFrom + '/' + safeTo + '/null/' + branchSegment;
     }
 
     $(function () {
-        // Step 1: Init DataTable with plain URL (no filter segments)
-        var patientsTable = initDataTable('.table-patients', '<?= admin_url('client/get_patient_list'); ?>', [0], [0], 'undefined', [0, 'desc']);
+        // Build initial URL with branch (using 'null' placeholders for empty dates)
+        var initialBranchParam = getSelectedBranchParam();
+        var initialUrl = buildPatientListUrl('null', 'null', initialBranchParam);
+
+        var patientsTable = initDataTable('.table-patients', initialUrl, [0], [0], 'undefined', [0, 'desc']);
         if (!patientsTable || !patientsTable.on) {
             patientsTable = $('.table-patients').DataTable();
         }
 
-        // Step 2: Attach preXhr.dt to send branch_ids on EVERY request
+        // Send branch_ids on every DataTable request via POST
         if (patientsTable && patientsTable.on) {
             patientsTable.on('preXhr.dt', function (e, settings, data) {
                 data.branch_ids = getSelectedBranchParam();
-                data.from_date_filter = $('#from_date').val();
-                data.to_date_filter = $('#to_date').val();
             });
-        }
-
-        // Step 3: Reload with initial branch selection (preXhr.dt now active)
-        var initialBranchParam = getSelectedBranchParam();
-        if (initialBranchParam) {
-            var initialListUrl = buildPatientListUrl('', '', initialBranchParam);
-            if ($.fn.DataTable.isDataTable('.table-patients')) {
-                var tableInstance = $('.table-patients').DataTable();
-                tableInstance.ajax.url(initialListUrl).load();
-            }
         }
 
         // Search / Filter button
