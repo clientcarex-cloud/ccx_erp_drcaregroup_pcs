@@ -486,16 +486,11 @@ foreach ($results as $row) {
 
     $company .= '<br><label style="font-weight: 300; font-size: 12px">' . e(_dt($row['datecreated']));
     if ($timeAgoLabel) {
-        $company .= ' <span style="color: #888; font-size: 11px;">(' . $timeAgoLabel . ')</span>';
+        $company .= ' <span style="display: inline-block; background: #4CAF50; color: #fff; font-size: 10px; padding: 1px 8px; border-radius: 50px; font-weight: 500;">' . $timeAgoLabel . '</span>';
     }
     $company .= '</label>';
     $url = admin_url('client/get_patient_list/' . $row['userid']);
     $company = '<a href="' . $url . '" class="tw-font-medium">' . $company . '</a>';
-    $company .= '<div class="row-options">';
-    if ($hasPermissionDelete) {
-        $company .= '<a href="' . admin_url('client/delete/' . $row['userid']) . '" class="_delete" onclick="return confirm(\'Are you sure?\')">' . _l('delete') . '</a>';
-    }
-    $company .= '</div>';
 
     $phonenumber = (staff_can('mobile_masking', 'customers') && !is_admin())
         ? mask_last_5_digits_1($row['phonenumber'])
