@@ -10,56 +10,56 @@ Version: 1.0.0
 
 define('TOKEN_SYSTEM_MODULE_NAME', 'token_system');
 
-hooks()->add_action('admin_init', TOKEN_SYSTEM_MODULE_NAME.'_init_menu_items');
+hooks()->add_action('admin_init', TOKEN_SYSTEM_MODULE_NAME . '_init_menu_items');
 
 function token_system_init_menu_items()
 {
     $CI = &get_instance();
-	if (staff_can('create', 'token_system')) {
-    $CI->app_menu->add_sidebar_menu_item('token_system', [
-        'name'     => _l('token_system'),
-        'icon'     => 'fa fa-ticket',
-        //'href'     => admin_url('token_system'),
-        'position' => 10,
+    if (staff_can('create', 'token_system')) {
+        $CI->app_menu->add_sidebar_menu_item('token_system', [
+            'name' => _l('token_system'),
+            'icon' => 'fa fa-ticket',
+            //'href'     => admin_url('token_system'),
+            'position' => 6,
+        ]);
+    }
+
+    $CI->app_menu->add_sidebar_children_item('token_system', [
+        'slug' => 'display',
+        'name' => _l('Display'),
+        'href' => admin_url('token_system/display'),
+        'position' => 1,
     ]);
-	}
-    
+
     $CI->app_menu->add_sidebar_children_item('token_system', [
-    'slug'     => 'display',
-    'name'     => _l('Display'),
-    'href'     => admin_url('token_system/display'),
-    'position' => 1,
-	]);
-	
+        'slug' => 'counter',
+        'name' => _l('Counter'),
+        'href' => admin_url('token_system/counters'),
+        'position' => 1,
+    ]);
+
     $CI->app_menu->add_sidebar_children_item('token_system', [
-    'slug'     => 'counter',
-    'name'     => _l('Counter'),
-    'href'     => admin_url('token_system/counters'),
-    'position' => 1,
-	]);
-	
+        'slug' => 'tokens',
+        'name' => _l('tokens'),
+        'href' => admin_url('token_system/tokens'),
+        'position' => 1,
+    ]);
+
     $CI->app_menu->add_sidebar_children_item('token_system', [
-    'slug'     => 'tokens',
-    'name'     => _l('tokens'),
-    'href'     => admin_url('token_system/tokens'),
-    'position' => 1,
-	]);
-	
-    $CI->app_menu->add_sidebar_children_item('token_system', [
-    'slug'     => 'call',
-    'name'     => _l('Call'),
-    'href'     => admin_url('token_system/call'),
-    'position' => 1,
-	]);
-	
+        'slug' => 'call',
+        'name' => _l('Call'),
+        'href' => admin_url('token_system/call'),
+        'position' => 1,
+    ]);
+
     /* $CI->app_menu->add_sidebar_children_item('token_system', [
     'slug'     => 'smart_queue',
     'name'     => _l('smart_queue'),
     'href'     => admin_url('token_system/smart_queue'),
     'position' => 1,
-	]); */
+    ]); */
 
-	
+
 
 }
 
@@ -75,10 +75,10 @@ hooks()->add_filter('staff_permissions', function ($permissions) {
     // For customers, this variable should be defined as it is used in array_merge
     $withNotApplicableViewOwn = [
         'view_own' => _l('permission_view_own'),
-        'view'     => $viewGlobalName,
-        'create'   => _l('permission_create'),
-        'edit'     => _l('permission_edit'),
-        'delete'   => _l('permission_delete'),
+        'view' => $viewGlobalName,
+        'create' => _l('permission_create'),
+        'edit' => _l('permission_edit'),
+        'delete' => _l('permission_delete'),
     ];
 
     $permissions['token_system'] = [

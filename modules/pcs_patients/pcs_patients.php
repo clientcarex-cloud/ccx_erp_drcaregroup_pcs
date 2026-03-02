@@ -41,7 +41,7 @@ function pcs_patients_module_init_menu_items()
         $CI->app_menu->add_sidebar_menu_item('pcs_patients', [
             'name' => _l('pcs_patients'),
             'icon' => 'fa fa-users',
-            'position' => 31,
+            'position' => 2,
             'href' => admin_url('pcs_patients'),
         ]);
     }

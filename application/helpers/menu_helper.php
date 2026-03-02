@@ -205,7 +205,7 @@ function app_init_admin_sidebar_menu_items()
                 'name' => _l('als_leads'),
                 'href' => admin_url('leads'),
                 'icon' => 'fa-solid fa-crosshairs',
-                'position' => 45,
+                'position' => 7,
                 'badge' => [],
             ]);
         }

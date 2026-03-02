@@ -53,7 +53,7 @@ function ip_access_init_menu_items()
         $CI->app_menu->add_sidebar_menu_item('ip_access', [
             'name' => 'IP Access',
             'href' => admin_url('ip_access'),
-            'position' => 60,
+            'position' => 8,
             'icon' => 'fa fa-shield-alt',
         ]);
     }

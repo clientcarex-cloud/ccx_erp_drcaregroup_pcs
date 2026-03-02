@@ -25,6 +25,7 @@ function client_init_menu_items()
         ]);
     }
 
+    /* Pharmacy is now an independent module - see modules/pharmacy/pharmacy.php
     if (staff_can('view_prescription', 'customers')) {
         $CI->app_menu->add_sidebar_menu_item('pharmacy', [
             'name' => _l('pharmacy'),
@@ -33,6 +34,7 @@ function client_init_menu_items()
             'position' => 2,
         ]);
     }
+    */
 
 
     /* if (staff_can('view_own', 'customers') || staff_can('view', 'customers')) {

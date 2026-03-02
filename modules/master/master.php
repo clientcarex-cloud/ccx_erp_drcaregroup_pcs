@@ -35,7 +35,7 @@ function master_init_menu_items()
 			'name' => _l('master'),
 			'icon' => 'fa fa-plus',
 			//'href'     => admin_url('master'),
-			'position' => 10,
+			'position' => 9,
 		]);
 
 		$CI->app_menu->add_sidebar_children_item('master', [

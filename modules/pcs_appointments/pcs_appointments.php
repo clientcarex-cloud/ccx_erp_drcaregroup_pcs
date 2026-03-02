@@ -41,7 +41,7 @@ function pcs_appointments_module_init_menu_items()
         $CI->app_menu->add_sidebar_menu_item('pcs_appointments', [
             'name' => _l('pcs_appointments'),
             'icon' => 'fa fa-calendar',
-            'position' => 32,
+            'position' => 3,
             'href' => admin_url('pcs_appointments'),
         ]);
     }

@@ -44,7 +44,7 @@ function mis_reports_module_init_menu_items()
 		$CI->app_menu->add_sidebar_menu_item('mis_reports', [
 			'name' => _l('mis_reports'),
 			'icon' => 'fa fa-chart-line',
-			'position' => 31,
+			'position' => 5,
 			'href' => admin_url('mis_reports/reports/mis_reports'),
 		]);
 	}

@@ -41,7 +41,7 @@ function pharmacy_module_init_menu_items()
         $CI->app_menu->add_sidebar_menu_item('pharmacy', [
             'name' => _l('pharmacy'),
             'icon' => 'fa fa-medkit',
-            'position' => 33,
+            'position' => 4,
             'href' => admin_url('pharmacy'),
         ]);
     }
