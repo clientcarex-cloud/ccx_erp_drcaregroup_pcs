@@ -5,6 +5,11 @@
         --tw-bg-opacity: 1 !important;
     }
 </style>
+<?php
+if (isset($master_data) && $master_data) {
+    extract($master_data);
+}
+?>
 <div id="wrapper">
     <div class="content">
         <div class="row">
@@ -31,7 +36,7 @@
 
                         <hr class="hr-panel-heading" />
 
-                        <!-- ===== Filter Row ===== -->
+                        <!-- ===== Filter Row (same as client/patients_list) ===== -->
                         <div class="row align-items-end">
                             <?php
                             $branchOptions = $branch ?? [];
@@ -48,7 +53,7 @@
                                     $branchOptions,
                                     ['id', 'name'],
                                     _l('branch') . '*',
-                                    isset($selected_branch_id) && !empty($selected_branch_id) ? $selected_branch_id : [],
+                                    isset($selected_branch_id) && !empty($selected_branch_id) ? $selected_branch_id : (isset($current_branch_id) ? [$current_branch_id] : []),
                                     [
                                         'id' => 'branch_id',
                                         'multiple' => 'true',
@@ -56,6 +61,7 @@
                                         'data-selected-text-format' => 'count > 2',
                                         'data-live-search' => 'true',
                                         'data-none-selected-text' => _l('dropdown_non_selected_tex'),
+                                        'required' => 'required'
                                     ],
                                     [],
                                     '',
@@ -114,9 +120,13 @@
 
     function getSelectedBranchValues() {
         const raw = $(BRANCH_SELECT_ID).val();
-        if (!raw) return [];
+        if (!raw) {
+            return [];
+        }
         if (Array.isArray(raw)) {
-            return raw.filter(function (v) { return v !== null && v !== undefined && v !== ''; });
+            return raw.filter(function (value) {
+                return value !== null && value !== undefined && value !== '';
+            });
         }
         return raw ? [raw] : [];
     }
@@ -127,35 +137,50 @@
     }
 
     function buildPatientListUrl(from, to, branchParam) {
-        var safeFrom = from || '';
-        var safeTo   = to   || '';
-        var branch   = branchParam || '';
-        return '<?= admin_url("client/get_patient_list/null/") ?>' + safeFrom + '/' + safeTo + '/null/' + branch;
-    }
-
-    function loadPatientsTable() {
-        var from   = $('#from_date').val()   || '';
-        var to     = $('#to_date').val()     || '';
-        var branch = getSelectedBranchParam();
-        var url    = buildPatientListUrl(from, to, branch);
-
-        // Destroy existing table if any, then re-init with new URL
-        if ($.fn.DataTable.isDataTable('.table-patients')) {
-            $('.table-patients').DataTable().destroy();
-        }
-
-        initDataTable('.table-patients', url, [0], [0], 'undefined', [0, 'desc']);
+        const safeFrom = from || '';
+        const safeTo = to || '';
+        const branchSegment = branchParam || '';
+        return '<?= admin_url("client/get_patient_list/null/") ?>' + safeFrom + '/' + safeTo + '/null/' + branchSegment;
     }
 
     $(function () {
-        // Initial load with default branch + today's dates
-        loadPatientsTable();
+        var patientsTable = initDataTable('.table-patients', '<?= admin_url('client/get_patient_list'); ?>', [0], [0]);
+        if (!patientsTable || !patientsTable.on) {
+            patientsTable = $('.table-patients').DataTable();
+        }
 
-        // Search button → reload table with selected filters
-        $('#filterBtn').click(function () {
-            loadPatientsTable();
-        });
+        if (patientsTable && patientsTable.on) {
+            patientsTable.on('preXhr.dt', function (e, settings, data) {
+                data.branch_ids = getSelectedBranchParam();
+                data.from_date_filter = $('#from_date').val();
+                data.to_date_filter = $('#to_date').val();
+            });
+        }
+
+        const initialBranchParam = getSelectedBranchParam();
+        const initialListUrl = buildPatientListUrl('', '', initialBranchParam);
+        if ($.fn.DataTable.isDataTable('.table-patients')) {
+            var tableInstance = $('.table-patients').DataTable();
+            tableInstance.ajax.url(initialListUrl).load();
+        }
 
         $(BRANCH_SELECT_ID).selectpicker('refresh');
+    });
+</script>
+
+<script>
+    // Search / filter handler
+    $(document).ready(function () {
+        $('#filterBtn').click(function () {
+            const from = $('#from_date').val();
+            const to = $('#to_date').val();
+            const branchParam = getSelectedBranchParam();
+
+            if ($.fn.DataTable.isDataTable('.table-patients')) {
+                const dataUrl = buildPatientListUrl(from, to, branchParam);
+                var tableInstance = $('.table-patients').DataTable();
+                tableInstance.ajax.url(dataUrl).load();
+            }
+        });
     });
 </script>

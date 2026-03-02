@@ -50,6 +50,7 @@ class Pcs_patients extends AdminController
         $data['branch'] = $visible_branches;
         $data['selected_branch_id'] = !empty($staff_branch_ids) ? $staff_branch_ids : [];
         $data['accessible_branch_ids'] = $staff_branch_ids;
+        $data['current_branch_id'] = $this->current_branch_id;
 
         $this->load->view('patients_list', $data);
     }
