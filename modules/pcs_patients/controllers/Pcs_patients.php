@@ -27,7 +27,7 @@ class Pcs_patients extends AdminController
 
     /**
      * Dedicated AJAX endpoint for PCS patients DataTable.
-     * Bypasses staff branch restriction so ANY branch can be filtered.
+     * Mirrors the MIS reports pattern: reads branch[], dates from GET/POST.
      */
     public function table($id = null, $consulted_date = null, $consulted_to_date = null)
     {
@@ -39,29 +39,27 @@ class Pcs_patients extends AdminController
         $data['consulted_from_date'] = ($consulted_date && strtolower($consulted_date) !== 'null') ? $consulted_date : null;
         $data['consulted_to_date'] = ($consulted_to_date && strtolower($consulted_to_date) !== 'null') ? $consulted_to_date : null;
 
-        // Read branch_ids from POST (sent by preXhr.dt)
-        $branch_ids_raw = $this->input->post('branch_ids');
-        log_message('error', 'PCS_PATIENTS_DEBUG: raw branch_ids POST = ' . var_export($branch_ids_raw, true));
-
-        $branch_filter = [];
-        if ($branch_ids_raw) {
-            $parts = explode(',', (string) $branch_ids_raw);
-            foreach ($parts as $part) {
-                $part = trim($part);
-                if (is_numeric($part) && (int) $part > 0) {
-                    $branch_filter[] = (int) $part;
-                }
-            }
-            $branch_filter = array_values(array_unique($branch_filter));
+        // Read branch[] from GET query string (same as MIS reports)
+        $selected_branch_id = $this->input->get('branch');
+        if (!$selected_branch_id) {
+            $selected_branch_id = $this->input->post('branch');
         }
 
-        log_message('error', 'PCS_PATIENTS_DEBUG: branch_filter = ' . json_encode($branch_filter));
-        log_message('error', 'PCS_PATIENTS_DEBUG: consulted_from = ' . var_export($data['consulted_from_date'], true));
-        log_message('error', 'PCS_PATIENTS_DEBUG: consulted_to = ' . var_export($data['consulted_to_date'], true));
+        if (is_array($selected_branch_id)) {
+            $selected_branch_id = array_filter($selected_branch_id, fn($id) => is_numeric($id));
+            $selected_branch_id = array_map('intval', $selected_branch_id);
+        } elseif ($selected_branch_id) {
+            $selected_branch_id = urldecode($selected_branch_id);
+            $selected_branch_id = explode(',', $selected_branch_id);
+            $selected_branch_id = array_filter($selected_branch_id, fn($id) => is_numeric($id));
+            $selected_branch_id = array_map('intval', $selected_branch_id);
+        } else {
+            $selected_branch_id = [];
+        }
 
-        // Pass branch filter directly — NO staff restriction
-        $data['branch_filter_ids'] = $branch_filter;
-        $data['selected_branch_id'] = $branch_filter;
+        // Pass directly — NO staff restriction (same as MIS reports)
+        $data['selected_branch_id'] = $selected_branch_id;
+        $data['branch_filter_ids'] = $selected_branch_id;
         $data['accessible_branch_ids'] = []; // empty = no restriction
         $data['current_branch_id'] = '';
 

@@ -5,11 +5,6 @@
         --tw-bg-opacity: 1 !important;
     }
 </style>
-<?php
-if (isset($master_data) && $master_data) {
-    extract($master_data);
-}
-?>
 <div id="wrapper">
     <div class="content">
         <div class="row">
@@ -36,38 +31,25 @@ if (isset($master_data) && $master_data) {
 
                         <hr class="hr-panel-heading" />
 
-                        <!-- ===== Filter Row (same as client/patients_list) ===== -->
+                        <!-- ===== Filter Row (same pattern as MIS GT report) ===== -->
                         <div class="row align-items-end">
-                            <?php
-                            $branchOptions = $branch ?? [];
-                            if (!empty($accessible_branch_ids ?? [])) {
-                                $allowedIds = array_map('intval', (array) $accessible_branch_ids);
-                                $branchOptions = array_values(array_filter($branchOptions, static function ($branchItem) use ($allowedIds) {
-                                    return isset($branchItem['id']) && in_array((int) $branchItem['id'], $allowedIds, true);
-                                }));
-                            }
-                            ?>
                             <div class="col-md-3">
-                                <?= render_select(
-                                    'groupid[]',
-                                    $branchOptions,
-                                    ['id', 'name'],
-                                    _l('branch') . '*',
-                                    isset($selected_branch_id) && !empty($selected_branch_id) ? $selected_branch_id : (isset($current_branch_id) ? [$current_branch_id] : []),
+                                <?php
+                                $selected_branches = [];
+                                echo render_select(
+                                    'branch[]',
+                                    $branch ?? [],
+                                    ['id', ['name']],
+                                    '<span style="color:red;">*</span> ' . _l('branch'),
+                                    $selected_branches,
                                     [
-                                        'id' => 'branch_id',
-                                        'multiple' => 'true',
-                                        'data-actions-box' => 'true',
-                                        'data-selected-text-format' => 'count > 2',
-                                        'data-live-search' => 'true',
+                                        'multiple' => true,
+                                        'data-actions-box' => true,
                                         'data-none-selected-text' => _l('dropdown_non_selected_tex'),
                                         'required' => 'required'
-                                    ],
-                                    [],
-                                    '',
-                                    '',
-                                    true
-                                ) ?>
+                                    ]
+                                );
+                                ?>
                             </div>
                             <div class="col-md-3">
                                 <label><?= _l('from_date'); ?></label>
@@ -116,57 +98,31 @@ if (isset($master_data) && $master_data) {
 
 <?php init_tail(); ?>
 <script>
-    const BRANCH_SELECT_ID = '#branch_id';
-
-    function getSelectedBranchValues() {
-        const raw = $(BRANCH_SELECT_ID).val();
-        if (!raw) {
-            return [];
-        }
-        if (Array.isArray(raw)) {
-            return raw.filter(function (value) {
-                return value !== null && value !== undefined && value !== '';
-            });
-        }
-        return raw ? [raw] : [];
-    }
-
-    function getSelectedBranchParam() {
-        const values = getSelectedBranchValues();
-        return values.length ? values.join(',') : '';
-    }
-
-    function buildPcsTableUrl(from, to) {
-        const safeFrom = from || '';
-        const safeTo = to || '';
-        return '<?= admin_url("pcs_patients/table/null/") ?>' + safeFrom + '/' + safeTo;
-    }
-
     $(function () {
-        // Initial load — no date filter, no branch filter
-        var patientsTable = initDataTable('.table-patients', '<?= admin_url("pcs_patients/table"); ?>', [0], [0]);
-        if (!patientsTable || !patientsTable.on) {
-            patientsTable = $('.table-patients').DataTable();
-        }
+        var pcsTableInitialized = false;
+        var BASE_URL = '<?= admin_url("pcs_patients/table/null/") ?>';
 
-        // Send branch_ids via POST with every DataTable AJAX request
-        if (patientsTable && patientsTable.on) {
-            patientsTable.on('preXhr.dt', function (e, settings, data) {
-                data.branch_ids = getSelectedBranchParam();
-            });
-        }
-
-        $(BRANCH_SELECT_ID).selectpicker('refresh');
-
-        // Search button → reload table with selected filters
         $('#filterBtn').click(function () {
-            const from = $('#from_date').val();
-            const to = $('#to_date').val();
+            var branches = $('[name="branch[]"]').val();
+            if (!branches || branches.length === 0) {
+                alert_float('warning', 'Please select at least one branch.');
+                return;
+            }
 
-            if ($.fn.DataTable.isDataTable('.table-patients')) {
-                const dataUrl = buildPcsTableUrl(from, to);
-                var tableInstance = $('.table-patients').DataTable();
-                tableInstance.ajax.url(dataUrl).load();
+            var from = $('#from_date').val();
+            var to = $('#to_date').val();
+            var branchParam = branches.map(function (b) {
+                return 'branch[]=' + encodeURIComponent(b);
+            }).join('&');
+
+            var ajaxUrl = BASE_URL + from + '/' + to + '?' + branchParam;
+            var tableSelector = '.table-patients';
+
+            if (pcsTableInitialized && $.fn.DataTable.isDataTable(tableSelector)) {
+                $(tableSelector).DataTable().ajax.url(ajaxUrl).load();
+            } else {
+                initDataTable(tableSelector, ajaxUrl, [0], [0]);
+                pcsTableInitialized = true;
             }
         });
     });
