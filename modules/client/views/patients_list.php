@@ -209,7 +209,6 @@ if ($master_data) {
                                     _l('treatment'),
                                     _l('assigned_doctor'),
                                     _l('source'),
-                                    _l('branch'),
                                     _l('last_calling_date'),
                                     _l('next_calling_date'),
                                     _l('current_status'),
@@ -358,7 +357,7 @@ if ($master_data) {
                                     <br>
 
                                     <?= render_datatable([
-                                                _l('patient_name'),
+                                        _l('patient_name'),
                                         _l('patient_mobile'),
                                         _l('assigned_doctor'),
                                         _l('appointment_date'),
@@ -368,7 +367,7 @@ if ($master_data) {
                                         _l('appointment_type'),
                                         _l('branch'),
                                         _l('registration_end_date'),
-                                            _l('consultation_fee'),
+                                        _l('consultation_fee'),
                                         _l('payment_status'),
                                         _l('action'),
                                     ], 'appointments'); ?>
@@ -482,12 +481,12 @@ if ($master_data) {
 
     $(function () {
         <?php if (isset($clientid) && $clientid): ?>
-                    $('#client-model-auto').modal({
+            $('#client-model-auto').modal({
                 backdrop: 'static',
                 keyboard: false
             });
         <?php else: ?>
-                var patientsTable = initDataTable('.table-patients', '<?= admin_url('client/get_patient_list'); ?>', [0], [0]);
+            var patientsTable = initDataTable('.table-patients', '<?= admin_url('client/get_patient_list'); ?>', [0], [0]);
             if (!patientsTable || !patientsTable.on) {
                 patientsTable = $('.table-patients').DataTable();
             }

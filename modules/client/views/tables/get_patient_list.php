@@ -29,7 +29,6 @@ $columns = [
     null,
     null,
     'patient_source_name',
-    'branch_names',
     null,
     null,
     null,
@@ -524,7 +523,6 @@ foreach ($results as $row) {
     $dataRow[] = isset($doctorMap[$row['userid']]) ? $doctorMap[$row['userid']]['name'] : '-';
 
     $dataRow[] = $row['patient_source_name'];
-    $dataRow[] = !empty($row['branch_names']) ? e($row['branch_names']) : '-';
     $dataRow[] = $callLog['last_calling_date'];
     $dataRow[] = $callLog['next_calling_date'];
     $dataRow[] = $statusLabel;
