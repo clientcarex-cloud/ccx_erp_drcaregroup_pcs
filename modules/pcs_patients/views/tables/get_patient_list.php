@@ -19,10 +19,10 @@ $order_dir = $incoming_order_dir === 'asc' ? 'asc' : 'desc';
 $summary_filter = $CI->input->get('summary_filter');
 
 // Map DataTable columns to actual SQL columns/aliases (null means fallback to default)
-// NOTE: No branch column in this independent version
 $columns = [
     'c.userid',
     'c.company',
+    'branch.name',
     'new.mr_no',
     'new.age',
     'new.gender',
@@ -93,6 +93,8 @@ $totalQuery->reset_query();
 $totalQuery->select('COUNT(DISTINCT c.userid) as total');
 $totalQuery->from(db_prefix() . 'clients c');
 $totalQuery->join(db_prefix() . 'clients_new_fields new', 'new.userid = c.userid', 'left');
+$totalQuery->join(db_prefix() . 'customer_groups cc', 'cc.customer_id = c.userid', 'left');
+$totalQuery->join(db_prefix() . 'customers_groups branch', 'branch.id = cc.groupid', 'left');
 
 if ($from_date && $to_date && $summary_filter != 'not_registered') {
     $totalQuery->where("DATE(new.registration_start_date) BETWEEN '$from_date' AND '$to_date'");
@@ -108,6 +110,8 @@ $filterQuery->select('COUNT(DISTINCT c.userid) as total');
 $filterQuery->from(db_prefix() . 'clients c');
 $filterQuery->join(db_prefix() . 'clients_new_fields new', 'new.userid = c.userid', 'left');
 $filterQuery->join(db_prefix() . 'leads_sources source', 'source.id = new.patient_source_id', 'left');
+$filterQuery->join(db_prefix() . 'customer_groups cc', 'cc.customer_id = c.userid', 'left');
+$filterQuery->join(db_prefix() . 'customers_groups branch', 'branch.id = cc.groupid', 'left');
 
 if ($from_date && $to_date && $summary_filter != 'not_registered') {
     $filterQuery->where("DATE(new.registration_start_date) BETWEEN '$from_date' AND '$to_date'");
@@ -120,6 +124,7 @@ if (!empty($search)) {
     $filterQuery->or_like('c.phonenumber', $search);
     $filterQuery->or_like('new.mr_no', $search);
     $filterQuery->or_like('new.alt_number1', $search);
+    $filterQuery->or_like('branch.name', $search);
     $filterQuery->group_end();
 }
 
@@ -128,10 +133,12 @@ $filteredRecords = $filterQuery->get()->row()->total;
 // ── Main data query ──
 $CI->db->reset_query();
 $CI->db->distinct();
-$CI->db->select('c.userid, c.company, c.phonenumber, c.datecreated, new.mr_no, new.age, new.gender, c.city, c.state, new.registration_start_date, new.registration_end_date, new.current_status, new.patient_status, source.name as patient_source_name');
+$CI->db->select('c.userid, c.company, c.phonenumber, c.datecreated, new.mr_no, new.age, new.gender, c.city, c.state, new.registration_start_date, new.registration_end_date, new.current_status, new.patient_status, source.name as patient_source_name, branch.name as branch_name');
 $CI->db->from(db_prefix() . 'clients c');
 $CI->db->join(db_prefix() . 'clients_new_fields new', 'new.userid = c.userid', 'left');
 $CI->db->join(db_prefix() . 'leads_sources source', 'source.id = new.patient_source_id', 'left');
+$CI->db->join(db_prefix() . 'customer_groups cc', 'cc.customer_id = c.userid', 'left');
+$CI->db->join(db_prefix() . 'customers_groups branch', 'branch.id = cc.groupid', 'left');
 
 if ($from_date && $to_date && $summary_filter != 'not_registered') {
     $CI->db->where("DATE(new.registration_start_date) BETWEEN '$from_date' AND '$to_date'");
@@ -143,6 +150,7 @@ if (!empty($search)) {
     $CI->db->or_like('c.phonenumber', $search);
     $CI->db->or_like('new.mr_no', $search);
     $CI->db->or_like('new.alt_number1', $search);
+    $CI->db->or_like('branch.name', $search);
     $CI->db->group_end();
 }
 $CI->db->order_by($order_column, $order_dir);
@@ -290,9 +298,10 @@ foreach ($results as $row) {
         $currentStatusLabel = '<span class="lead-status-' . $id . ' label" style="color:' . $color . ';border:1px solid ' . adjust_hex_brightness($color, 0.4) . ';background:' . adjust_hex_brightness($color, 0.04) . ';">' . e($currentStatusName) . '</span>';
     }
 
-    // 16 columns — NO branch column
+    // 17 columns — with branch column
     $dataRow[] = $i++;
     $dataRow[] = $company;
+    $dataRow[] = !empty($row['branch_name']) ? e($row['branch_name']) : '-';
     $dataRow[] = !empty($row['mr_no']) ? e($row['mr_no']) : '-';
     $dataRow[] = $row['age'];
     $dataRow[] = $row['gender'];
