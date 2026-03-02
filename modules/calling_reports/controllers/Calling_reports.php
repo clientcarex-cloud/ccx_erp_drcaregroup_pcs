@@ -7,9 +7,10 @@ class Calling_reports extends AdminController
     {
         parent::__construct();
         $this->load->model('client/client_model');
-        $this->load->model('master/master_model');
-        $this->load->model('client/leads_model');
+        $this->load->model('client/master_model');
+        $this->load->model('leads_model');
         $this->load->model('client/doctor_model');
+        $this->load->helper('custom');
     }
 
     public function index()
@@ -54,7 +55,7 @@ class Calling_reports extends AdminController
             }
         }
         if ($id) {
-            $this->load->model('client/leads_model');
+            $this->load->model('leads_model');
             $this->load->model('currencies_model');
             $this->load->model('taxes_model');
             $this->load->model('invoice_items_model');
