@@ -41,6 +41,8 @@ class Pcs_patients extends AdminController
 
         // Read branch_ids from POST (sent by preXhr.dt)
         $branch_ids_raw = $this->input->post('branch_ids');
+        log_message('error', 'PCS_PATIENTS_DEBUG: raw branch_ids POST = ' . var_export($branch_ids_raw, true));
+
         $branch_filter = [];
         if ($branch_ids_raw) {
             $parts = explode(',', (string) $branch_ids_raw);
@@ -52,6 +54,10 @@ class Pcs_patients extends AdminController
             }
             $branch_filter = array_values(array_unique($branch_filter));
         }
+
+        log_message('error', 'PCS_PATIENTS_DEBUG: branch_filter = ' . json_encode($branch_filter));
+        log_message('error', 'PCS_PATIENTS_DEBUG: consulted_from = ' . var_export($data['consulted_from_date'], true));
+        log_message('error', 'PCS_PATIENTS_DEBUG: consulted_to = ' . var_export($data['consulted_to_date'], true));
 
         // Pass branch filter directly — NO staff restriction
         $data['branch_filter_ids'] = $branch_filter;
