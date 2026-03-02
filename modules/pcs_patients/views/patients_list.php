@@ -117,19 +117,9 @@
         return values.length ? values.join(',') : '';
     }
 
-    function buildPatientListUrl(from, to, branchParam) {
-        const safeFrom = from || 'null';
-        const safeTo = to || 'null';
-        const branchSegment = branchParam || 'null';
-        return '<?= admin_url("client/get_patient_list/null/") ?>' + safeFrom + '/' + safeTo + '/null/' + branchSegment;
-    }
-
     $(function () {
-        // Build initial URL with branch (using 'null' placeholders for empty dates)
-        var initialBranchParam = getSelectedBranchParam();
-        var initialUrl = buildPatientListUrl('null', 'null', initialBranchParam);
-
-        var patientsTable = initDataTable('.table-patients', initialUrl, [0], [0], 'undefined', [0, 'desc']);
+        // Init DataTable with plain URL (no date/branch segments)
+        var patientsTable = initDataTable('.table-patients', '<?= admin_url("client/get_patient_list"); ?>', [0], [0], 'undefined', [0, 'desc']);
         if (!patientsTable || !patientsTable.on) {
             patientsTable = $('.table-patients').DataTable();
         }
@@ -141,16 +131,17 @@
             });
         }
 
-        // Search / Filter button
+        // Search / Filter button — uses URL segments with real dates + branch
         $('#filterBtn').click(function () {
             var from = $('#from_date').val();
             var to = $('#to_date').val();
-            var branchParam = getSelectedBranchParam();
+            var branchParam = getSelectedBranchParam() || 'null';
+
+            var url = '<?= admin_url("client/get_patient_list/null/") ?>' + from + '/' + to + '/null/' + branchParam;
 
             if ($.fn.DataTable.isDataTable('.table-patients')) {
-                var dataUrl = buildPatientListUrl(from, to, branchParam);
                 var tableInstance = $('.table-patients').DataTable();
-                tableInstance.ajax.url(dataUrl).load();
+                tableInstance.ajax.url(url).load();
             }
         });
 
