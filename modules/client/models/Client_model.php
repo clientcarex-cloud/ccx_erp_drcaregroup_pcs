@@ -2353,6 +2353,7 @@ class Client_model extends App_Model
 		//}
 
 		if ($this->db->trans_status() === false) {
+			log_activity('save_client: Transaction FAILED - rolling back. client_id: ' . ($client_id ?? 'null'));
 			$this->db->trans_rollback();
 			if ($lockAcquired) {
 				$this->db->query('SELECT RELEASE_LOCK(?)', [$lockKey]);
@@ -2363,7 +2364,10 @@ class Client_model extends App_Model
 		$this->db->trans_commit();
 
 		if ($shouldGenerateMr && $client_id) {
+			log_activity('save_client: Calling generate_mr_no for client_id: ' . $client_id . ', shouldGenerateMr: ' . ($shouldGenerateMr ? 'true' : 'false'));
 			$this->generate_mr_no($client_id);
+		} else {
+			log_activity('save_client: Skipped generate_mr_no. client_id: ' . ($client_id ?? 'null') . ', shouldGenerateMr: ' . ($shouldGenerateMr ? 'true' : 'false'));
 		}
 
 		if ($lockAcquired) {
@@ -4769,31 +4773,40 @@ class Client_model extends App_Model
 	{
 		$userid = (int) $userid;
 		if ($userid <= 0) {
+			log_activity('generate_mr_no: Invalid userid: ' . $userid);
 			return false;
 		}
 
-		$currentRecord = $this->db->get_where(db_prefix() . 'clients_new_fields', ['userid' => $userid])->row();
+		// Check if clients_new_fields record exists
+		$currentRecord = $this->db->query(
+			'SELECT mr_no FROM ' . db_prefix() . 'clients_new_fields WHERE userid = ? LIMIT 1',
+			[$userid]
+		)->row();
+
 		if (!$currentRecord) {
+			log_activity('generate_mr_no: No clients_new_fields record for userid: ' . $userid);
 			return false;
 		}
 
+		// If MR No already exists, return it
 		if (!empty($currentRecord->mr_no)) {
 			return $currentRecord->mr_no;
 		}
 
 		// --- Determine branch code from tblcustomers_groups.name ---
-		// Branch names are stored as "AM1-Jubilee Hills", "AM10-Mumbai", etc.
+		// Branch names are stored as "AM1-Jubilee Hills", "C60 - Dr Care Eco Clinic", etc.
 		// We extract the text before the first "-" as the branch code.
 		$branchCode = 'MR'; // fallback if no branch found
 
-		$branchRow = $this->db->select('cgs.name')
-			->from(db_prefix() . 'customer_groups cg')
-			->join(db_prefix() . 'customers_groups cgs', 'cgs.id = cg.groupid', 'left')
-			->where('cg.customer_id', $userid)
-			->order_by('cg.id', 'DESC')
-			->limit(1)
-			->get()
-			->row();
+		$branchRow = $this->db->query(
+			'SELECT cgs.name
+			 FROM ' . db_prefix() . 'customer_groups cg
+			 LEFT JOIN ' . db_prefix() . 'customers_groups cgs ON cgs.id = cg.groupid
+			 WHERE cg.customer_id = ?
+			 ORDER BY cg.id DESC
+			 LIMIT 1',
+			[$userid]
+		)->row();
 
 		if ($branchRow && !empty($branchRow->name)) {
 			$parts = explode('-', $branchRow->name, 2);
@@ -4811,10 +4824,12 @@ class Client_model extends App_Model
 			$mr_no = $branchCode . '-' . date('YmdHis');
 
 			// Check if this MR No already exists (same-second collision)
-			$exists = $this->db->where('mr_no', $mr_no)
-				->count_all_results(db_prefix() . 'clients_new_fields');
+			$exists = $this->db->query(
+				'SELECT COUNT(*) AS cnt FROM ' . db_prefix() . 'clients_new_fields WHERE mr_no = ?',
+				[$mr_no]
+			)->row();
 
-			if ($exists == 0) {
+			if (!$exists || (int) $exists->cnt === 0) {
 				break;
 			}
 
@@ -4824,23 +4839,23 @@ class Client_model extends App_Model
 			}
 		}
 
-		// Update the record with the generated MR No
-		$this->db->where('userid', $userid);
-		$this->db->group_start();
-		$this->db->where('mr_no', '');
-		$this->db->or_where('mr_no IS NULL', null, false);
-		$this->db->group_end();
-		$this->db->set('mr_no', $mr_no);
-		$this->db->update(db_prefix() . 'clients_new_fields');
+		// Update the record with the generated MR No (only if currently empty/null)
+		$this->db->query(
+			'UPDATE ' . db_prefix() . 'clients_new_fields SET mr_no = ? WHERE userid = ? AND (mr_no IS NULL OR mr_no = ?)',
+			[$mr_no, $userid, '']
+		);
 
-		// Double-check in case another process populated the value simultaneously.
-		$latestRecord = $this->db->select('mr_no')
-			->from(db_prefix() . 'clients_new_fields')
-			->where('userid', $userid)
-			->get()
-			->row();
+		// Verify the update
+		$latestRecord = $this->db->query(
+			'SELECT mr_no FROM ' . db_prefix() . 'clients_new_fields WHERE userid = ? LIMIT 1',
+			[$userid]
+		)->row();
 
-		return $latestRecord && !empty($latestRecord->mr_no) ? $latestRecord->mr_no : $mr_no;
+		$finalMrNo = ($latestRecord && !empty($latestRecord->mr_no)) ? $latestRecord->mr_no : $mr_no;
+
+		log_activity('generate_mr_no: Generated MR No [' . $finalMrNo . '] for userid: ' . $userid);
+
+		return $finalMrNo;
 	}
 
 	public function register_patient($userid, $invoiceId = NULL, $treatment_followup_date = NULL)
