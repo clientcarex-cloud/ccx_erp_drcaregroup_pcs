@@ -4779,7 +4779,7 @@ class Client_model extends App_Model
 
 		// Check if clients_new_fields record exists
 		$currentRecord = $this->db->query(
-			'SELECT mr_no FROM ' . db_prefix() . 'clients_new_fields WHERE userid = ? LIMIT 1',
+			'SELECT mr_no, TRIM(COALESCE(mr_no, \'\')) as trimmed_mr FROM ' . db_prefix() . 'clients_new_fields WHERE userid = ? LIMIT 1',
 			[$userid]
 		)->row();
 
@@ -4788,10 +4788,14 @@ class Client_model extends App_Model
 			return false;
 		}
 
-		// If MR No already exists, return it
-		if (!empty($currentRecord->mr_no)) {
-			return $currentRecord->mr_no;
+		// If MR No already exists and is non-empty, return it
+		$existingMr = trim((string) $currentRecord->trimmed_mr);
+		if ($existingMr !== '' && $existingMr !== '0') {
+			log_activity('generate_mr_no: MR No already exists [' . $existingMr . '] for userid: ' . $userid);
+			return $existingMr;
 		}
+
+		log_activity('generate_mr_no: mr_no is empty for userid: ' . $userid . ', raw value: [' . var_export($currentRecord->mr_no, true) . ']');
 
 		// --- Determine branch code from tblcustomers_groups.name ---
 		// Branch names are stored as "AM1-Jubilee Hills", "C60 - Dr Care Eco Clinic", etc.
@@ -4814,6 +4818,9 @@ class Client_model extends App_Model
 			if ($code !== '') {
 				$branchCode = $code;
 			}
+			log_activity('generate_mr_no: Found branch [' . $branchRow->name . '], extracted code [' . $branchCode . '] for userid: ' . $userid);
+		} else {
+			log_activity('generate_mr_no: No branch found for userid: ' . $userid . ', using fallback [MR]');
 		}
 
 		// --- Generate MR No in format: BRANCHCODE-YYYYMMDDHHMMSS ---
@@ -4839,11 +4846,14 @@ class Client_model extends App_Model
 			}
 		}
 
-		// Update the record with the generated MR No (only if currently empty/null)
+		// Force update the record with the generated MR No
 		$this->db->query(
-			'UPDATE ' . db_prefix() . 'clients_new_fields SET mr_no = ? WHERE userid = ? AND (mr_no IS NULL OR mr_no = ?)',
-			[$mr_no, $userid, '']
+			'UPDATE ' . db_prefix() . 'clients_new_fields SET mr_no = ? WHERE userid = ?',
+			[$mr_no, $userid]
 		);
+
+		$affectedRows = $this->db->affected_rows();
+		log_activity('generate_mr_no: UPDATE affected ' . $affectedRows . ' rows. Set mr_no=[' . $mr_no . '] for userid: ' . $userid);
 
 		// Verify the update
 		$latestRecord = $this->db->query(
@@ -4853,7 +4863,7 @@ class Client_model extends App_Model
 
 		$finalMrNo = ($latestRecord && !empty($latestRecord->mr_no)) ? $latestRecord->mr_no : $mr_no;
 
-		log_activity('generate_mr_no: Generated MR No [' . $finalMrNo . '] for userid: ' . $userid);
+		log_activity('generate_mr_no: Final MR No [' . $finalMrNo . '] for userid: ' . $userid);
 
 		return $finalMrNo;
 	}
