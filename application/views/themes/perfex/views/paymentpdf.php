@@ -40,7 +40,7 @@ $pdf->SetFont($font_name, 'B', 12);
 $pdf->SetTextColor(50, 50, 50);
 
 // Assuming 'TEST BRANCH' is a dynamic value, possibly from invoice_data or a branch config
-$branch_name = get_option('invoice_company_name');
+$branch_name = 'Dr. AM Reddy Clinic';
 $pdf->Cell($branch_info_width, 0, $branch_name, 0, 1, 'R', 0, '', 0);
 
 $pdf->SetX($branch_info_x);
@@ -52,7 +52,7 @@ $format = get_option('company_info_format');
 $vat    = get_option('company_vat');
 
 // Use the provided format replacement logic
-$formatted_company_info = _info_format_replace('company_name', '<b style="color:black" class="company-name-formatted">' . get_option('invoice_company_name') . '</b>', $format);
+$formatted_company_info = _info_format_replace('company_name', '<b style="color:black" class="company-name-formatted">' . 'Dr. AM Reddy Clinic' . '</b>', $format);
 $formatted_company_info = _info_format_replace('address', get_option('invoice_company_address'), $formatted_company_info);
 $formatted_company_info = _info_format_replace('city', get_option('invoice_company_city'), $formatted_company_info);
 $formatted_company_info = _info_format_replace('state', get_option('company_state'), $formatted_company_info);
@@ -77,11 +77,11 @@ $full_branch_address_phone = $company_address_text;
 if (!empty($company_phone_text)) {
     // Check if the address already contains the phone to avoid duplication
     if (strpos($full_branch_address_phone, $company_phone_text) === false) {
-        $full_branch_address_phone .= "\n" . $company_phone_text . '(24X7)'; // Adding (24X7) as per image
+        $full_branch_address_phone .= "\n" . $company_phone_text;
     }
 } else {
     // If phone is not dynamic, use the hardcoded one from the image
-    $full_branch_address_phone .= "\n" . '+91-7671007000(24X7)';
+    $full_branch_address_phone .= "\n" . '+91-7671007000';
 }
 
 // Ensure proper line breaks for MultiCell
@@ -460,7 +460,7 @@ $pdf->Ln(3);
 // Dynamic footer address and contact (reusing variables or default values)
 $footer_address = 'Hyderabad, Telangana, India'; // Hardcoded as per image, assuming not dynamic from config
 $footer_contact_email = 'patientsupport@drcarehospitals.com'; // Hardcoded as per image
-$footer_contact_phone = '+91-7671007000(24X7)'; // Hardcoded as per image
+$footer_contact_phone = '+91-7671007000';
 
 $pdf->Cell($content_width, 0, $footer_address, 0, 1, 'C', 0, '', 0);
 $pdf->Cell($content_width, 0, 'Email:' . $footer_contact_email . ' Mobile: ' . $footer_contact_phone, 0, 1, 'C', 0, '', 0);
