@@ -184,6 +184,7 @@ class Client extends AdminController
 		$this->load->model('invoice_items_model');
 		$data['items'] = $this->invoice_items_model->get_grouped();
 
+		$data['patient_inactive_fields'] = $this->client_model->patient_inactive_fields();
 		$data['master_data'] = $this->load_master_data();
 		$data['title'] = 'Enquiry Form';
 		$data['current_branch_id'] = $this->current_branch_id;
