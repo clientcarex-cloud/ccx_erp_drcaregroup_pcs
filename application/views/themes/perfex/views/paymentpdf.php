@@ -30,7 +30,7 @@ if (get_option('company_logo_dark') != '' && file_exists($companyUploadPath . ge
 } elseif (get_option('company_logo') != '' && file_exists($companyUploadPath . get_option('company_logo'))) {
     $logo_url = $companyUploadPath . get_option('company_logo');
 }
-$logo_width = 30; // Adjusted width for the logo
+$logo_width = 45; // Adjusted width for the logo
 $hospital_name_x = $content_left_margin + $logo_width + 5; // X position for hospital name
 $hospital_name_width = 50; // Width for hospital name text
 
