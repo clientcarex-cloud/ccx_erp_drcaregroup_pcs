@@ -147,6 +147,10 @@
 							$mis_sections['Other Reports'][] = ['New GT Report (Master)', 'Branch-wise GT summary with NP visits, registrations, consultation fees & payments.', admin_url('mis_reports/reports/new_gt_report_master')];
 
 							$mis_sections['Other Reports'][] = ['New Renewal Report (Master)', 'Branch-wise renewal summary with active/inactive renewals & package amounts.', admin_url('mis_reports/reports/new_renewal_report_master')];
+
+							$mis_sections['Other Reports'][] = ['Date to Date Call Logs Feedback', 'Date-wise call logs feedback report.', admin_url('mis_reports/reports/date_to_date_call_logs_feedback')];
+
+							$mis_sections['Other Reports'][] = ['Date to Date Case Sheet Feedback', 'Date-wise case sheet feedback report.', admin_url('mis_reports/reports/date_to_date_case_sheet_feedback')];
 						}
 
 						if (staff_can('manager_reports', 'customers')) {
