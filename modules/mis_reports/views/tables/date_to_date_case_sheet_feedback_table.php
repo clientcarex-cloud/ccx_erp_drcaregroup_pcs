@@ -16,14 +16,14 @@ $order = $CI->input->post('order');
 $order_dir = 'desc';
 
 // ======================== Date range filter ========================
-$date_where = '';
+$from_date = null;
+$to_date = null;
 if (!empty($consulted_from_date) && !empty($consulted_to_date)) {
     $from_date = date('Y-m-d', strtotime($consulted_from_date));
     $to_date = date('Y-m-d', strtotime($consulted_to_date));
-    $date_where = " AND DATE(c.date) >= '{$from_date}' AND DATE(c.date) <= '{$to_date}'";
 } elseif (!empty($consulted_from_date)) {
     $from_date = date('Y-m-d', strtotime($consulted_from_date));
-    $date_where = " AND DATE(c.date) = '{$from_date}'";
+    $to_date = $from_date;
 }
 
 // ======================== COUNT TOTAL RECORDS ========================
@@ -34,8 +34,9 @@ $CI->db->join(db_prefix() . 'clients_new_fields new_fields', 'new_fields.userid 
 $CI->db->join(db_prefix() . 'patient_treatment t', 't.casesheet_id = c.id', 'left');
 $CI->db->join(db_prefix() . 'suggested_diagnostics sd', 'sd.suggested_diagnostics_id = t.suggested_diagnostics_id', 'left');
 
-if (!empty($date_where)) {
-    $CI->db->where($date_where);
+if ($from_date) {
+    $CI->db->where('DATE(c.date) >=', $from_date);
+    $CI->db->where('DATE(c.date) <=', $to_date);
 }
 
 if (!empty($search)) {
@@ -69,8 +70,9 @@ $CI->db->join(db_prefix() . 'clients_new_fields new_fields', 'new_fields.userid 
 $CI->db->join(db_prefix() . 'patient_treatment t', 't.casesheet_id = c.id', 'left');
 $CI->db->join(db_prefix() . 'suggested_diagnostics sd', 'sd.suggested_diagnostics_id = t.suggested_diagnostics_id', 'left');
 
-if (!empty($date_where)) {
-    $CI->db->where($date_where);
+if ($from_date) {
+    $CI->db->where('DATE(c.date) >=', $from_date);
+    $CI->db->where('DATE(c.date) <=', $to_date);
 }
 
 if (!empty($search)) {
