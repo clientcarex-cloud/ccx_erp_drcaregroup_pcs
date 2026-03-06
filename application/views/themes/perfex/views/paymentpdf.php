@@ -22,15 +22,25 @@ $header_y_start = 10; // Starting Y for the header
 $pdf->setY($header_y_start);
 $pdf->setX($content_left_margin);
 
-// Left side of header (Logo and Hospital Name)
-$logo_url = get_admin_header_logo_url();
-//$logo_url = 'http://localhost/uploads/company/59b9349a858cffc9c47d703c78fbfe2c.png';
+// Left side of header (Logo)
+$companyUploadPath = get_upload_path_by_type('company');
+$logo_url = '';
+if (get_option('company_logo_dark') != '' && file_exists($companyUploadPath . get_option('company_logo_dark'))) {
+    $logo_url = $companyUploadPath . get_option('company_logo_dark');
+} elseif (get_option('company_logo') != '' && file_exists($companyUploadPath . get_option('company_logo'))) {
+    $logo_url = $companyUploadPath . get_option('company_logo');
+}
 $logo_width = 30; // Adjusted width for the logo
 $hospital_name_x = $content_left_margin + $logo_width + 5; // X position for hospital name
 $hospital_name_width = 50; // Width for hospital name text
 
 // Add Logo
-$pdf->Image($logo_url, $content_left_margin, $header_y_start, $logo_width, '', 'PNG', '', 'T', false, 300, '', false, false, 0, false, false, false);
+if (!empty($logo_url)) {
+    $logo_ext = strtoupper(pathinfo($logo_url, PATHINFO_EXTENSION));
+    if ($logo_ext == 'JPG')
+        $logo_ext = 'JPEG';
+    $pdf->Image($logo_url, $content_left_margin, $header_y_start, $logo_width, '', $logo_ext, '', 'T', false, 300, '', false, false, 0, false, false, false);
+}
 
 // Right side of header (Branch Info - DYNAMIC)
 $branch_info_width = 75; // Adjusted width for branch info block
@@ -49,7 +59,7 @@ $pdf->SetFont($font_name, '', 10);
 // --- DYNAMIC BRANCH ADDRESS AND PHONE ---
 // Get company info format and replace placeholders
 $format = get_option('company_info_format');
-$vat    = get_option('company_vat');
+$vat = get_option('company_vat');
 
 // Use the provided format replacement logic
 $formatted_company_info = _info_format_replace('company_name', '<b style="color:black" class="company-name-formatted">' . 'Dr. AM Reddy Clinic' . '</b>', $format);
@@ -60,7 +70,7 @@ $formatted_company_info = _info_format_replace('zip_code', get_option('invoice_c
 $formatted_company_info = _info_format_replace('country_code', get_option('invoice_company_country_code'), $formatted_company_info);
 $formatted_company_info = _info_format_replace('phone', get_option('invoice_company_phonenumber'), $formatted_company_info);
 $formatted_company_info = _info_format_replace('vat_number', $vat, $formatted_company_info);
-$formatted_company_info = _info_format_replace('vat_number_with_label', $vat == '' ? '':_l('company_vat_number') . ': ' . $vat, $formatted_company_info);
+$formatted_company_info = _info_format_replace('vat_number_with_label', $vat == '' ? '' : _l('company_vat_number') . ': ' . $vat, $formatted_company_info);
 
 // Extract just the address and phone number
 // This is a heuristic and might need adjustment based on the actual format string.
@@ -113,7 +123,7 @@ $total_package = $payment->invoice_data->total;
 $current_transaction_id = $payment->transactionid; // from current receipt
 
 // Sort by date, then by payment ID
-usort($payments, function($a, $b) {
+usort($payments, function ($a, $b) {
     $dateCompare = strtotime($a['daterecorded']) <=> strtotime($b['daterecorded']);
     if ($dateCompare === 0) {
         return $a['id'] <=> $b['id']; // fallback: smaller ID is earlier
@@ -123,7 +133,7 @@ usort($payments, function($a, $b) {
 
 $total_package_paid = 0;
 foreach ($payments as $payment_data) {
-    $total_package_paid += (float)$payment_data['amount'];
+    $total_package_paid += (float) $payment_data['amount'];
 
     // Stop when we reach the current payment
     if ($payment_data['transactionid'] === $current_transaction_id) {
@@ -198,24 +208,24 @@ $pdf->SetFont($font_name, '', $font_size);
 $pdf->Cell(3, 0, ':', 0, 0, 'C');
 $pdf->Cell($value_width, 0, html_entity_decode($client_name), 0, 0, 'L');
 
-if($first_item_desc != "Consultation Fee"){
-	$pdf->SetX($content_left_margin + $label_width + 3 + $value_width + $gap_between_columns);
-	$pdf->SetFont($font_name, 'B', $font_size);
-	$pdf->Cell($label_width, 0, 'Registration ID', 0, 0, 'L');
-	$pdf->SetFont($font_name, '', $font_size);
-	$pdf->Cell(3, 0, ':', 0, 0, 'C');
-	$pdf->Cell($value_width, 0, $visit_id, 0, 1, 'L');
+if ($first_item_desc != "Consultation Fee") {
+    $pdf->SetX($content_left_margin + $label_width + 3 + $value_width + $gap_between_columns);
+    $pdf->SetFont($font_name, 'B', $font_size);
+    $pdf->Cell($label_width, 0, 'Registration ID', 0, 0, 'L');
+    $pdf->SetFont($font_name, '', $font_size);
+    $pdf->Cell(3, 0, ':', 0, 0, 'C');
+    $pdf->Cell($value_width, 0, $visit_id, 0, 1, 'L');
 
-	$pdf->Ln(3);
-}else{
-	$pdf->SetX($content_left_margin + $label_width + 3 + $value_width + $gap_between_columns);
-	$pdf->SetFont($font_name, 'B', $font_size);
-	//$pdf->Cell($label_width, 0, 'Registration ID', 0, 0, 'L');
-	$pdf->SetFont($font_name, '', $font_size);
-	//$pdf->Cell(3, 0, ':', 0, 0, 'C');
-	//$pdf->Cell($value_width, 0, $visit_id, 0, 1, 'L');
+    $pdf->Ln(3);
+} else {
+    $pdf->SetX($content_left_margin + $label_width + 3 + $value_width + $gap_between_columns);
+    $pdf->SetFont($font_name, 'B', $font_size);
+    //$pdf->Cell($label_width, 0, 'Registration ID', 0, 0, 'L');
+    $pdf->SetFont($font_name, '', $font_size);
+    //$pdf->Cell(3, 0, ':', 0, 0, 'C');
+    //$pdf->Cell($value_width, 0, $visit_id, 0, 1, 'L');
 
-	$pdf->Ln(8);
+    $pdf->Ln(8);
 }
 
 
@@ -235,22 +245,22 @@ $pdf->Cell($value_width, 0, $branch_name_patient_details, 0, 1, 'L');
 
 $pdf->Ln(3);
 
-if($first_item_desc != "Consultation Fee"){
-// Row 3: Reg Date & Reg End Date
-$pdf->SetFont($font_name, 'B', $font_size);
-$pdf->Cell($label_width, 0, 'Reg Date', 0, 0, 'L');
-$pdf->SetFont($font_name, '', $font_size);
-$pdf->Cell(3, 0, ':', 0, 0, 'C');
-$pdf->Cell($value_width, 0, _d($registration_start_date), 0, 0, 'L');
+if ($first_item_desc != "Consultation Fee") {
+    // Row 3: Reg Date & Reg End Date
+    $pdf->SetFont($font_name, 'B', $font_size);
+    $pdf->Cell($label_width, 0, 'Reg Date', 0, 0, 'L');
+    $pdf->SetFont($font_name, '', $font_size);
+    $pdf->Cell(3, 0, ':', 0, 0, 'C');
+    $pdf->Cell($value_width, 0, _d($registration_start_date), 0, 0, 'L');
 
-$pdf->SetX($content_left_margin + $label_width + 3 + $value_width + $gap_between_columns);
-$pdf->SetFont($font_name, 'B', $font_size);
-$pdf->Cell($label_width, 0, 'Reg End Date', 0, 0, 'L');
-$pdf->SetFont($font_name, '', $font_size);
-$pdf->Cell(3, 0, ':', 0, 0, 'C');
-$pdf->Cell($value_width, 0, _d($payment->invoice_data->duedate), 0, 1, 'L');
+    $pdf->SetX($content_left_margin + $label_width + 3 + $value_width + $gap_between_columns);
+    $pdf->SetFont($font_name, 'B', $font_size);
+    $pdf->Cell($label_width, 0, 'Reg End Date', 0, 0, 'L');
+    $pdf->SetFont($font_name, '', $font_size);
+    $pdf->Cell(3, 0, ':', 0, 0, 'C');
+    $pdf->Cell($value_width, 0, _d($payment->invoice_data->duedate), 0, 1, 'L');
 
-$pdf->Ln(3);
+    $pdf->Ln(3);
 }
 
 // Row 4: Package & Paid Amount
@@ -333,7 +343,7 @@ $pdf->Ln(1);
 // --- IN WORDS ---
 $amount_in_words_text = '';
 if (function_exists('numberToWords')) {
-	$amount = (int)$payment->amount;
+    $amount = (int) $payment->amount;
     $amount_in_words_text = numberToWords($amount);
     // Add currency suffix, assuming 'INR' for Rupees
     // You might need to map currency codes to their full names (e.g., 'INR' to 'Rupees')
@@ -392,12 +402,17 @@ $current_y_for_terms_box = $pdf->getY();
 //$pdf->SetX($content_left_margin);
 $x_position = 0; // Negative value for left adjustment
 $pdf->writeHTMLCell(
-    $content_width, 
-    '', 
+    $content_width,
+    '',
     $x_position,  // This is the X position parameter (3rd parameter)
-    $current_y_for_terms_box, 
-    $terms_html, 
-    0, 1, false, true, 'L', true
+    $current_y_for_terms_box,
+    $terms_html,
+    0,
+    1,
+    false,
+    true,
+    'L',
+    true
 );
 
 // Optionally, draw a light border around the terms for visual effect
@@ -421,7 +436,7 @@ if (isset($payment->received_by) && function_exists('get_staff_full_name')) {
     if ($staff) {
         $cashier_name = $staff;
         // If staff ID is stored in staff data
-         $cashier_id = isset($payment->received_by) ? $payment->received_by : 'N/A';
+        $cashier_id = isset($payment->received_by) ? $payment->received_by : 'N/A';
     }
 }
 $patient_mobile_display = 'Mobile: ' . $client_mobile; // From patient details above
