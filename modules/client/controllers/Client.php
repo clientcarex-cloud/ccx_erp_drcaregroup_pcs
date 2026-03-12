@@ -4195,6 +4195,32 @@ class Client extends AdminController
 	}
 
 
+	public function update_refunded_status()
+	{
+		if (!$this->input->is_ajax_request()) {
+			show_404();
+		}
+
+		$patient_id = $this->input->post('patient_id');
+		$is_refunded = $this->input->post('is_refunded');
+
+		if (!$patient_id || $is_refunded === null) {
+			echo json_encode(['success' => false, 'message' => 'Missing data']);
+			return;
+		}
+
+		$this->db->where('userid', $patient_id);
+		$this->db->update(db_prefix() . 'clients_new_fields', [
+			'is_refunded' => intval($is_refunded)
+		]);
+
+		if ($this->db->affected_rows() >= 0) {
+			echo json_encode(['success' => true]);
+		} else {
+			echo json_encode(['success' => false, 'message' => 'Failed to update']);
+		}
+	}
+
 	public function add_pincode()
 	{
 		$name = trim($this->input->post('pincode_name'));

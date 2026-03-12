@@ -1204,3 +1204,6 @@ $lang['inactive_renewals_done']  = 'Inactive Renewals Done';
 $lang['payment_category']  = 'Payment Category';
 $lang['gt_consult_fee_report']  = 'GT Consultation Fee Report';
 $lang['registered_end_date']  = 'Registration End Date';
+$lang['refunded_patient']  = 'Refunded Patient';
+$lang['mark_as_refunded']  = 'Mark as Refunded';
+$lang['remove_refunded']  = 'Remove Refunded';

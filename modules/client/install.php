@@ -829,6 +829,13 @@ function client_install()
 		');
 	}
 	
+	if (!$CI->db->field_exists('is_refunded', db_prefix() . 'clients_new_fields')) {
+		$CI->db->query('
+			ALTER TABLE `' . db_prefix() . 'clients_new_fields`
+			ADD COLUMN `is_refunded` TINYINT(1) NOT NULL DEFAULT 0 AFTER `complaint_migrate`
+		');
+	}
+
 	if (!$CI->db->field_exists('appointment_type_id', db_prefix() . 'estimates')) {
 		$CI->db->query('
 			ALTER TABLE `' . db_prefix() . 'estimates`
