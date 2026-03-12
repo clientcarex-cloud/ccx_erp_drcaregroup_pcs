@@ -5055,9 +5055,6 @@ class Client_model extends App_Model
 			$client_id = $data['clientid'];
 			$expirydate = $data['expirydate'];
 
-			// Always generate MR No when a package is added (idempotent - skips if already exists)
-			$this->generate_mr_no($client_id);
-
 			if ($paying_amount > 0) {
 				$data = array(
 					"registration_end_date" => $expirydate
