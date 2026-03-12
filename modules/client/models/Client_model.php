@@ -3021,6 +3021,23 @@ class Client_model extends App_Model
 
 				if ($this->input->post('doctor_id')) {
 
+					// Determine if this appointment type should generate an invoice
+					$invoice_yes_types = [
+						'First appointment', 'Renewal Appointment', 'Courier Appointment', 'Pre Renewal'
+					];
+					$invoice_yes_lower = array_map('strtolower', $invoice_yes_types);
+					$selected_type_id = $this->input->post('appointment_type_id');
+					$should_generate_invoice = false;
+					if (!empty($selected_type_id)) {
+						$selected_type = $this->db->get_where(db_prefix() . 'appointment_type',
+							['appointment_type_id' => $selected_type_id])->row();
+						if ($selected_type && in_array(strtolower($selected_type->appointment_type_name), $invoice_yes_lower)) {
+							$should_generate_invoice = true;
+						}
+					}
+
+					if ($should_generate_invoice) {
+
 					$this->load->model('invoices_model');
 
 					$year = date('Y');
@@ -3188,6 +3205,8 @@ class Client_model extends App_Model
 
 						$this->db->insert(db_prefix() . 'invoicepaymentrecords', $invoicepaymentrecords);
 					}
+
+					} // end if ($should_generate_invoice)
 
 				}
 

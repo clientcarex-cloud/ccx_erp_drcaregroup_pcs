@@ -3812,10 +3812,31 @@ if (staff_can('view_call_log', 'customers')) {
 <div class="col-md-3">
   <div class="form-group">
   <label><span style="color: #f00">*</span> <?= _l('appointment_type'); ?></label>
+      <?php
+      // Appointment types to HIDE from call log dropdown
+      $hidden_appointment_types = [
+          'Scheduled Follow up appointment', 'Renewal Appt', 'Enquiry',
+          'Doctor Talk Appt', 'Courier Appt', 'Renewal CPOT Appt',
+          'Renewal PPOT Appt', 'FE Appt', 'Cheque Bounce Appt',
+          'OB Appt', 'Senior Dr Appt', 'Cheque Stop Appt',
+          'REF Appt', 'IB Appt', 'Refund Appt',
+          'Reference PPOT Appt', 'FE CPOT Appt', 'Reference CPOT Appt'
+      ];
+      $hidden_lower = array_map('strtolower', $hidden_appointment_types);
+
+      // Appointment types that SHOULD generate invoice (YES)
+      $invoice_yes_types = [
+          'First appointment', 'Renewal Appointment', 'Courier Appointment', 'Pre Renewal'
+      ];
+      $invoice_yes_lower = array_map('strtolower', $invoice_yes_types);
+      ?>
       <select class="form-control selectpicker" name="appointment_type_id" id="appointment_type_id" data-live-search="true">
         <option value=""></option>
-        <?php foreach ($appointment_type as $app): ?>
-          <option value="<?= $app['appointment_type_id']; ?>"><?= $app['appointment_type_name']; ?></option>
+        <?php foreach ($appointment_type as $app):
+          if (in_array(strtolower($app['appointment_type_name']), $hidden_lower)) continue;
+          $generates_invoice = in_array(strtolower($app['appointment_type_name']), $invoice_yes_lower) ? '1' : '0';
+        ?>
+          <option value="<?= $app['appointment_type_id']; ?>" data-generates-invoice="<?= $generates_invoice; ?>"><?= $app['appointment_type_name']; ?></option>
         <?php endforeach; ?>
       </select>
   </div>
@@ -4035,6 +4056,33 @@ $(function () {
     toggleFieldsByResponse();
 
     $('#patient_response_id_1').on('change', toggleFieldsByResponse);
+
+    // Toggle payment section based on appointment type invoice flag
+    $('#appointment_type_id').on('change changed.bs.select', function () {
+        const selectedOption = $(this).find('option:selected');
+        const generatesInvoice = selectedOption.data('generates-invoice');
+        const response = $('#patient_response_id_1 option:selected').text().toLowerCase().trim();
+        const paymentSection = $('.appointment_payment_section');
+        const paymentAmount = $('#paying_amount_1');
+        const paymentMode = $('select[name="paymentmode"]');
+
+        if (generatesInvoice == '0') {
+            // NO-invoice type: hide payment section
+            paymentSection.hide();
+            paymentAmount.removeAttr('required').val('');
+            paymentMode.removeAttr('required').val('');
+            paymentMode.selectpicker && paymentMode.selectpicker('refresh');
+            $('#payment_amount_required_indicator').hide();
+            $('#payment_mode_required_indicator').hide();
+        } else if (response === 'paid appointment') {
+            // YES-invoice type + paid appointment: show payment section
+            paymentSection.show();
+            paymentAmount.attr('required', true);
+            paymentMode.attr('required', true);
+            $('#payment_amount_required_indicator').show();
+            $('#payment_mode_required_indicator').show();
+        }
+    });
 });
 </script>
 
