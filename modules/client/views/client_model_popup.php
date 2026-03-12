@@ -572,23 +572,20 @@
                 <div class="btn-group">
                   <button type="button" class="btn btn-sm dropdown-toggle <?= $is_refunded ? 'btn-danger' : 'btn-default' ?>" data-toggle="dropdown" id="refundedDropdownBtn">
                     <i class="fa fa-tag"></i>
-                    <?= $is_refunded ? _l('refunded_patient') : _l('refunded_patient') ?>
+                    <span id="refundedBtnLabel"><?= $is_refunded ? _l('refunded_patient') : 'Select' ?></span>
                     <span class="caret"></span>
                   </button>
                   <ul class="dropdown-menu dropdown-menu-right">
-                    <?php if ($is_refunded): ?>
-                      <li>
-                        <a href="javascript:void(0);" class="set-refunded-status" data-value="0">
-                          <i class="fa fa-times text-muted"></i> <?= _l('remove_refunded') ?>
-                        </a>
-                      </li>
-                    <?php else: ?>
-                      <li>
-                        <a href="javascript:void(0);" class="set-refunded-status" data-value="1">
-                          <i class="fa fa-check text-danger"></i> <?= _l('mark_as_refunded') ?>
-                        </a>
-                      </li>
-                    <?php endif; ?>
+                    <li>
+                      <a href="javascript:void(0);" class="set-refunded-status" data-value="1">
+                        <i class="fa fa-check text-danger"></i> <?= _l('mark_as_refunded') ?>
+                      </a>
+                    </li>
+                    <li>
+                      <a href="javascript:void(0);" class="set-refunded-status" data-value="0">
+                        <i class="fa fa-times text-muted"></i> <?= _l('remove_refunded') ?>
+                      </a>
+                    </li>
                   </ul>
                 </div>
 
@@ -604,16 +601,15 @@
                       var res = JSON.parse(response);
                       if (res.success) {
                         alert_float('success', value == 1 ? 'Patient marked as Refunded' : 'Refunded status removed');
-                        // Update button appearance
                         var $btn = $('#refundedDropdownBtn');
+                        var $label = $('#refundedBtnLabel');
                         if (value == 1) {
                           $btn.removeClass('btn-default').addClass('btn-danger');
+                          $label.text('<?= _l('refunded_patient') ?>');
                         } else {
                           $btn.removeClass('btn-danger').addClass('btn-default');
+                          $label.text('Select');
                         }
-                        // Update active states
-                        $('.set-refunded-status').closest('li').removeClass('active');
-                        $('.set-refunded-status[data-value="' + value + '"]').closest('li').addClass('active');
                       } else {
                         alert_float('danger', res.message || 'Failed to update status');
                       }
