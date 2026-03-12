@@ -4872,7 +4872,7 @@ class Client_model extends App_Model
 				$communication_data = array(
 					"branch_address" => $branch_address,
 				);
-				$this->patient_journey_log_event($client_id, 'patient_registered', 'Patient Registered', $communication_data);
+				$this->patient_journey_log_event($userid, 'patient_registered', 'Patient Registered', $communication_data);
 
 			}
 		}
@@ -5035,6 +5035,10 @@ class Client_model extends App_Model
 		if ($insert_id) {
 			$client_id = $data['clientid'];
 			$expirydate = $data['expirydate'];
+
+			// Always generate MR No when a package is added (idempotent - skips if already exists)
+			$this->generate_mr_no($client_id);
+
 			if ($paying_amount > 0) {
 				$data = array(
 					"registration_end_date" => $expirydate
@@ -5096,7 +5100,7 @@ class Client_model extends App_Model
 				);
 				$this->db->where(array("userid" => $client_id));
 				$this->db->update(db_prefix() . 'clients_new_fields', $data);
-				//$this->register_patient($clientid, $invoice_id);
+				$this->register_patient($clientid, $invoice_id);
 				$branch_address = get_option('invoice_company_address');
 				$communication_data = array(
 					"branch_address" => $branch_address,
