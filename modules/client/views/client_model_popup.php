@@ -576,16 +576,19 @@
                     <span class="caret"></span>
                   </button>
                   <ul class="dropdown-menu dropdown-menu-right">
-                    <li class="<?= $is_refunded ? '' : 'active' ?>">
-                      <a href="javascript:void(0);" class="set-refunded-status" data-value="0">
-                        <i class="fa fa-times text-muted"></i> <?= _l('remove_refunded') ?>
-                      </a>
-                    </li>
-                    <li class="<?= $is_refunded ? 'active' : '' ?>">
-                      <a href="javascript:void(0);" class="set-refunded-status" data-value="1">
-                        <i class="fa fa-check text-danger"></i> <?= _l('mark_as_refunded') ?>
-                      </a>
-                    </li>
+                    <?php if ($is_refunded): ?>
+                      <li>
+                        <a href="javascript:void(0);" class="set-refunded-status" data-value="0">
+                          <i class="fa fa-times text-muted"></i> <?= _l('remove_refunded') ?>
+                        </a>
+                      </li>
+                    <?php else: ?>
+                      <li>
+                        <a href="javascript:void(0);" class="set-refunded-status" data-value="1">
+                          <i class="fa fa-check text-danger"></i> <?= _l('mark_as_refunded') ?>
+                        </a>
+                      </li>
+                    <?php endif; ?>
                   </ul>
                 </div>
 
