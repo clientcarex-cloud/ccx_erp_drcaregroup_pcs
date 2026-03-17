@@ -13,7 +13,22 @@ class Mis_reports extends AdminController
         $this->load->model('client/master_model');
         $this->load->model('client/doctor_model');
         $this->load->model('client/staff_model');
-        $this->load->helper('client/custom'); // loads custom_helper.php from client module
+        $this->load->helper('client/custom');
+
+        // Self-healing: create tblreport_goals if missing
+        if (!$this->db->table_exists(db_prefix() . 'report_goals')) {
+            $this->db->query('CREATE TABLE `' . db_prefix() . 'report_goals` (
+                `id` INT(11) NOT NULL AUTO_INCREMENT,
+                `branch_id` INT(11) NOT NULL,
+                `year` INT(4) NOT NULL,
+                `month` INT(2) NOT NULL,
+                `goal_type` VARCHAR(50) NOT NULL,
+                `amount` DECIMAL(15,2) NOT NULL DEFAULT 0,
+                `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (`id`),
+                UNIQUE KEY `unique_goal` (`branch_id`, `year`, `month`, `goal_type`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8;');
+        }
     }
 
     public function index()
@@ -357,6 +372,86 @@ class Mis_reports extends AdminController
         ];
 
         echo json_encode($data);
+        exit;
+    }
+
+    /**
+     * Reports Goals settings page
+     */
+    public function report_goals()
+    {
+        if (!is_admin() && !staff_can('edit', 'mis_reports')) {
+            access_denied('MIS Reports');
+        }
+
+        $data['title'] = 'Reports Goals';
+        $data['branch'] = $this->client_model->get_branch();
+        $this->load->view('mis_reports/reports/report_goals', $data);
+    }
+
+    /**
+     * AJAX: save report goals
+     */
+    public function save_report_goals()
+    {
+        if (!$this->input->is_ajax_request()) {
+            show_404();
+        }
+        if (!is_admin() && !staff_can('edit', 'mis_reports')) {
+            echo json_encode(['success' => false, 'message' => 'Access denied']);
+            exit;
+        }
+
+        $goals = $this->input->post('goals');
+        if (!$goals || !is_array($goals)) {
+            echo json_encode(['success' => false, 'message' => 'No data received']);
+            exit;
+        }
+
+        $table = db_prefix() . 'report_goals';
+        foreach ($goals as $goal) {
+            $branch_id = (int) $goal['branch_id'];
+            $year      = (int) $goal['year'];
+            $month     = (int) $goal['month'];
+            $goal_type = $this->db->escape_str($goal['goal_type']);
+            $amount    = (float) $goal['amount'];
+
+            // Upsert: INSERT ... ON DUPLICATE KEY UPDATE
+            $this->db->query("
+                INSERT INTO `$table` (`branch_id`, `year`, `month`, `goal_type`, `amount`)
+                VALUES ($branch_id, $year, $month, '$goal_type', $amount)
+                ON DUPLICATE KEY UPDATE `amount` = $amount
+            ");
+        }
+
+        echo json_encode(['success' => true, 'message' => 'Goals saved successfully']);
+        exit;
+    }
+
+    /**
+     * AJAX: get report goals for a branch + year
+     */
+    public function get_report_goals()
+    {
+        if (!$this->input->is_ajax_request()) {
+            show_404();
+        }
+
+        $branch_id = (int) $this->input->get('branch_id');
+        $year      = (int) $this->input->get('year');
+
+        $this->db->where('branch_id', $branch_id);
+        $this->db->where('year', $year);
+        $results = $this->db->get(db_prefix() . 'report_goals')->result_array();
+
+        // Return keyed by "month_goaltype" for easy JS lookup
+        $goals = [];
+        foreach ($results as $row) {
+            $key = $row['month'] . '_' . $row['goal_type'];
+            $goals[$key] = (float) $row['amount'];
+        }
+
+        echo json_encode(['success' => true, 'goals' => $goals]);
         exit;
     }
 }

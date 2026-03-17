@@ -151,6 +151,8 @@
 							$mis_sections['Other Reports'][] = ['Date to Date Call Logs Feedback', 'Date-wise call logs feedback report.', admin_url('mis_reports/reports/date_to_date_call_logs_feedback')];
 
 							$mis_sections['Other Reports'][] = ['Date to Date Case Sheet Feedback', 'Date-wise case sheet feedback report.', admin_url('mis_reports/reports/date_to_date_case_sheet_feedback')];
+
+							$mis_sections['Other Reports'][] = ['Reports Goals', 'Set month-wise GT, Enquiry & Renewal goals per branch.', admin_url('mis_reports/report_goals')];
 						}
 
 						if (staff_can('manager_reports', 'customers')) {
