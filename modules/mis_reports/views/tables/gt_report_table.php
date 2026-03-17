@@ -280,7 +280,7 @@ $sql = "
 
     /* Renewal Paid: Visit Type = Renewal AND Payment > 0, sum Paid Amount */
     LEFT JOIN (
-        SELECT visit.branch_id, SUM(pay.amount) AS ren_paid
+        SELECT visit.branch_id, SUM(inv.total) AS ren_gt, SUM(pay.amount) AS ren_paid
         FROM (
             SELECT DISTINCT a.branch_id, a.userid
             FROM tblappointment a
