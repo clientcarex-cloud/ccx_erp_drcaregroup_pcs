@@ -55,6 +55,45 @@ $day_of_month = max(1, (int) (($effective_end - $from_ts) / 86400) + 1);
 // Total days in the selected range
 $total_days = max(1, (int) (($to_ts - $from_ts) / 86400) + 1);
 
+// ---- Fetch goals from tblreport_goals for the date range ----
+// Determine which months fall within the selected date range
+$from_year  = (int) date('Y', $from_ts);
+$from_month = (int) date('n', $from_ts);
+$to_year    = (int) date('Y', $to_ts);
+$to_month   = (int) date('n', $to_ts);
+
+$goals_lookup = []; // keyed by branch_id => ['gt_goal' => X, 'enquiry_goal' => X, 'renewal_goal' => X]
+$goals_table = db_prefix() . 'report_goals';
+
+// Build month/year conditions
+$month_conditions = [];
+$y = $from_year;
+$m = $from_month;
+while ($y < $to_year || ($y == $to_year && $m <= $to_month)) {
+    $month_conditions[] = "(g.year = $y AND g.month = $m)";
+    $m++;
+    if ($m > 12) { $m = 1; $y++; }
+}
+
+if (!empty($month_conditions)) {
+    $month_where = implode(' OR ', $month_conditions);
+    $goals_sql = "SELECT g.branch_id, g.goal_type, SUM(g.amount) AS total_amount
+                  FROM `$goals_table` g
+                  WHERE ($month_where)
+                  GROUP BY g.branch_id, g.goal_type";
+    $goals_result = $CI->db->query($goals_sql)->result_array();
+    foreach ($goals_result as $g) {
+        $bid  = (int) $g['branch_id'];
+        $type = $g['goal_type'];
+        if (!isset($goals_lookup[$bid])) {
+            $goals_lookup[$bid] = ['gt_goal' => 0, 'enquiry_goal' => 0, 'renewal_goal' => 0];
+        }
+        if (isset($goals_lookup[$bid][$type])) {
+            $goals_lookup[$bid][$type] = (float) $g['total_amount'];
+        }
+    }
+}
+
 // ---- Main Report SQL ----
 $sql = "
     SELECT
@@ -362,6 +401,8 @@ $output = [
 
 // Initialize totals array
 $totals = [
+  'gt_goal' => 0,
+  'enquiry_goal' => 0,
   'gt_achieved' => 0,
   'np_visits' => 0,
   'np_registration' => 0,
@@ -403,13 +444,14 @@ foreach ($result as $row) {
   $referral_due = (int) $row['referral_due'];
   $refund_amount = (int) $row['refund_amount'];
 
-  // Computed columns
-  $gt_goal = 0; // Placeholder — no goal data source yet
+  // Computed columns — fetch goals for this branch
+  $branch_goals = isset($goals_lookup[(int) $row['branch_id']]) ? $goals_lookup[(int) $row['branch_id']] : ['gt_goal' => 0, 'enquiry_goal' => 0, 'renewal_goal' => 0];
+  $gt_goal = (int) $branch_goals['gt_goal'];
   $gt_achieved_pct = ($gt_goal > 0) ? round(($gt_achieved / $gt_goal) * 100) : 0;
   $gt_projection = round(($gt_achieved / $day_of_month) * $total_days);
   $np_ticket_value = ($np_visits > 0) ? round($np_paid / $np_visits) : 0;
   $enquiry_gt = $np_paid + $enq_due_collected;
-  $enquiry_goal = 0; // Placeholder — no goal data source yet
+  $enquiry_goal = (int) $branch_goals['enquiry_goal'];
   $enquiry_projection = round(($enquiry_gt / $day_of_month) * $total_days);
   $renewed_pct = ($renewal_visits > 0) ? round(($renewed / $renewal_visits) * 100) : 0;
   // Pending computed
@@ -419,6 +461,8 @@ foreach ($result as $row) {
   $referral_ticket_value_val = ($referral_registrations > 0) ? round($referral_paid / $referral_registrations) : 0;
 
   // Accumulate sums
+  $totals['gt_goal'] += $gt_goal;
+  $totals['enquiry_goal'] += $enquiry_goal;
   $totals['gt_achieved'] += $gt_achieved;
   $totals['np_visits'] += $np_visits;
   $totals['np_registration'] += $np_registration;
@@ -485,11 +529,13 @@ $total_ren_tv = ($totals['renewed'] > 0) ? round($totals['renewal_paid'] / $tota
 $total_ref_pct = ($totals['ref_visited'] > 0) ? round(($totals['ref_reg'] / $totals['ref_visited']) * 100) : 0;
 $total_ref_tv = ($totals['ref_reg'] > 0) ? round($totals['ref_paid'] / $totals['ref_reg']) : 0;
 
+$total_gt_achieved_pct = ($totals['gt_goal'] > 0) ? round(($totals['gt_achieved'] / $totals['gt_goal']) * 100) : 0;
+
 $output['totals'] = [
   '<strong>Grand Total</strong>',
-  '<strong>0</strong>',                                              // GT Goal
+  '<strong>' . $totals['gt_goal'] . '</strong>',                     // GT Goal
   '<strong>' . $totals['gt_achieved'] . '</strong>',                 // GT Achieved
-  '<strong>0</strong>',                                              // GT Achieved %
+  '<strong>' . $total_gt_achieved_pct . '</strong>',                 // GT Achieved %
   '<strong>' . $total_gt_projection . '</strong>',                   // GT Projection
   '<strong>' . $totals['np_visits'] . '</strong>',                   // NP Visits
   '<strong>' . $totals['np_registration'] . '</strong>',             // NP Registration
@@ -499,7 +545,7 @@ $output['totals'] = [
   '<strong>' . $total_np_ticket_value . '</strong>',                 // NP Ticket Value
   '<strong>' . $totals['enq_due_collected'] . '</strong>',           // Enquiry Due Collected
   '<strong>' . $total_enquiry_gt . '</strong>',                      // Enquiry GT
-  '<strong>0</strong>',                                              // Enquiry Goal
+  '<strong>' . $totals['enquiry_goal'] . '</strong>',                // Enquiry Goal
   '<strong>' . $total_enquiry_projection . '</strong>',              // Enquiry Projection
   '<strong>' . $totals['renewal_visits'] . '</strong>',              // Renewal Visits
   '<strong>' . $totals['renewed'] . '</strong>',                     // Renewed
