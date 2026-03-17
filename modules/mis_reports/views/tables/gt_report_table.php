@@ -534,7 +534,7 @@ $total_gt_achieved_pct = ($totals['gt_goal'] > 0) ? round(($totals['gt_achieved'
 $output['totals'] = [
   '<strong>Grand Total</strong>',
   '<strong>' . $totals['gt_goal'] . '</strong>',                     // GT Goal
-  '<strong>' . $totals['gt_achieved'] . '</strong>',                 // GT Achieved
+  '<strong>' . app_format_money_custom($totals['gt_achieved'], 1) . '</strong>',  // GT Achieved
   '<strong>' . $total_gt_achieved_pct . '</strong>',                 // GT Achieved %
   '<strong>' . $total_gt_projection . '</strong>',                   // GT Projection
   '<strong>' . $totals['np_visits'] . '</strong>',                   // NP Visits
