@@ -94,7 +94,22 @@ $sql = "
         CAST(ROUND(IFNULL(followup_con_fee_table.followup_con_fee, 0), 0) AS SIGNED) AS followup_con_fee,
 
         /* Renewal Paid: visit type = Renewal AND payment > 0, sum paid amount */
-        CAST(ROUND(IFNULL(ren_money_table.ren_paid, 0), 0) AS SIGNED) AS renewal_paid
+        CAST(ROUND(IFNULL(ren_money_table.ren_paid, 0), 0) AS SIGNED) AS renewal_paid,
+
+        /* ── Pending columns (kept for future work) ── */
+        CAST(ROUND(IFNULL(ren_money_table.ren_gt, 0) - IFNULL(ren_money_table.ren_paid, 0), 0) AS SIGNED) AS renewal_due,
+        0 AS renewal_projection,
+        0 AS renewal_ticket_value,
+        CAST(ROUND(IFNULL(ref_visit_table.ref_visited, 0), 0) AS SIGNED) AS referral_visits,
+        CAST(ROUND(IFNULL(ref_reg_table.ref_reg, 0), 0) AS SIGNED) AS referral_registrations,
+        CASE WHEN IFNULL(ref_visit_table.ref_visited, 0) = 0 THEN 0
+             ELSE CAST(ROUND(IFNULL(ref_reg_table.ref_reg, 0) / ref_visit_table.ref_visited * 100, 0) AS SIGNED)
+        END AS referral_pct,
+        CAST(ROUND(IFNULL(ref_money_table.ref_paid, 0), 0) AS SIGNED) AS referral_paid,
+        CAST(ROUND(IFNULL(ref_money_table.ref_gt, 0) - IFNULL(ref_money_table.ref_paid, 0), 0) AS SIGNED) AS referral_due,
+        0 AS referral_projection,
+        0 AS referral_ticket_value,
+        0 AS refund_amount
 
     FROM tblcustomers_groups cg
 
@@ -286,6 +301,50 @@ $sql = "
         GROUP BY visit.branch_id
     ) ren_money_table ON ren_money_table.branch_id = cg.id
 
+    /* ── Pending: Referral sub-queries (kept for future work) ── */
+    LEFT JOIN (
+        SELECT rc.branch_id, COUNT(DISTINCT a.userid) AS ref_visited
+        FROM (
+            SELECT DISTINCT map.groupid AS branch_id, c.userid
+            FROM tblleads l
+            JOIN tblclients c ON c.leadid = l.id
+            JOIN tblcustomer_groups map ON map.customer_id = c.userid
+            WHERE l.refer_id > 0
+        ) rc
+        JOIN tblappointment a ON a.userid = rc.userid
+        WHERE a.visit_status = 1
+          AND a.appointment_date >= CONCAT($from_date_sql, ' 00:00:00')
+          AND a.appointment_date <= CONCAT($to_date_sql, ' 23:59:59')
+        GROUP BY rc.branch_id
+    ) ref_visit_table ON ref_visit_table.branch_id = cg.id
+    LEFT JOIN (
+        SELECT rc.branch_id, COUNT(*) AS ref_reg
+        FROM (
+            SELECT DISTINCT map.groupid AS branch_id, inv.clientid
+            FROM tblinvoices inv
+            JOIN tblitemable item ON item.rel_id = inv.id AND item.rel_type = 'invoice'
+            JOIN tblinvoicepaymentrecords pay ON pay.invoiceid = inv.id
+            JOIN tblcustomer_groups map ON map.customer_id = inv.clientid
+            WHERE item.description <> 'Consultation Fee'
+              AND inv.date >= $from_date_sql
+              AND inv.date <= $to_date_sql
+        ) rc
+        GROUP BY rc.branch_id
+    ) ref_reg_table ON ref_reg_table.branch_id = cg.id
+    LEFT JOIN (
+        SELECT map.groupid AS branch_id, SUM(inv.total) AS ref_gt, SUM(IFNULL(pay.amount, 0)) AS ref_paid
+        FROM tblinvoices inv
+        JOIN tblitemable item ON item.rel_id = inv.id AND item.rel_type = 'invoice'
+        LEFT JOIN tblinvoicepaymentrecords pay ON pay.invoiceid = inv.id
+        JOIN tblcustomer_groups map ON map.customer_id = inv.clientid
+        WHERE item.description <> 'Consultation Fee'
+          AND inv.date >= $from_date_sql
+          AND inv.date <= $to_date_sql
+          AND pay.date >= $from_date_sql
+          AND pay.date <= $to_date_sql
+        GROUP BY map.groupid
+    ) ref_money_table ON ref_money_table.branch_id = cg.id
+
     WHERE 1=1 $branch_filter_sql
     ORDER BY cg.name;
 ";
@@ -313,6 +372,13 @@ $totals = [
   'renewed' => 0,
   'followup_con_fee' => 0,
   'renewal_paid' => 0,
+  // Pending columns
+  'renewal_due' => 0,
+  'ref_visited' => 0,
+  'ref_reg' => 0,
+  'ref_paid' => 0,
+  'ref_due' => 0,
+  'refund_amount' => 0,
 ];
 
 // Format data for DataTable
@@ -328,6 +394,14 @@ foreach ($result as $row) {
   $renewed = (int) $row['renewed'];
   $followup_con_fee = (int) $row['followup_con_fee'];
   $renewal_paid = (int) $row['renewal_paid'];
+  // Pending columns
+  $renewal_due = (int) $row['renewal_due'];
+  $referral_visits = (int) $row['referral_visits'];
+  $referral_registrations = (int) $row['referral_registrations'];
+  $referral_pct = (int) $row['referral_pct'];
+  $referral_paid = (int) $row['referral_paid'];
+  $referral_due = (int) $row['referral_due'];
+  $refund_amount = (int) $row['refund_amount'];
 
   // Computed columns
   $gt_goal = 0; // Placeholder — no goal data source yet
@@ -338,6 +412,11 @@ foreach ($result as $row) {
   $enquiry_goal = 0; // Placeholder — no goal data source yet
   $enquiry_projection = round(($enquiry_gt / $day_of_month) * $total_days);
   $renewed_pct = ($renewal_visits > 0) ? round(($renewed / $renewal_visits) * 100) : 0;
+  // Pending computed
+  $renewal_projection_val = 0;
+  $renewal_ticket_value_val = ($renewed > 0) ? round($renewal_paid / $renewed) : 0;
+  $referral_projection_val = 0;
+  $referral_ticket_value_val = ($referral_registrations > 0) ? round($referral_paid / $referral_registrations) : 0;
 
   // Accumulate sums
   $totals['gt_achieved'] += $gt_achieved;
@@ -350,6 +429,13 @@ foreach ($result as $row) {
   $totals['renewed'] += $renewed;
   $totals['followup_con_fee'] += $followup_con_fee;
   $totals['renewal_paid'] += $renewal_paid;
+  // Pending sums
+  $totals['renewal_due'] += $renewal_due;
+  $totals['ref_visited'] += $referral_visits;
+  $totals['ref_reg'] += $referral_registrations;
+  $totals['ref_paid'] += $referral_paid;
+  $totals['ref_due'] += $referral_due;
+  $totals['refund_amount'] += $refund_amount;
 
   $output['data'][] = [
     $row['branch_name'],         // Branch
@@ -372,6 +458,18 @@ foreach ($result as $row) {
     $renewed_pct,                // Renewed %
     $followup_con_fee,           // Follow-up Consultation Fee
     $renewal_paid,               // Renewal Paid
+    // ── Pending columns (amber) ──
+    $renewal_due,                // Renewal Due
+    $renewal_projection_val,     // Renewal Projection
+    $renewal_ticket_value_val,   // Renewal Ticket Value
+    $referral_visits,            // Referral Visits
+    $referral_registrations,     // Referral Registrations
+    $referral_pct,               // Referral %
+    $referral_paid,              // Referral Paid
+    $referral_due,               // Referral Due
+    $referral_projection_val,    // Referral Projection
+    $referral_ticket_value_val,  // Referral Ticket Value
+    $refund_amount,              // Refund Amount
   ];
 }
 
@@ -382,6 +480,10 @@ $total_enquiry_gt = $totals['np_paid'] + $totals['enq_due_collected'];
 $total_gt_projection = round(($totals['gt_achieved'] / $day_of_month) * $total_days);
 $total_enquiry_projection = round(($total_enquiry_gt / $day_of_month) * $total_days);
 $total_renewed_pct = ($totals['renewal_visits'] > 0) ? round(($totals['renewed'] / $totals['renewal_visits']) * 100) : 0;
+// Pending totals
+$total_ren_tv = ($totals['renewed'] > 0) ? round($totals['renewal_paid'] / $totals['renewed']) : 0;
+$total_ref_pct = ($totals['ref_visited'] > 0) ? round(($totals['ref_reg'] / $totals['ref_visited']) * 100) : 0;
+$total_ref_tv = ($totals['ref_reg'] > 0) ? round($totals['ref_paid'] / $totals['ref_reg']) : 0;
 
 $output['totals'] = [
   '<strong>Grand Total</strong>',
@@ -404,6 +506,18 @@ $output['totals'] = [
   '<strong>' . $total_renewed_pct . '</strong>',                     // Renewed %
   '<strong>' . $totals['followup_con_fee'] . '</strong>',            // Follow-up Consultation Fee
   '<strong>' . $totals['renewal_paid'] . '</strong>',                // Renewal Paid
+  // ── Pending columns (amber) ──
+  '<strong>' . $totals['renewal_due'] . '</strong>',                 // Renewal Due
+  '<strong>0</strong>',                                              // Renewal Projection
+  '<strong>' . $total_ren_tv . '</strong>',                          // Renewal Ticket Value
+  '<strong>' . $totals['ref_visited'] . '</strong>',                 // Referral Visits
+  '<strong>' . $totals['ref_reg'] . '</strong>',                     // Referral Registrations
+  '<strong>' . $total_ref_pct . '</strong>',                         // Referral %
+  '<strong>' . $totals['ref_paid'] . '</strong>',                    // Referral Paid
+  '<strong>' . $totals['ref_due'] . '</strong>',                     // Referral Due
+  '<strong>0</strong>',                                              // Referral Projection
+  '<strong>' . $total_ref_tv . '</strong>',                          // Referral Ticket Value
+  '<strong>' . $totals['refund_amount'] . '</strong>',               // Refund Amount
 ];
 
 header('Content-Type: application/json');

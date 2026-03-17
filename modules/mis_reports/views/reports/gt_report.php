@@ -4,6 +4,13 @@
     .swal2-popup {
         font-size: 1.6rem !important;
     }
+    /* Highlight pending/WIP columns (index 20-30) with amber background */
+    .table-unit-gt-report thead th:nth-child(n+21),
+    .table-unit-gt-report tbody td:nth-child(n+21),
+    .table-unit-gt-report tfoot th:nth-child(n+21) {
+        background-color: #fff3cd !important;
+        color: #856404 !important;
+    }
 </style>
 
 <?php
@@ -95,6 +102,18 @@
                             'Renewed %',
                             'Follow-up Consultation Fee',
                             'Renewal Paid',
+                            // ── Pending columns (highlighted amber) ──
+                            'Renewal Due',
+                            'Renewal Projection',
+                            'Renewal Ticket Value',
+                            'Referral Visits',
+                            'Referral Registrations',
+                            'Referral %',
+                            'Referral Paid',
+                            'Referral Due',
+                            'Referral Projection',
+                            'Referral Ticket Value',
+                            'Refund Amount',
                         ];
 
                         echo render_datatable($columns, 'unit-gt-report');
