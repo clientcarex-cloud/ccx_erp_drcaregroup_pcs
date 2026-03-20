@@ -454,4 +454,35 @@ class Mis_reports extends AdminController
         echo json_encode(['success' => true, 'goals' => $goals]);
         exit;
     }
+
+    /**
+     * Staff Referral Reward Report
+     * Dedicated method to avoid the monolithic reports() method
+     */
+    public function staff_referral_reward_report()
+    {
+        if ($this->input->is_ajax_request()) {
+            $data = [];
+            $data['from_date'] = $this->input->get('from_date');
+            $data['to_date']   = $this->input->get('to_date');
+            $data['branch']    = $this->input->get('branch');
+            return $this->app->get_table_data(module_views_path('mis_reports', 'tables/staff_referral_reward_report_table'), $data);
+        }
+
+        $data['title'] = 'Staff Referral Reward Report';
+        $data['branch'] = $this->client_model->get_branch();
+
+        $current_staff_user_id = get_staff_user_id();
+        if ($current_staff_user_id) {
+            $this->db->select('branch_id');
+            $this->db->from(db_prefix() . 'staff');
+            $this->db->where('staffid', $current_staff_user_id);
+            $row = $this->db->get()->row();
+            if ($row) {
+                $data['branch_id'] = $row->branch_id;
+            }
+        }
+
+        $this->load->view('mis_reports/reports/staff_referral_reward_report', $data);
+    }
 }
