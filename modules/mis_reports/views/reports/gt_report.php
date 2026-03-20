@@ -5,9 +5,9 @@
         font-size: 1.6rem !important;
     }
     /* Highlight pending/WIP columns (index 20-30) with amber background */
-    .table-unit-gt-report thead th:nth-child(n+24),
-    .table-unit-gt-report tbody td:nth-child(n+24),
-    .table-unit-gt-report tfoot th:nth-child(n+24) {
+    .table-unit-gt-report thead th:nth-child(n+25),
+    .table-unit-gt-report tbody td:nth-child(n+25),
+    .table-unit-gt-report tfoot th:nth-child(n+25) {
         background-color: #fff3cd !important;
         color: #856404 !important;
     }
@@ -98,6 +98,7 @@
                             'NP Ticket Value',
                             'Enquiry Due Collected',
                             'Enquiry GT',
+                            'Enquiry Achieved %',
                             'Enquiry Goal',
                             'Enquiry Projection',
                             'Renewal Visits',
