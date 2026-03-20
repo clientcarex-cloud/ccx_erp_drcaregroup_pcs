@@ -132,11 +132,13 @@ class Mis_reports extends AdminController
             }
         }
 
-        function get_counter_by_doctor_id($doctor_id)
-        {
-            $CI =& get_instance();
-            $CI->db->where('doctor_id', $doctor_id);
-            return $CI->db->get(db_prefix() . 'counter')->row(); // returns single row (object)
+        if (!function_exists('get_counter_by_doctor_id')) {
+            function get_counter_by_doctor_id($doctor_id)
+            {
+                $CI =& get_instance();
+                $CI->db->where('doctor_id', $doctor_id);
+                return $CI->db->get(db_prefix() . 'counter')->row(); // returns single row (object)
+            }
         }
 
         $this->load->model('leads_model');
@@ -213,40 +215,42 @@ class Mis_reports extends AdminController
                 ->get()
                 ->row();
 
-            function get_estimation_payment_summary($estimation_id)
-            {
-                $CI =& get_instance();
+            if (!function_exists('get_estimation_payment_summary')) {
+                function get_estimation_payment_summary($estimation_id)
+                {
+                    $CI =& get_instance();
 
-                // 1. Get the estimate row
-                $CI->db->select('total, invoiceid, currency, date, expirydate');
-                $CI->db->where('id', $estimation_id);
-                $estimate = $CI->db->get(db_prefix() . 'estimates')->row();
+                    // 1. Get the estimate row
+                    $CI->db->select('total, invoiceid, currency, date, expirydate');
+                    $CI->db->where('id', $estimation_id);
+                    $estimate = $CI->db->get(db_prefix() . 'estimates')->row();
 
-                if (!$estimate || !$estimate->invoiceid) {
+                    if (!$estimate || !$estimate->invoiceid) {
+                        return [
+                            'total' => 0,
+                            'paid' => 0,
+                            'dues' => 0,
+                            'currency' => '',
+                            'invoice_id' => null,
+                        ];
+                    }
+
+                    // 2. Sum payments from invoicepaymentrecords
+                    $CI->db->select_sum('amount');
+                    $CI->db->where('invoiceid', $estimate->invoiceid);
+                    $paid_row = $CI->db->get(db_prefix() . 'invoicepaymentrecords')->row();
+                    $paid = $paid_row ? (float) $paid_row->amount : 0;
+
                     return [
-                        'total' => 0,
-                        'paid' => 0,
-                        'dues' => 0,
-                        'currency' => '',
-                        'invoice_id' => null,
+                        'total' => (float) $estimate->total,
+                        'paid' => $paid,
+                        'dues' => (float) $estimate->total - $paid,
+                        'currency' => $estimate->currency,
+                        'invoice_id' => $estimate->invoiceid,
+                        'date' => $estimate->date,
+                        'expirydate' => $estimate->expirydate,
                     ];
                 }
-
-                // 2. Sum payments from invoicepaymentrecords
-                $CI->db->select_sum('amount');
-                $CI->db->where('invoiceid', $estimate->invoiceid);
-                $paid_row = $CI->db->get(db_prefix() . 'invoicepaymentrecords')->row();
-                $paid = $paid_row ? (float) $paid_row->amount : 0;
-
-                return [
-                    'total' => (float) $estimate->total,
-                    'paid' => $paid,
-                    'dues' => (float) $estimate->total - $paid,
-                    'currency' => $estimate->currency,
-                    'invoice_id' => $estimate->invoiceid,
-                    'date' => $estimate->date,
-                    'expirydate' => $estimate->expirydate,
-                ];
             }
             $callback_url = "reports/" . $type;
             $home_branch_id = $this->client_model->get_client_branch($id);
