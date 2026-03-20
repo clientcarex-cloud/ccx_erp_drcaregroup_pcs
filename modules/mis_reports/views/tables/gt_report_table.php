@@ -160,6 +160,7 @@ foreach ($np_mrno_result as $r) {
 }
 
 // ---- Fetch Enquiry Consultation Fee: paid amount where Package='Consultation Fee' for patients with 'First Appointment' ----
+// Matches payment_detail_report logic: appointment type is derived from the latest appointment on the payment date
 $enq_confee_sql = "
     SELECT sub.branch_id, COALESCE(SUM(sub.amount), 0) AS total_confee
     FROM (
@@ -176,8 +177,7 @@ $enq_confee_sql = "
               JOIN tblappointment_type at ON at.appointment_type_id = a.appointment_type_id
               WHERE a.userid = inv.clientid
                 AND at.appointment_type_name = 'First Appointment'
-                AND a.appointment_date >= '$from_date_esc 00:00:00'
-                AND a.appointment_date <= '$to_date_esc 23:59:59'
+                AND (DATE(a.appointment_date) = DATE(pr.date) OR DATE(a.created_at) = DATE(pr.date))
           )
     ) sub
     GROUP BY sub.branch_id
