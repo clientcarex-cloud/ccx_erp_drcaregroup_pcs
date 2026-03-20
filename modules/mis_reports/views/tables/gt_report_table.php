@@ -36,6 +36,28 @@ if (!empty($clean_branch_ids)) {
   $branch_filter_sql = ' AND cg.id IN (' . implode(',', $clean_branch_ids) . ')';
 }
 
+// ---- Fetch total paid amounts per branch from invoice payment records ----
+$from_date_esc = $CI->db->escape_str($from_date);
+$to_date_esc   = $CI->db->escape_str($to_date);
+
+$paid_sql = "
+    SELECT cg2.id AS branch_id, COALESCE(SUM(pr.amount), 0) AS total_paid
+    FROM tblcustomers_groups cg2
+    LEFT JOIN tblcustomer_groups map ON map.groupid = cg2.id
+    LEFT JOIN tblinvoices inv ON inv.clientid = map.customer_id
+    LEFT JOIN tblinvoicepaymentrecords pr ON pr.invoiceid = inv.id
+        AND pr.date >= '$from_date_esc'
+        AND pr.date <= '$to_date_esc'
+    WHERE map.customer_id IS NOT NULL
+      AND inv.status <> 5
+    GROUP BY cg2.id
+";
+$paid_result = $CI->db->query($paid_sql)->result_array();
+$paid_lookup = []; // keyed by branch_id => total_paid
+foreach ($paid_result as $pr) {
+    $paid_lookup[(int) $pr['branch_id']] = (float) $pr['total_paid'];
+}
+
 // ---- Fetch goals from tblreport_goals for the date range ----
 $from_ts = strtotime($from_date);
 $to_ts   = strtotime($to_date);
@@ -98,24 +120,32 @@ $output = [
 
 // Initialize totals
 $total_gt_goal = 0;
+$total_gt_achieved = 0;
 $total_enquiry_goal = 0;
 
 // Format data for DataTable
 foreach ($result as $row) {
+  $bid = (int) $row['branch_id'];
+
   // Fetch goals for this branch
-  $branch_goals = isset($goals_lookup[(int) $row['branch_id']]) ? $goals_lookup[(int) $row['branch_id']] : ['gt_goal' => 0, 'enquiry_goal' => 0];
+  $branch_goals = isset($goals_lookup[$bid]) ? $goals_lookup[$bid] : ['gt_goal' => 0, 'enquiry_goal' => 0];
   $gt_goal = (int) $branch_goals['gt_goal'];
   $enquiry_goal = (int) $branch_goals['enquiry_goal'];
 
-  // Accumulate goal totals
+  // Fetch paid amount for this branch
+  $gt_achieved = isset($paid_lookup[$bid]) ? round($paid_lookup[$bid]) : 0;
+  $gt_achieved_pct = ($gt_goal > 0) ? round(($gt_achieved / $gt_goal) * 100) : 0;
+
+  // Accumulate totals
   $total_gt_goal += $gt_goal;
+  $total_gt_achieved += $gt_achieved;
   $total_enquiry_goal += $enquiry_goal;
 
   $output['data'][] = [
     $row['branch_name'],         // Branch
     $gt_goal,                    // GT Goal
-    0,                           // GT Achieved
-    0,                           // GT Achieved %
+    $gt_achieved,                // GT Achieved
+    $gt_achieved_pct . '%',      // GT Achieved %
     0,                           // GT Projection
     0,                           // NP Visits
     0,                           // NP Registration
@@ -147,12 +177,13 @@ foreach ($result as $row) {
   ];
 }
 
-// Totals row — only goals have real values, everything else is 0
+// Totals row
+$total_gt_achieved_pct = ($total_gt_goal > 0) ? round(($total_gt_achieved / $total_gt_goal) * 100) : 0;
 $output['totals'] = [
   '<strong>Grand Total</strong>',
   '<strong>' . $total_gt_goal . '</strong>',             // GT Goal
-  '<strong>0</strong>',                                   // GT Achieved
-  '<strong>0</strong>',                                   // GT Achieved %
+  '<strong>' . $total_gt_achieved . '</strong>',         // GT Achieved
+  '<strong>' . $total_gt_achieved_pct . '%</strong>',    // GT Achieved %
   '<strong>0</strong>',                                   // GT Projection
   '<strong>0</strong>',                                   // NP Visits
   '<strong>0</strong>',                                   // NP Registration
