@@ -139,10 +139,10 @@ class Mis_reports extends AdminController
             return $CI->db->get(db_prefix() . 'counter')->row(); // returns single row (object)
         }
 
+        $this->load->model('leads_model');
         $statuses = $this->leads_model->get_status();
 
         if ($id && $id != 'NULL') {
-            $this->load->model('leads_model');
             $this->load->model('currencies_model');
             $this->load->model('taxes_model');
             $this->load->model('invoice_items_model');
