@@ -80,15 +80,31 @@ while ($y < $to_year || ($y == $to_year && $m <= $to_month)) {
     if ($m > 12) { $m = 1; $y++; }
 }
 
+// ---- Common EXISTS clause: patient has 'First Appointment' on the payment date ----
+// Mirrors payment_detail_report: Appointment Type derived from latest appointment on payment date
+$first_appt_exists = "
+    EXISTS (
+        SELECT 1 FROM tblappointment a
+        JOIN tblappointment_type atype ON atype.appointment_type_id = a.appointment_type_id
+        WHERE a.userid = inv.clientid
+          AND atype.appointment_type_name = 'First Appointment'
+          AND (DATE(a.appointment_date) = DATE(pr.date) OR DATE(a.created_at) = DATE(pr.date))
+    )
+";
+
 // ---- Fetch NP Visits from Appointment Type ('First Appointment') ----
 $np_appt_sql = "
-    SELECT a.branch_id, COUNT(DISTINCT a.userid) AS np_visits
-    FROM tblappointment a
-    JOIN tblappointment_type at ON at.appointment_type_id = a.appointment_type_id
-    WHERE at.appointment_type_name = 'First Appointment'
-      AND a.appointment_date >= '$from_date_esc 00:00:00'
-      AND a.appointment_date <= '$to_date_esc 23:59:59'
-    GROUP BY a.branch_id
+    SELECT sub.branch_id, COUNT(DISTINCT sub.clientid) AS np_visits
+    FROM (
+        SELECT DISTINCT pr.id, map.groupid AS branch_id, inv.clientid
+        FROM tblinvoicepaymentrecords pr
+        JOIN tblinvoices inv ON inv.id = pr.invoiceid
+        JOIN tblcustomer_groups map ON map.customer_id = inv.clientid
+        WHERE pr.date >= '$from_date_esc'
+          AND pr.date <= '$to_date_esc'
+          AND $first_appt_exists
+    ) sub
+    GROUP BY sub.branch_id
 ";
 $np_appt_result = $CI->db->query($np_appt_sql)->result_array();
 $np_appt_lookup = [];
@@ -103,9 +119,9 @@ $np_paycat_sql = "
         SELECT DISTINCT pr.id, map.groupid AS branch_id, inv.clientid
         FROM tblinvoicepaymentrecords pr
         JOIN tblinvoices inv ON inv.id = pr.invoiceid
-        JOIN tblappointment_type at ON at.appointment_type_id = inv.appointment_type_id
+        JOIN tblappointment_type paycat ON paycat.appointment_type_id = inv.appointment_type_id
         JOIN tblcustomer_groups map ON map.customer_id = inv.clientid
-        WHERE at.appointment_type_name = 'First Appointment'
+        WHERE paycat.appointment_type_name = 'First Appointment'
           AND pr.date >= '$from_date_esc'
           AND pr.date <= '$to_date_esc'
     ) sub
@@ -117,7 +133,7 @@ foreach ($np_paycat_result as $r) {
     $np_paycat_lookup[(int) $r['branch_id']] = (int) $r['np_visits'];
 }
 
-// ---- Fetch NP Registration: unique patients with a package (excl. Consultation Fee) ----
+// ---- Fetch NP Registration (Package): First Appointment patients with non-Consultation-Fee package ----
 $np_reg_sql = "
     SELECT sub.branch_id, COUNT(DISTINCT sub.clientid) AS np_reg
     FROM (
@@ -129,6 +145,7 @@ $np_reg_sql = "
         WHERE item.description <> 'Consultation Fee'
           AND pr.date >= '$from_date_esc'
           AND pr.date <= '$to_date_esc'
+          AND $first_appt_exists
     ) sub
     GROUP BY sub.branch_id
 ";
@@ -138,7 +155,7 @@ foreach ($np_reg_result as $r) {
     $np_reg_lookup[(int) $r['branch_id']] = (int) $r['np_reg'];
 }
 
-// ---- Fetch NP Registration (MR. No): unique patients with a non-empty mr_no ----
+// ---- Fetch NP Registration (MR. No): First Appointment patients with non-empty mr_no ----
 $np_mrno_sql = "
     SELECT sub.branch_id, COUNT(DISTINCT sub.clientid) AS np_mrno
     FROM (
@@ -150,6 +167,7 @@ $np_mrno_sql = "
         WHERE cnf.mr_no IS NOT NULL AND cnf.mr_no <> ''
           AND pr.date >= '$from_date_esc'
           AND pr.date <= '$to_date_esc'
+          AND $first_appt_exists
     ) sub
     GROUP BY sub.branch_id
 ";
