@@ -58,16 +58,16 @@ foreach ($rResult as $aRow) {
     $row = [];
 
     $row[] = $serial++;
-    $row[] = e($aRow['name']);
-    $row[] = e($aRow['phonenumber']);
-    $row[] = e($aRow['status_name']) ?: '-';
+    $row[] = $aRow['name'];
+    $row[] = $aRow['phonenumber'];
+    $row[] = $aRow['status_name'] ?: '-';
 
     // Get patient referrer name
     $referrer_name = isset($patient_map[$aRow['refer_id']]) ? $patient_map[$aRow['refer_id']] : '-';
-    $row[] = e($referrer_name);
+    $row[] = $referrer_name;
 
     // Branch name
-    $row[] = isset($branch_map[$aRow['branch_id']]) ? e($branch_map[$aRow['branch_id']]) : '-';
+    $row[] = isset($branch_map[$aRow['branch_id']]) ? $branch_map[$aRow['branch_id']] : '-';
 
     $row[] = $aRow['dateadded'] ? _dt($aRow['dateadded']) : '-';
 
