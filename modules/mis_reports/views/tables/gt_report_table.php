@@ -117,6 +117,27 @@ foreach ($np_paycat_result as $r) {
     $np_paycat_lookup[(int) $r['branch_id']] = (int) $r['np_visits'];
 }
 
+// ---- Fetch NP Registration: unique patients with a package (excl. Consultation Fee) ----
+$np_reg_sql = "
+    SELECT sub.branch_id, COUNT(DISTINCT sub.clientid) AS np_reg
+    FROM (
+        SELECT DISTINCT pr.id, map.groupid AS branch_id, inv.clientid
+        FROM tblinvoicepaymentrecords pr
+        JOIN tblinvoices inv ON inv.id = pr.invoiceid
+        JOIN tblitemable item ON item.rel_id = inv.id AND item.rel_type = 'invoice'
+        JOIN tblcustomer_groups map ON map.customer_id = inv.clientid
+        WHERE item.description <> 'Consultation Fee'
+          AND pr.date >= '$from_date_esc'
+          AND pr.date <= '$to_date_esc'
+    ) sub
+    GROUP BY sub.branch_id
+";
+$np_reg_result = $CI->db->query($np_reg_sql)->result_array();
+$np_reg_lookup = [];
+foreach ($np_reg_result as $r) {
+    $np_reg_lookup[(int) $r['branch_id']] = (int) $r['np_reg'];
+}
+
 if (!empty($month_conditions)) {
     $month_where = implode(' OR ', $month_conditions);
     $goals_sql = "SELECT g.branch_id, g.goal_type, SUM(g.amount) AS total_amount
@@ -184,6 +205,8 @@ foreach ($result as $row) {
   $total_gt_projection = (isset($total_gt_projection) ? $total_gt_projection : 0) + $gt_projection;
   $total_np_appt = (isset($total_np_appt) ? $total_np_appt : 0) + (isset($np_appt_lookup[$bid]) ? $np_appt_lookup[$bid] : 0);
   $total_np_paycat = (isset($total_np_paycat) ? $total_np_paycat : 0) + (isset($np_paycat_lookup[$bid]) ? $np_paycat_lookup[$bid] : 0);
+  $np_reg = isset($np_reg_lookup[$bid]) ? $np_reg_lookup[$bid] : 0;
+  $total_np_reg = (isset($total_np_reg) ? $total_np_reg : 0) + $np_reg;
   $total_enquiry_goal += $enquiry_goal;
 
   $output['data'][] = [
@@ -194,7 +217,7 @@ foreach ($result as $row) {
     $gt_projection,              // GT Projection
     isset($np_appt_lookup[$bid]) ? $np_appt_lookup[$bid] : 0,     // NP Visits (Appt Type)
     isset($np_paycat_lookup[$bid]) ? $np_paycat_lookup[$bid] : 0, // NP Visits (Pay Cat)
-    0,                           // NP Registration
+    $np_reg,                     // NP Registration
     0,                           // NP Registration %
     0,                           // Enquiry Consultation Fee
     0,                           // NP Paid
@@ -233,7 +256,7 @@ $output['totals'] = [
   '<strong>' . $total_gt_projection . '</strong>',       // GT Projection
   '<strong>' . $total_np_appt . '</strong>',              // NP Visits (Appt Type)
   '<strong>' . $total_np_paycat . '</strong>',            // NP Visits (Pay Cat)
-  '<strong>0</strong>',                                   // NP Registration
+  '<strong>' . $total_np_reg . '</strong>',                // NP Registration
   '<strong>0</strong>',                                   // NP Registration %
   '<strong>0</strong>',                                   // Enquiry Consultation Fee
   '<strong>0</strong>',                                   // NP Paid
