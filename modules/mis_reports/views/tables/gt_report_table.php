@@ -136,9 +136,15 @@ foreach ($result as $row) {
   $gt_achieved = isset($paid_lookup[$bid]) ? round($paid_lookup[$bid]) : 0;
   $gt_achieved_pct = ($gt_goal > 0) ? round(($gt_achieved / $gt_goal) * 100) : 0;
 
+  // GT Projection = (GT Achieved / current day of month) * total days in month
+  $current_day   = (int) date('j', strtotime($to_date));
+  $days_in_month = (int) date('t', strtotime($to_date));
+  $gt_projection = ($current_day > 0) ? round(($gt_achieved / $current_day) * $days_in_month) : 0;
+
   // Accumulate totals
   $total_gt_goal += $gt_goal;
   $total_gt_achieved += $gt_achieved;
+  $total_gt_projection = (isset($total_gt_projection) ? $total_gt_projection : 0) + $gt_projection;
   $total_enquiry_goal += $enquiry_goal;
 
   $output['data'][] = [
@@ -146,7 +152,7 @@ foreach ($result as $row) {
     $gt_goal,                    // GT Goal
     $gt_achieved,                // GT Achieved
     $gt_achieved_pct . '%',      // GT Achieved %
-    0,                           // GT Projection
+    $gt_projection,              // GT Projection
     0,                           // NP Visits
     0,                           // NP Registration
     0,                           // NP Registration %
@@ -184,7 +190,7 @@ $output['totals'] = [
   '<strong>' . $total_gt_goal . '</strong>',             // GT Goal
   '<strong>' . $total_gt_achieved . '</strong>',         // GT Achieved
   '<strong>' . $total_gt_achieved_pct . '%</strong>',    // GT Achieved %
-  '<strong>0</strong>',                                   // GT Projection
+  '<strong>' . $total_gt_projection . '</strong>',       // GT Projection
   '<strong>0</strong>',                                   // NP Visits
   '<strong>0</strong>',                                   // NP Registration
   '<strong>0</strong>',                                   // NP Registration %
