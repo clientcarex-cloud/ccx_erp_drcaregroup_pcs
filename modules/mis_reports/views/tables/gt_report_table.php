@@ -232,6 +232,8 @@ foreach ($result as $row) {
   $total_np_mrno = (isset($total_np_mrno) ? $total_np_mrno : 0) + $np_mrno;
   $total_enquiry_goal += $enquiry_goal;
 
+  $np_visits_appt = isset($np_appt_lookup[$bid]) ? $np_appt_lookup[$bid] : 0;
+
   $output['data'][] = [
     $row['branch_name'],         // Branch
     $gt_goal,                    // GT Goal
@@ -242,7 +244,8 @@ foreach ($result as $row) {
     isset($np_paycat_lookup[$bid]) ? $np_paycat_lookup[$bid] : 0, // NP Visits (Pay Cat)
     $np_reg,                     // NP Registration (Package)
     $np_mrno,                    // NP Registration (MR. No)
-    0,                           // NP Registration %
+    ($np_visits_appt > 0) ? round(($np_reg / $np_visits_appt) * 100) . '%' : '0%',   // NP Reg % (Package)
+    ($np_visits_appt > 0) ? round(($np_mrno / $np_visits_appt) * 100) . '%' : '0%',  // NP Reg % (MR. No)
     0,                           // Enquiry Consultation Fee
     0,                           // NP Paid
     0,                           // NP Ticket Value
@@ -282,7 +285,8 @@ $output['totals'] = [
   '<strong>' . $total_np_paycat . '</strong>',            // NP Visits (Pay Cat)
   '<strong>' . $total_np_reg . '</strong>',                // NP Registration (Package)
   '<strong>' . $total_np_mrno . '</strong>',               // NP Registration (MR. No)
-  '<strong>0</strong>',                                   // NP Registration %
+  '<strong>' . (($total_np_appt > 0) ? round(($total_np_reg / $total_np_appt) * 100) : 0) . '%</strong>',  // NP Reg % (Package)
+  '<strong>' . (($total_np_appt > 0) ? round(($total_np_mrno / $total_np_appt) * 100) : 0) . '%</strong>', // NP Reg % (MR. No)
   '<strong>0</strong>',                                   // Enquiry Consultation Fee
   '<strong>0</strong>',                                   // NP Paid
   '<strong>0</strong>',                                   // NP Ticket Value
