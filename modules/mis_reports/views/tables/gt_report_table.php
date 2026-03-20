@@ -159,7 +159,7 @@ foreach ($np_mrno_result as $r) {
     $np_mrno_lookup[(int) $r['branch_id']] = (int) $r['np_mrno'];
 }
 
-// ---- Fetch Enquiry Consultation Fee: paid amount where Package='Consultation Fee' AND PayCat='First Appointment' ----
+// ---- Fetch Enquiry Consultation Fee: paid amount where Package='Consultation Fee' for patients with 'First Appointment' ----
 $enq_confee_sql = "
     SELECT sub.branch_id, COALESCE(SUM(sub.amount), 0) AS total_confee
     FROM (
@@ -167,12 +167,18 @@ $enq_confee_sql = "
         FROM tblinvoicepaymentrecords pr
         JOIN tblinvoices inv ON inv.id = pr.invoiceid
         JOIN tblitemable item ON item.rel_id = inv.id AND item.rel_type = 'invoice'
-        JOIN tblappointment_type at ON at.appointment_type_id = inv.appointment_type_id
         JOIN tblcustomer_groups map ON map.customer_id = inv.clientid
         WHERE item.description = 'Consultation Fee'
-          AND at.appointment_type_name = 'First Appointment'
           AND pr.date >= '$from_date_esc'
           AND pr.date <= '$to_date_esc'
+          AND EXISTS (
+              SELECT 1 FROM tblappointment a
+              JOIN tblappointment_type at ON at.appointment_type_id = a.appointment_type_id
+              WHERE a.userid = inv.clientid
+                AND at.appointment_type_name = 'First Appointment'
+                AND a.appointment_date >= '$from_date_esc 00:00:00'
+                AND a.appointment_date <= '$to_date_esc 23:59:59'
+          )
     ) sub
     GROUP BY sub.branch_id
 ";
