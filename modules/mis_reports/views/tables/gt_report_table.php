@@ -323,9 +323,9 @@ foreach ($result as $row) {
     $np_paid,                    // NP Paid
     ($np_visits_appt > 0) ? round($np_paid / $np_visits_appt) : 0, // NP Ticket Value
     0,                           // Enquiry Due Collected
-    0,                           // Enquiry GT
+    (0 + $np_paid),              // Enquiry GT = Enquiry Due Collected + NP Paid
     $enquiry_goal,               // Enquiry Goal
-    0,                           // Enquiry Projection
+    ($current_day > 0) ? round(((0 + $np_paid) / $current_day) * $days_in_month) : 0, // Enquiry Projection
     0,                           // Renewal Visits
     0,                           // Renewed
     0,                           // Renewed %
@@ -364,9 +364,9 @@ $output['totals'] = [
   '<strong>' . $total_np_paid . '</strong>',                // NP Paid
   '<strong>' . (($total_np_appt > 0) ? round($total_np_paid / $total_np_appt) : 0) . '</strong>', // NP Ticket Value
   '<strong>0</strong>',                                   // Enquiry Due Collected
-  '<strong>0</strong>',                                   // Enquiry GT
+  '<strong>' . (0 + $total_np_paid) . '</strong>',         // Enquiry GT
   '<strong>' . $total_enquiry_goal . '</strong>',         // Enquiry Goal
-  '<strong>0</strong>',                                   // Enquiry Projection
+  '<strong>' . (($current_day > 0) ? round(((0 + $total_np_paid) / $current_day) * $days_in_month) : 0) . '</strong>', // Enquiry Projection
   '<strong>0</strong>',                                   // Renewal Visits
   '<strong>0</strong>',                                   // Renewed
   '<strong>0</strong>',                                   // Renewed %
