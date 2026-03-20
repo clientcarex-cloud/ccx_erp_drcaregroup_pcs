@@ -321,7 +321,7 @@ foreach ($result as $row) {
     ($np_visits_appt > 0) ? round(($np_mrno / $np_visits_appt) * 100) . '%' : '0%',  // NP Reg % (MR. No)
     $enq_confee,                 // Enquiry Consultation Fee
     $np_paid,                    // NP Paid
-    0,                           // NP Ticket Value
+    ($np_visits_appt > 0) ? round($np_paid / $np_visits_appt) : 0, // NP Ticket Value
     0,                           // Enquiry Due Collected
     0,                           // Enquiry GT
     $enquiry_goal,               // Enquiry Goal
@@ -362,7 +362,7 @@ $output['totals'] = [
   '<strong>' . (($total_np_appt > 0) ? round(($total_np_mrno / $total_np_appt) * 100) : 0) . '%</strong>', // NP Reg % (MR. No)
   '<strong>' . $total_enq_confee . '</strong>',            // Enquiry Consultation Fee
   '<strong>' . $total_np_paid . '</strong>',                // NP Paid
-  '<strong>0</strong>',                                   // NP Ticket Value
+  '<strong>' . (($total_np_appt > 0) ? round($total_np_paid / $total_np_appt) : 0) . '</strong>', // NP Ticket Value
   '<strong>0</strong>',                                   // Enquiry Due Collected
   '<strong>0</strong>',                                   // Enquiry GT
   '<strong>' . $total_enquiry_goal . '</strong>',         // Enquiry Goal
