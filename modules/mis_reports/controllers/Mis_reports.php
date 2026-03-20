@@ -308,6 +308,36 @@ class Mis_reports extends AdminController
         }
     }
 
+    public function staff_referral_reward_report($from = null, $to = null)
+    {
+        if ($this->input->is_ajax_request()) {
+            $data['consulted_from_date'] = ($from !== null && $from !== '-') ? $from : null;
+            $data['consulted_to_date']   = ($to   !== null && $to   !== '-') ? $to   : null;
+            return $this->app->get_table_data(
+                module_views_path('mis_reports', 'tables/staff_referral_reward_report_table'),
+                $data
+            );
+        }
+        $data['title'] = _l('staff_referral_reward_report');
+        $data['type']  = 'staff_referral_reward_report';
+        $this->load->view('mis_reports/reports/staff_referral_reward_report', $data);
+    }
+
+    public function patient_referral_reward_report($from = null, $to = null)
+    {
+        if ($this->input->is_ajax_request()) {
+            $data['consulted_from_date'] = ($from !== null && $from !== '-') ? $from : null;
+            $data['consulted_to_date']   = ($to   !== null && $to   !== '-') ? $to   : null;
+            return $this->app->get_table_data(
+                module_views_path('mis_reports', 'tables/patient_referral_reward_report_table'),
+                $data
+            );
+        }
+        $data['title'] = _l('patient_referral_reward_report');
+        $data['type']  = 'patient_referral_reward_report';
+        $this->load->view('mis_reports/reports/patient_referral_reward_report', $data);
+    }
+
     public function source_enquiry_detail_report($source_id, $from = null, $to = null, $subtype = null)
     {
         if ($this->input->is_ajax_request()) {

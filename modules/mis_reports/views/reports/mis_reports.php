@@ -152,9 +152,9 @@
 
 							$mis_sections['Other Reports'][] = ['Date to Date Case Sheet Feedback', 'Date-wise case sheet feedback report.', admin_url('mis_reports/reports/date_to_date_case_sheet_feedback')];
 
-							$mis_sections['Other Reports'][] = ['Staff Referral Reward System', 'Leads referred by staff members with date-wise details.', admin_url('mis_reports/reports/staff_referral_reward_report')];
+							$mis_sections['Other Reports'][] = ['Staff Referral Reward System', 'Leads referred by staff members with date-wise details.', admin_url('mis_reports/staff_referral_reward_report')];
 
-							$mis_sections['Other Reports'][] = ['Patient Referral Reward System', 'Leads referred by existing patients with date-wise details.', admin_url('mis_reports/reports/patient_referral_reward_report')];
+							$mis_sections['Other Reports'][] = ['Patient Referral Reward System', 'Leads referred by existing patients with date-wise details.', admin_url('mis_reports/patient_referral_reward_report')];
 
 							$mis_sections['Other Reports'][] = ['Reports Goals', 'Set month-wise GT, Enquiry & Renewal goals per branch.', admin_url('mis_reports/report_goals')];
 						}

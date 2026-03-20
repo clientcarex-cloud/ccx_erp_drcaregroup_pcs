@@ -16,8 +16,8 @@
 
                         <hr class="hr-panel-heading" />
                         <div class="clearfix"></div>
-                        <form method="post"
-                            action="<?= admin_url('mis_reports/reports/patient_referral_reward_report'); ?>">
+                        <form method="post" id="referral-filter-form"
+                            action="<?= admin_url('mis_reports/patient_referral_reward_report'); ?>">
                             <div class="row align-items-end">
 
                                 <div class="col-md-3">
@@ -46,10 +46,8 @@
                                 </div>
 
                                 <div class="col-md-2">
-                                    <input type="hidden" name="<?= $this->security->get_csrf_token_name(); ?>"
-                                        value="<?= $this->security->get_csrf_hash(); ?>" />
                                     <br>
-                                    <button type="submit" class="btn btn-success" style="width: 100%;margin-top: 5px">
+                                    <button type="button" id="searchBtn" class="btn btn-success" style="width: 100%;margin-top: 5px">
                                         <?= _l('search'); ?>
                                     </button>
                                 </div>
@@ -80,18 +78,17 @@
 <script>
     $(function () {
         var from = $('#consulted_date').val();
-        var to = $('#consulted_to_date').val();
-        initDataTable('.table-patient-referral-reward', '<?= admin_url("mis_reports/reports/$type/1/") ?>' + from + '/' + to, [0], [0]);
-    });
+        var to   = $('#consulted_to_date').val();
+        var baseUrl = '<?= admin_url("mis_reports/patient_referral_reward_report/") ?>';
+        initDataTable('.table-patient-referral-reward', baseUrl + from + '/' + to, [0], [0]);
 
-    $(function () {
         $('#searchBtn').on('click', function () {
             var from = $('#consulted_date').val();
-            var to = $('#consulted_to_date').val();
+            var to   = $('#consulted_to_date').val();
             if ($.fn.DataTable.isDataTable('.table-patient-referral-reward')) {
-                $('.table-patient-referral-reward').DataTable().ajax.url(
-                    '<?= admin_url("mis_reports/reports/$type/1/") ?>' + from + '/' + to
-                ).load();
+                $('.table-patient-referral-reward').DataTable().ajax.url(baseUrl + from + '/' + to).load();
+            } else {
+                initDataTable('.table-patient-referral-reward', baseUrl + from + '/' + to, [0], [0]);
             }
         });
     });
