@@ -80,6 +80,43 @@ while ($y < $to_year || ($y == $to_year && $m <= $to_month)) {
     if ($m > 12) { $m = 1; $y++; }
 }
 
+// ---- Fetch NP Visits from Appointment Type ('First Appointment') ----
+$np_appt_sql = "
+    SELECT a.branch_id, COUNT(DISTINCT a.userid) AS np_visits
+    FROM tblappointment a
+    JOIN tblappointment_type at ON at.appointment_type_id = a.appointment_type_id
+    WHERE at.appointment_type_name = 'First Appointment'
+      AND a.appointment_date >= '$from_date_esc 00:00:00'
+      AND a.appointment_date <= '$to_date_esc 23:59:59'
+    GROUP BY a.branch_id
+";
+$np_appt_result = $CI->db->query($np_appt_sql)->result_array();
+$np_appt_lookup = [];
+foreach ($np_appt_result as $r) {
+    $np_appt_lookup[(int) $r['branch_id']] = (int) $r['np_visits'];
+}
+
+// ---- Fetch NP Visits from Payment Category ('First Appointment') ----
+$np_paycat_sql = "
+    SELECT sub.branch_id, COUNT(DISTINCT sub.clientid) AS np_visits
+    FROM (
+        SELECT DISTINCT pr.id, map.groupid AS branch_id, inv.clientid
+        FROM tblinvoicepaymentrecords pr
+        JOIN tblinvoices inv ON inv.id = pr.invoiceid
+        JOIN tblappointment_type at ON at.appointment_type_id = inv.appointment_type_id
+        JOIN tblcustomer_groups map ON map.customer_id = inv.clientid
+        WHERE at.appointment_type_name = 'First Appointment'
+          AND pr.date >= '$from_date_esc'
+          AND pr.date <= '$to_date_esc'
+    ) sub
+    GROUP BY sub.branch_id
+";
+$np_paycat_result = $CI->db->query($np_paycat_sql)->result_array();
+$np_paycat_lookup = [];
+foreach ($np_paycat_result as $r) {
+    $np_paycat_lookup[(int) $r['branch_id']] = (int) $r['np_visits'];
+}
+
 if (!empty($month_conditions)) {
     $month_where = implode(' OR ', $month_conditions);
     $goals_sql = "SELECT g.branch_id, g.goal_type, SUM(g.amount) AS total_amount
@@ -145,6 +182,8 @@ foreach ($result as $row) {
   $total_gt_goal += $gt_goal;
   $total_gt_achieved += $gt_achieved;
   $total_gt_projection = (isset($total_gt_projection) ? $total_gt_projection : 0) + $gt_projection;
+  $total_np_appt = (isset($total_np_appt) ? $total_np_appt : 0) + (isset($np_appt_lookup[$bid]) ? $np_appt_lookup[$bid] : 0);
+  $total_np_paycat = (isset($total_np_paycat) ? $total_np_paycat : 0) + (isset($np_paycat_lookup[$bid]) ? $np_paycat_lookup[$bid] : 0);
   $total_enquiry_goal += $enquiry_goal;
 
   $output['data'][] = [
@@ -153,7 +192,8 @@ foreach ($result as $row) {
     $gt_achieved,                // GT Achieved
     $gt_achieved_pct . '%',      // GT Achieved %
     $gt_projection,              // GT Projection
-    0,                           // NP Visits
+    isset($np_appt_lookup[$bid]) ? $np_appt_lookup[$bid] : 0,     // NP Visits (Appt Type)
+    isset($np_paycat_lookup[$bid]) ? $np_paycat_lookup[$bid] : 0, // NP Visits (Pay Cat)
     0,                           // NP Registration
     0,                           // NP Registration %
     0,                           // Enquiry Consultation Fee
@@ -191,7 +231,8 @@ $output['totals'] = [
   '<strong>' . $total_gt_achieved . '</strong>',         // GT Achieved
   '<strong>' . $total_gt_achieved_pct . '%</strong>',    // GT Achieved %
   '<strong>' . $total_gt_projection . '</strong>',       // GT Projection
-  '<strong>0</strong>',                                   // NP Visits
+  '<strong>' . $total_np_appt . '</strong>',              // NP Visits (Appt Type)
+  '<strong>' . $total_np_paycat . '</strong>',            // NP Visits (Pay Cat)
   '<strong>0</strong>',                                   // NP Registration
   '<strong>0</strong>',                                   // NP Registration %
   '<strong>0</strong>',                                   // Enquiry Consultation Fee
