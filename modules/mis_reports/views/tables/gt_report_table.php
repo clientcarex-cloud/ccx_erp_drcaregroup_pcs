@@ -41,13 +41,16 @@ $from_date_esc = $CI->db->escape_str($from_date);
 $to_date_esc   = $CI->db->escape_str($to_date);
 
 $paid_sql = "
-    SELECT map.groupid AS branch_id, COALESCE(SUM(pr.amount), 0) AS total_paid
-    FROM tblinvoicepaymentrecords pr
-    JOIN tblinvoices inv ON inv.id = pr.invoiceid
-    JOIN tblcustomer_groups map ON map.customer_id = inv.clientid
-    WHERE pr.date >= '$from_date_esc'
-      AND pr.date <= '$to_date_esc'
-    GROUP BY map.groupid
+    SELECT sub.branch_id, COALESCE(SUM(sub.amount), 0) AS total_paid
+    FROM (
+        SELECT DISTINCT pr.id, map.groupid AS branch_id, pr.amount
+        FROM tblinvoicepaymentrecords pr
+        JOIN tblinvoices inv ON inv.id = pr.invoiceid
+        JOIN tblcustomer_groups map ON map.customer_id = inv.clientid
+        WHERE pr.date >= '$from_date_esc'
+          AND pr.date <= '$to_date_esc'
+    ) sub
+    GROUP BY sub.branch_id
 ";
 $paid_result = $CI->db->query($paid_sql)->result_array();
 $paid_lookup = []; // keyed by branch_id => total_paid
