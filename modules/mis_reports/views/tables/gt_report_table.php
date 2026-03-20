@@ -159,6 +159,29 @@ foreach ($np_mrno_result as $r) {
     $np_mrno_lookup[(int) $r['branch_id']] = (int) $r['np_mrno'];
 }
 
+// ---- Fetch Enquiry Consultation Fee: paid amount where Package='Consultation Fee' AND PayCat='First Appointment' ----
+$enq_confee_sql = "
+    SELECT sub.branch_id, COALESCE(SUM(sub.amount), 0) AS total_confee
+    FROM (
+        SELECT DISTINCT pr.id, map.groupid AS branch_id, pr.amount
+        FROM tblinvoicepaymentrecords pr
+        JOIN tblinvoices inv ON inv.id = pr.invoiceid
+        JOIN tblitemable item ON item.rel_id = inv.id AND item.rel_type = 'invoice'
+        JOIN tblappointment_type at ON at.appointment_type_id = inv.appointment_type_id
+        JOIN tblcustomer_groups map ON map.customer_id = inv.clientid
+        WHERE item.description = 'Consultation Fee'
+          AND at.appointment_type_name = 'First Appointment'
+          AND pr.date >= '$from_date_esc'
+          AND pr.date <= '$to_date_esc'
+    ) sub
+    GROUP BY sub.branch_id
+";
+$enq_confee_result = $CI->db->query($enq_confee_sql)->result_array();
+$enq_confee_lookup = [];
+foreach ($enq_confee_result as $r) {
+    $enq_confee_lookup[(int) $r['branch_id']] = (float) $r['total_confee'];
+}
+
 if (!empty($month_conditions)) {
     $month_where = implode(' OR ', $month_conditions);
     $goals_sql = "SELECT g.branch_id, g.goal_type, SUM(g.amount) AS total_amount
@@ -230,6 +253,8 @@ foreach ($result as $row) {
   $total_np_reg = (isset($total_np_reg) ? $total_np_reg : 0) + $np_reg;
   $np_mrno = isset($np_mrno_lookup[$bid]) ? $np_mrno_lookup[$bid] : 0;
   $total_np_mrno = (isset($total_np_mrno) ? $total_np_mrno : 0) + $np_mrno;
+  $enq_confee = isset($enq_confee_lookup[$bid]) ? round($enq_confee_lookup[$bid]) : 0;
+  $total_enq_confee = (isset($total_enq_confee) ? $total_enq_confee : 0) + $enq_confee;
   $total_enquiry_goal += $enquiry_goal;
 
   $np_visits_appt = isset($np_appt_lookup[$bid]) ? $np_appt_lookup[$bid] : 0;
@@ -246,7 +271,7 @@ foreach ($result as $row) {
     $np_mrno,                    // NP Registration (MR. No)
     ($np_visits_appt > 0) ? round(($np_reg / $np_visits_appt) * 100) . '%' : '0%',   // NP Reg % (Package)
     ($np_visits_appt > 0) ? round(($np_mrno / $np_visits_appt) * 100) . '%' : '0%',  // NP Reg % (MR. No)
-    0,                           // Enquiry Consultation Fee
+    $enq_confee,                 // Enquiry Consultation Fee
     0,                           // NP Paid
     0,                           // NP Ticket Value
     0,                           // Enquiry Due Collected
@@ -287,7 +312,7 @@ $output['totals'] = [
   '<strong>' . $total_np_mrno . '</strong>',               // NP Registration (MR. No)
   '<strong>' . (($total_np_appt > 0) ? round(($total_np_reg / $total_np_appt) * 100) : 0) . '%</strong>',  // NP Reg % (Package)
   '<strong>' . (($total_np_appt > 0) ? round(($total_np_mrno / $total_np_appt) * 100) : 0) . '%</strong>', // NP Reg % (MR. No)
-  '<strong>0</strong>',                                   // Enquiry Consultation Fee
+  '<strong>' . $total_enq_confee . '</strong>',            // Enquiry Consultation Fee
   '<strong>0</strong>',                                   // NP Paid
   '<strong>0</strong>',                                   // NP Ticket Value
   '<strong>0</strong>',                                   // Enquiry Due Collected
