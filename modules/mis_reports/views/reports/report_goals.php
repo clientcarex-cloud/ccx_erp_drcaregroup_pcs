@@ -184,15 +184,208 @@
                 </div>
             </div>
         </div>
+
+        <!-- Goals with Lead Sources Section -->
+        <div class="row">
+            <div class="col-md-12">
+                <div class="panel_s">
+                    <div class="panel-body">
+                        <h4 class="no-margin" style="margin-bottom:15px !important;">
+                            <i class="fa fa-link" style="color:#8e44ad;"></i>
+                            Goals with Lead Sources
+                        </h4>
+                        <hr class="hr-panel-heading" />
+                        <p class="text-muted" style="margin-bottom:15px;">Assign lead sources to goal categories. Each source can only belong to <strong>one</strong> category.</p>
+
+                        <div class="row" id="leadSourceCardsContainer">
+                            <?php
+                            $categories = [
+                                'referral' => ['label' => 'Referral', 'color' => '#8e44ad', 'bg' => '#f5eef8', 'icon' => 'fa-users'],
+                                'enquiry'  => ['label' => 'Enquiry',  'color' => '#2980b9', 'bg' => '#ebf5fb', 'icon' => 'fa-phone'],
+                                'renewal'  => ['label' => 'Renewal',  'color' => '#e67e22', 'bg' => '#fef5e7', 'icon' => 'fa-refresh'],
+                            ];
+                            foreach ($categories as $cat_key => $cat_info) { ?>
+                            <div class="col-md-4">
+                                <div class="goal-source-card" style="border-top: 3px solid <?= $cat_info['color']; ?>; background: <?= $cat_info['bg']; ?>;">
+                                    <h5 style="color: <?= $cat_info['color']; ?>; font-weight:700; margin-bottom:12px;">
+                                        <i class="fa <?= $cat_info['icon']; ?>"></i> <?= $cat_info['label']; ?>
+                                    </h5>
+                                    <select class="form-control goal-source-select" id="source_<?= $cat_key; ?>" data-category="<?= $cat_key; ?>" multiple="multiple" style="width:100%;">
+                                        <?php foreach ($leads_sources as $src) { ?>
+                                            <option value="<?= $src['id']; ?>"><?= htmlspecialchars($src['name']); ?></option>
+                                        <?php } ?>
+                                    </select>
+                                    <button type="button" class="btn btn-sm btn-save-source" style="background:<?= $cat_info['color']; ?>; color:#fff; margin-top:10px;" data-category="<?= $cat_key; ?>">
+                                        <i class="fa fa-save"></i> Save
+                                    </button>
+                                    <span class="source-save-status" id="status_<?= $cat_key; ?>"></span>
+                                </div>
+                            </div>
+                            <?php } ?>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
 </div>
 
 <?php init_tail(); ?>
 
+<style>
+    .goal-source-card {
+        border-radius: 6px;
+        padding: 18px;
+        margin-bottom: 15px;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+    .btn-save-source {
+        border: none;
+        border-radius: 4px;
+        padding: 5px 16px;
+        font-weight: 600;
+        font-size: 13px;
+    }
+    .btn-save-source:hover { opacity: 0.85; }
+    .source-save-status {
+        display: inline-block;
+        margin-left: 8px;
+        font-weight: 600;
+        font-size: 12px;
+        opacity: 0;
+        transition: opacity 0.3s;
+    }
+    .source-save-status.show { opacity: 1; }
+    .source-save-status.success { color: #27ae60; }
+    .source-save-status.error { color: #e74c3c; }
+
+    /* Style disabled options in Select2 */
+    .select2-results__option[aria-disabled="true"] {
+        color: #bbb !important;
+        font-style: italic;
+    }
+</style>
+
 <script>
 $(function () {
     var csrfName = '<?= $this->security->get_csrf_token_name(); ?>';
     var csrfHash = '<?= $this->security->get_csrf_hash(); ?>';
+
+    // ============================================
+    // GOALS WITH LEAD SOURCES
+    // ============================================
+    var allSources = <?= json_encode($leads_sources); ?>;
+    var assignments = { referral: [], enquiry: [], renewal: [] };
+
+    // Init Select2 on each dropdown
+    $('.goal-source-select').select2({
+        placeholder: 'Select lead sources...',
+        width: '100%',
+        allowClear: true
+    });
+
+    // Load existing assignments on page load
+    function loadLeadSourceAssignments() {
+        $.ajax({
+            url: admin_url + 'mis_reports/get_goal_lead_sources',
+            type: 'GET',
+            dataType: 'json',
+            success: function (res) {
+                if (res.success) {
+                    assignments = res.data;
+                    // Set values in Select2
+                    $.each(assignments, function (cat, ids) {
+                        $('#source_' + cat).val(ids).trigger('change.select2');
+                    });
+                    syncDisabledOptions();
+                }
+            }
+        });
+    }
+    loadLeadSourceAssignments();
+
+    // Sync: disable options that are used in other categories
+    function syncDisabledOptions() {
+        var usedByCategory = {};
+        $('.goal-source-select').each(function () {
+            var cat = $(this).data('category');
+            var vals = $(this).val() || [];
+            vals.forEach(function (v) {
+                usedByCategory[v] = cat;
+            });
+        });
+
+        $('.goal-source-select').each(function () {
+            var currentCat = $(this).data('category');
+            $(this).find('option').each(function () {
+                var optVal = $(this).val();
+                if (usedByCategory[optVal] && usedByCategory[optVal] !== currentCat) {
+                    $(this).prop('disabled', true);
+                } else {
+                    $(this).prop('disabled', false);
+                }
+            });
+        });
+        // Refresh Select2 to show disabled state
+        $('.goal-source-select').select2({
+            placeholder: 'Select lead sources...',
+            width: '100%',
+            allowClear: true
+        });
+    }
+
+    // On selection change, re-sync
+    $('.goal-source-select').on('change', function () {
+        syncDisabledOptions();
+    });
+
+    // Save button for each category
+    $('.btn-save-source').on('click', function () {
+        var $btn = $(this);
+        var category = $btn.data('category');
+        var sourceIds = $('#source_' + category).val() || [];
+        var $status = $('#status_' + category);
+
+        var postData = {};
+        postData[csrfName] = csrfHash;
+        postData['category'] = category;
+        for (var i = 0; i < sourceIds.length; i++) {
+            postData['source_ids[' + i + ']'] = sourceIds[i];
+        }
+
+        $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Saving...');
+
+        $.ajax({
+            url: admin_url + 'mis_reports/save_goal_lead_sources',
+            type: 'POST',
+            data: postData,
+            dataType: 'json',
+            success: function (res) {
+                $btn.prop('disabled', false).html('<i class="fa fa-save"></i> Save');
+                if (res.success) {
+                    alert_float('success', res.message);
+                    $status.text('✓ Saved').removeClass('error').addClass('success show');
+                    if (res.csrf_hash) csrfHash = res.csrf_hash;
+                } else {
+                    alert_float('danger', res.message || 'Save failed.');
+                    $status.text('✗ Error').removeClass('success').addClass('error show');
+                }
+                setTimeout(function () { $status.removeClass('show'); }, 3000);
+            },
+            error: function () {
+                $btn.prop('disabled', false).html('<i class="fa fa-save"></i> Save');
+                alert_float('danger', 'Failed to save.');
+                $status.text('✗ Error').removeClass('success').addClass('error show');
+                setTimeout(function () { $status.removeClass('show'); }, 3000);
+            }
+        });
+    });
+
+    // ============================================
+    // EXISTING GOALS TABLE LOGIC
+    // ============================================
 
     // Load goals
     $('#loadGoalsBtn').on('click', function () {

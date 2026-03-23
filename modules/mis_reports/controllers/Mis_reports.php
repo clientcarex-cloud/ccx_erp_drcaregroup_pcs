@@ -29,6 +29,18 @@ class Mis_reports extends AdminController
                 UNIQUE KEY `unique_goal` (`branch_id`, `year`, `month`, `goal_type`)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8;');
         }
+
+        // Self-healing: create tblgoal_lead_sources if missing
+        if (!$this->db->table_exists(db_prefix() . 'goal_lead_sources')) {
+            $this->db->query('CREATE TABLE `' . db_prefix() . 'goal_lead_sources` (
+                `id` INT(11) NOT NULL AUTO_INCREMENT,
+                `source_id` INT(11) NOT NULL,
+                `category` VARCHAR(50) NOT NULL,
+                `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (`id`),
+                UNIQUE KEY `unique_source` (`source_id`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8;');
+        }
     }
 
     public function index()
@@ -386,6 +398,7 @@ class Mis_reports extends AdminController
 
         $data['title'] = 'Reports Goals';
         $data['branch'] = $this->client_model->get_branch();
+        $data['leads_sources'] = $this->client_model->get_leads_sources();
         $this->load->view('mis_reports/reports/report_goals', $data);
     }
 
@@ -452,6 +465,86 @@ class Mis_reports extends AdminController
         }
 
         echo json_encode(['success' => true, 'goals' => $goals]);
+        exit;
+    }
+
+    /**
+     * AJAX: save goal lead source assignments for a category
+     */
+    public function save_goal_lead_sources()
+    {
+        if (!$this->input->is_ajax_request()) {
+            show_404();
+        }
+        if (!is_admin() && !staff_can('edit', 'mis_reports')) {
+            echo json_encode(['success' => false, 'message' => 'Access denied']);
+            exit;
+        }
+
+        $category   = $this->db->escape_str($this->input->post('category'));
+        $source_ids = $this->input->post('source_ids'); // array or empty
+
+        if (!in_array($category, ['referral', 'enquiry', 'renewal'])) {
+            echo json_encode(['success' => false, 'message' => 'Invalid category']);
+            exit;
+        }
+
+        $table = db_prefix() . 'goal_lead_sources';
+
+        // Check for conflicts: any source_id already assigned to a DIFFERENT category?
+        if (!empty($source_ids) && is_array($source_ids)) {
+            $source_ids = array_map('intval', $source_ids);
+            $this->db->where_in('source_id', $source_ids);
+            $this->db->where('category !=', $category);
+            $conflicts = $this->db->get($table)->result_array();
+
+            if (!empty($conflicts)) {
+                $conflict_ids = array_column($conflicts, 'source_id');
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Source ID(s) ' . implode(', ', $conflict_ids) . ' already assigned to another category.'
+                ]);
+                exit;
+            }
+        }
+
+        // Delete existing assignments for this category
+        $this->db->where('category', $category);
+        $this->db->delete($table);
+
+        // Insert new assignments
+        if (!empty($source_ids) && is_array($source_ids)) {
+            foreach ($source_ids as $sid) {
+                $this->db->insert($table, [
+                    'source_id' => (int) $sid,
+                    'category'  => $category,
+                ]);
+            }
+        }
+
+        echo json_encode(['success' => true, 'message' => 'Lead sources saved for ' . ucfirst($category)]);
+        exit;
+    }
+
+    /**
+     * AJAX: get all goal lead source assignments
+     */
+    public function get_goal_lead_sources()
+    {
+        if (!$this->input->is_ajax_request()) {
+            show_404();
+        }
+
+        $results = $this->db->get(db_prefix() . 'goal_lead_sources')->result_array();
+
+        $grouped = ['referral' => [], 'enquiry' => [], 'renewal' => []];
+        foreach ($results as $row) {
+            if (isset($grouped[$row['category']])) {
+                $grouped[$row['category']][] = (int) $row['source_id'];
+            }
+        }
+
+        echo json_encode(['success' => true, 'data' => $grouped]);
         exit;
     }
 
