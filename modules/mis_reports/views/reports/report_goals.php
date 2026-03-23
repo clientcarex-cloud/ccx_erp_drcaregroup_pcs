@@ -210,12 +210,16 @@
                                     <h5 style="color: <?= $cat_info['color']; ?>; font-weight:700; margin-bottom:12px;">
                                         <i class="fa <?= $cat_info['icon']; ?>"></i> <?= $cat_info['label']; ?>
                                     </h5>
-                                    <select class="form-control goal-source-select" id="source_<?= $cat_key; ?>" data-category="<?= $cat_key; ?>" multiple="multiple" style="width:100%;">
-                                        <?php foreach ($leads_sources as $src) { ?>
-                                            <option value="<?= $src['id']; ?>"><?= htmlspecialchars($src['name']); ?></option>
-                                        <?php } ?>
-                                    </select>
-                                    <button type="button" class="btn btn-sm btn-save-source" style="background:<?= $cat_info['color']; ?>; color:#fff; margin-top:10px;" data-category="<?= $cat_key; ?>">
+                                    <div class="input-group" style="margin-bottom:10px;">
+                                        <select class="form-control goal-source-dropdown" id="dropdown_<?= $cat_key; ?>" data-category="<?= $cat_key; ?>" style="width:100%;">
+                                            <option value=""></option>
+                                            <?php foreach ($leads_sources as $src) { ?>
+                                                <option value="<?= $src['id']; ?>"><?= htmlspecialchars($src['name']); ?></option>
+                                            <?php } ?>
+                                        </select>
+                                    </div>
+                                    <ul class="selected-sources-list" id="list_<?= $cat_key; ?>" data-category="<?= $cat_key; ?>"></ul>
+                                    <button type="button" class="btn btn-sm btn-save-source" style="background:<?= $cat_info['color']; ?>; color:#fff; margin-top:8px;" data-category="<?= $cat_key; ?>">
                                         <i class="fa fa-save"></i> Save
                                     </button>
                                     <span class="source-save-status" id="status_<?= $cat_key; ?>"></span>
@@ -261,10 +265,51 @@
     .source-save-status.success { color: #27ae60; }
     .source-save-status.error { color: #e74c3c; }
 
-    /* Style disabled options in Select2 */
-    .select2-results__option[aria-disabled="true"] {
-        color: #bbb !important;
+    /* Selected sources list */
+    .selected-sources-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        max-height: 220px;
+        overflow-y: auto;
+    }
+    .selected-sources-list li {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 6px 10px;
+        margin-bottom: 4px;
+        background: #fff;
+        border: 1px solid #e0e0e0;
+        border-radius: 4px;
+        font-size: 13px;
+        transition: background 0.15s;
+    }
+    .selected-sources-list li:hover {
+        background: #f9f9f9;
+    }
+    .selected-sources-list li .source-name {
+        flex: 1;
+        font-weight: 500;
+    }
+    .selected-sources-list li .remove-source {
+        cursor: pointer;
+        color: #e74c3c;
+        font-size: 15px;
+        font-weight: 700;
+        margin-left: 10px;
+        line-height: 1;
+        opacity: 0.7;
+        transition: opacity 0.15s;
+    }
+    .selected-sources-list li .remove-source:hover {
+        opacity: 1;
+    }
+    .selected-sources-list .empty-msg {
+        color: #aaa;
         font-style: italic;
+        font-size: 12px;
+        padding: 6px 0;
     }
 </style>
 
@@ -277,14 +322,90 @@ $(function () {
     // GOALS WITH LEAD SOURCES
     // ============================================
     var allSources = <?= json_encode($leads_sources); ?>;
-    var assignments = { referral: [], enquiry: [], renewal: [] };
+    // Build a lookup: id -> name
+    var sourceMap = {};
+    allSources.forEach(function (s) { sourceMap[s.id] = s.name; });
 
-    // Init Select2 on each dropdown
-    $('.goal-source-select').select2({
-        placeholder: 'Select lead sources...',
+    // Track selected IDs per category
+    var selected = { referral: [], enquiry: [], renewal: [] };
+
+    // Init Select2 as single-select dropdown
+    $('.goal-source-dropdown').select2({
+        placeholder: 'Select a lead source to add...',
         width: '100%',
         allowClear: true
     });
+
+    // On dropdown selection, add to list
+    $(document).on('change', '.goal-source-dropdown', function () {
+        var $dd = $(this);
+        var cat = $dd.data('category');
+        var val = $dd.val();
+        if (!val) return;
+        val = String(val);
+
+        // Prevent duplicates within same category
+        if (selected[cat].indexOf(val) !== -1) {
+            $dd.val('').trigger('change.select2');
+            return;
+        }
+
+        selected[cat].push(val);
+        renderList(cat);
+        syncDropdowns();
+
+        // Reset dropdown
+        $dd.val('').trigger('change.select2');
+    });
+
+    // Remove item from list
+    $(document).on('click', '.remove-source', function () {
+        var cat = $(this).data('category');
+        var id = String($(this).data('id'));
+        selected[cat] = selected[cat].filter(function (v) { return v !== id; });
+        renderList(cat);
+        syncDropdowns();
+    });
+
+    // Render the selected list for a category
+    function renderList(cat) {
+        var $list = $('#list_' + cat);
+        $list.empty();
+        if (selected[cat].length === 0) {
+            $list.append('<li class="empty-msg">No sources assigned</li>');
+            return;
+        }
+        selected[cat].forEach(function (id) {
+            var name = sourceMap[id] || ('Source #' + id);
+            $list.append(
+                '<li>' +
+                    '<span class="source-name">' + $('<span>').text(name).html() + '</span>' +
+                    '<span class="remove-source" data-category="' + cat + '" data-id="' + id + '" title="Remove">&times;</span>' +
+                '</li>'
+            );
+        });
+    }
+
+    // Sync dropdowns: hide options already used in ANY category
+    function syncDropdowns() {
+        var allUsed = {};
+        $.each(selected, function (cat, ids) {
+            ids.forEach(function (id) { allUsed[id] = cat; });
+        });
+
+        $('.goal-source-dropdown').each(function () {
+            var currentCat = $(this).data('category');
+            $(this).find('option').each(function () {
+                var optVal = $(this).val();
+                if (!optVal) return; // skip placeholder
+                if (allUsed[optVal]) {
+                    $(this).prop('disabled', true);
+                } else {
+                    $(this).prop('disabled', false);
+                }
+            });
+        });
+    }
 
     // Load existing assignments on page load
     function loadLeadSourceAssignments() {
@@ -294,58 +415,22 @@ $(function () {
             dataType: 'json',
             success: function (res) {
                 if (res.success) {
-                    assignments = res.data;
-                    // Set values in Select2
-                    $.each(assignments, function (cat, ids) {
-                        $('#source_' + cat).val(ids).trigger('change.select2');
+                    $.each(res.data, function (cat, ids) {
+                        selected[cat] = ids.map(String);
+                        renderList(cat);
                     });
-                    syncDisabledOptions();
+                    syncDropdowns();
                 }
             }
         });
     }
     loadLeadSourceAssignments();
 
-    // Sync: disable options that are used in other categories
-    function syncDisabledOptions() {
-        var usedByCategory = {};
-        $('.goal-source-select').each(function () {
-            var cat = $(this).data('category');
-            var vals = $(this).val() || [];
-            vals.forEach(function (v) {
-                usedByCategory[v] = cat;
-            });
-        });
-
-        $('.goal-source-select').each(function () {
-            var currentCat = $(this).data('category');
-            $(this).find('option').each(function () {
-                var optVal = $(this).val();
-                if (usedByCategory[optVal] && usedByCategory[optVal] !== currentCat) {
-                    $(this).prop('disabled', true);
-                } else {
-                    $(this).prop('disabled', false);
-                }
-            });
-        });
-        // Refresh Select2 to show disabled state
-        $('.goal-source-select').select2({
-            placeholder: 'Select lead sources...',
-            width: '100%',
-            allowClear: true
-        });
-    }
-
-    // On selection change, re-sync
-    $('.goal-source-select').on('change', function () {
-        syncDisabledOptions();
-    });
-
     // Save button for each category
     $('.btn-save-source').on('click', function () {
         var $btn = $(this);
         var category = $btn.data('category');
-        var sourceIds = $('#source_' + category).val() || [];
+        var sourceIds = selected[category] || [];
         var $status = $('#status_' + category);
 
         var postData = {};
