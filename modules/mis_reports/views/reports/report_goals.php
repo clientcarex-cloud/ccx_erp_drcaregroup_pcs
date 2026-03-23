@@ -210,13 +210,15 @@
                                     <h5 style="color: <?= $cat_info['color']; ?>; font-weight:700; margin-bottom:12px;">
                                         <i class="fa <?= $cat_info['icon']; ?>"></i> <?= $cat_info['label']; ?>
                                     </h5>
-                                    <div class="input-group" style="margin-bottom:10px;">
-                                        <select class="form-control goal-source-dropdown" id="dropdown_<?= $cat_key; ?>" data-category="<?= $cat_key; ?>" style="width:100%;">
-                                            <option value=""></option>
+                                    <div style="margin-bottom:10px;">
+                                        <select class="form-control goal-source-dropdown" id="dropdown_<?= $cat_key; ?>" data-category="<?= $cat_key; ?>" multiple="multiple" style="width:100%;">
                                             <?php foreach ($leads_sources as $src) { ?>
                                                 <option value="<?= $src['id']; ?>"><?= htmlspecialchars($src['name']); ?></option>
                                             <?php } ?>
                                         </select>
+                                        <button type="button" class="btn btn-xs btn-add-sources" style="margin-top:6px; background:<?= $cat_info['color']; ?>; color:#fff; border:none; border-radius:3px; padding:3px 12px; font-weight:600;" data-category="<?= $cat_key; ?>">
+                                            <i class="fa fa-plus"></i> Add Selected
+                                        </button>
                                     </div>
                                     <ul class="selected-sources-list" id="list_<?= $cat_key; ?>" data-category="<?= $cat_key; ?>"></ul>
                                     <button type="button" class="btn btn-sm btn-save-source" style="background:<?= $cat_info['color']; ?>; color:#fff; margin-top:8px;" data-category="<?= $cat_key; ?>">
@@ -329,33 +331,33 @@ $(function () {
     // Track selected IDs per category
     var selected = { referral: [], enquiry: [], renewal: [] };
 
-    // Init Select2 as single-select dropdown
+    // Init Select2 as multi-select dropdown
     $('.goal-source-dropdown').select2({
-        placeholder: 'Select a lead source to add...',
+        placeholder: 'Select lead sources...',
         width: '100%',
         allowClear: true
     });
 
-    // On dropdown selection, add to list
-    $(document).on('change', '.goal-source-dropdown', function () {
-        var $dd = $(this);
-        var cat = $dd.data('category');
-        var val = $dd.val();
-        if (!val) return;
-        val = String(val);
+    // Add button: move selected dropdown items into the list
+    $(document).on('click', '.btn-add-sources', function () {
+        var $btn = $(this);
+        var cat = $btn.data('category');
+        var $dd = $('#dropdown_' + cat);
+        var vals = $dd.val() || [];
+        if (vals.length === 0) return;
 
-        // Prevent duplicates within same category
-        if (selected[cat].indexOf(val) !== -1) {
-            $dd.val('').trigger('change.select2');
-            return;
-        }
+        vals.forEach(function (v) {
+            v = String(v);
+            if (selected[cat].indexOf(v) === -1) {
+                selected[cat].push(v);
+            }
+        });
 
-        selected[cat].push(val);
+        // Clear the dropdown
+        $dd.val(null).trigger('change.select2');
+
         renderList(cat);
         syncDropdowns();
-
-        // Reset dropdown
-        $dd.val('').trigger('change.select2');
     });
 
     // Remove item from list
