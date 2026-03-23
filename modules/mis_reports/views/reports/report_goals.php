@@ -211,14 +211,12 @@
                                         <i class="fa <?= $cat_info['icon']; ?>"></i> <?= $cat_info['label']; ?>
                                     </h5>
                                     <div style="margin-bottom:10px;">
-                                        <select class="form-control goal-source-dropdown" id="dropdown_<?= $cat_key; ?>" data-category="<?= $cat_key; ?>" multiple="multiple" style="width:100%;">
+                                        <select class="form-control goal-source-dropdown" id="dropdown_<?= $cat_key; ?>" data-category="<?= $cat_key; ?>" multiple="multiple" size="8" style="width:100%; min-height:180px;">
                                             <?php foreach ($leads_sources as $src) { ?>
                                                 <option value="<?= $src['id']; ?>"><?= htmlspecialchars($src['name']); ?></option>
                                             <?php } ?>
                                         </select>
-                                        <button type="button" class="btn btn-xs btn-add-sources" style="margin-top:6px; background:<?= $cat_info['color']; ?>; color:#fff; border:none; border-radius:3px; padding:3px 12px; font-weight:600;" data-category="<?= $cat_key; ?>">
-                                            <i class="fa fa-plus"></i> Add Selected
-                                        </button>
+                                        <input type="text" class="form-control source-search-input" data-category="<?= $cat_key; ?>" placeholder="🔍 Search sources..." style="margin-top:6px; font-size:12px; padding:4px 8px;">
                                     </div>
                                     <ul class="selected-sources-list" id="list_<?= $cat_key; ?>" data-category="<?= $cat_key; ?>"></ul>
                                     <button type="button" class="btn btn-sm btn-save-source" style="background:<?= $cat_info['color']; ?>; color:#fff; margin-top:8px;" data-category="<?= $cat_key; ?>">
@@ -272,7 +270,7 @@
         list-style: none;
         padding: 0;
         margin: 0;
-        max-height: 220px;
+        max-height: 300px;
         overflow-y: auto;
     }
     .selected-sources-list li {
@@ -331,33 +329,33 @@ $(function () {
     // Track selected IDs per category
     var selected = { referral: [], enquiry: [], renewal: [] };
 
-    // Init Select2 as multi-select dropdown
-    $('.goal-source-dropdown').select2({
-        placeholder: 'Select lead sources...',
-        width: '100%',
-        allowClear: true
-    });
+    // NO Select2 — using native multi-select with search filter
 
-    // Add button: move selected dropdown items into the list
-    $(document).on('click', '.btn-add-sources', function () {
-        var $btn = $(this);
-        var cat = $btn.data('category');
+    // Search filter for each category's dropdown
+    $(document).on('input', '.source-search-input', function () {
+        var query = $(this).val().toLowerCase();
+        var cat = $(this).data('category');
         var $dd = $('#dropdown_' + cat);
-        var vals = $dd.val() || [];
-        if (vals.length === 0) return;
-
-        vals.forEach(function (v) {
-            v = String(v);
-            if (selected[cat].indexOf(v) === -1) {
-                selected[cat].push(v);
+        $dd.find('option').each(function () {
+            var text = $(this).text().toLowerCase();
+            if (text.indexOf(query) !== -1) {
+                $(this).show();
+            } else {
+                $(this).hide();
             }
         });
+    });
 
-        // Clear the dropdown
-        $dd.val(null).trigger('change.select2');
-
+    // On native select change, sync the selected list
+    $(document).on('change', '.goal-source-dropdown', function () {
+        var $dd = $(this);
+        var cat = $dd.data('category');
+        var vals = [];
+        $dd.find('option:selected').each(function () {
+            vals.push(String($(this).val()));
+        });
+        selected[cat] = vals;
         renderList(cat);
-        syncDropdowns();
     });
 
     // Remove item from list
@@ -388,7 +386,7 @@ $(function () {
         });
     }
 
-    // Sync dropdowns: hide options already used in ANY category
+    // Sync dropdowns: disable options already used in ANOTHER category
     function syncDropdowns() {
         var allUsed = {};
         $.each(selected, function (cat, ids) {
@@ -398,12 +396,12 @@ $(function () {
         $('.goal-source-dropdown').each(function () {
             var currentCat = $(this).data('category');
             $(this).find('option').each(function () {
-                var optVal = $(this).val();
-                if (!optVal) return; // skip placeholder
-                if (allUsed[optVal]) {
-                    $(this).prop('disabled', true);
+                var optVal = String($(this).val());
+                if (!optVal) return;
+                if (allUsed[optVal] && allUsed[optVal] !== currentCat) {
+                    $(this).prop('disabled', true).css('color', '#ccc');
                 } else {
-                    $(this).prop('disabled', false);
+                    $(this).prop('disabled', false).css('color', '');
                 }
             });
         });
@@ -419,6 +417,8 @@ $(function () {
                 if (res.success) {
                     $.each(res.data, function (cat, ids) {
                         selected[cat] = ids.map(String);
+                        // Set the native select values
+                        $('#dropdown_' + cat).val(ids.map(String));
                         renderList(cat);
                     });
                     syncDropdowns();
