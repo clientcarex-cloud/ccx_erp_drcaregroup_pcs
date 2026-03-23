@@ -59,6 +59,7 @@
     .goal-type-gt { background: #d4edda; color: #155724; }
     .goal-type-enquiry { background: #cce5ff; color: #004085; }
     .goal-type-renewal { background: #fff3cd; color: #856404; }
+    .goal-type-referral { background: #e2d5f1; color: #4a235a; }
     .filter-bar {
         display: flex;
         gap: 15px;
@@ -156,9 +157,10 @@
                                 <tbody>
                                     <?php
                                     $goal_types = [
-                                        'gt_goal'      => ['GT Goal', 'goal-type-gt'],
-                                        'enquiry_goal' => ['Enquiry Goal', 'goal-type-enquiry'],
-                                        'renewal_goal' => ['Renewal Goal', 'goal-type-renewal'],
+                                        'gt_goal'       => ['GT Goal', 'goal-type-gt'],
+                                        'enquiry_goal'  => ['Enquiry Goal', 'goal-type-enquiry'],
+                                        'renewal_goal'  => ['Renewal Goal', 'goal-type-renewal'],
+                                        'referral_goal' => ['Referral Goal', 'goal-type-referral'],
                                     ];
                                     foreach ($goal_types as $type_key => $type_info) {
                                         echo '<tr data-goal-type="' . $type_key . '">';
