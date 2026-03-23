@@ -5,9 +5,9 @@
         font-size: 1.6rem !important;
     }
     /* Highlight pending/WIP columns (index 20-30) with amber background */
-    .table-unit-gt-report thead th:nth-child(n+25),
-    .table-unit-gt-report tbody td:nth-child(n+25),
-    .table-unit-gt-report tfoot th:nth-child(n+25) {
+    .table-unit-gt-report thead th:nth-child(n+22),
+    .table-unit-gt-report tbody td:nth-child(n+22),
+    .table-unit-gt-report tfoot th:nth-child(n+22) {
         background-color: #fff3cd !important;
         color: #856404 !important;
     }
@@ -87,12 +87,9 @@
                             'GT Achieved',
                             'GT Achieved %',
                             'GT Projection',
-                            'NP Visits (Appt Type)',
                             'NP Visits (Pay Cat)',
                             'NP Registration (Package)',
-                            'NP Registration (MR. No)',
                             'NP Reg % (Package)',
-                            'NP Reg % (MR. No)',
                             'Enquiry Consultation Fee',
                             'NP Paid',
                             'NP Ticket Value',

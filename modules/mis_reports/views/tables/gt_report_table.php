@@ -92,25 +92,6 @@ $first_appt_exists = "
     )
 ";
 
-// ---- Fetch NP Visits from Appointment Type ('First Appointment') ----
-$np_appt_sql = "
-    SELECT sub.branch_id, COUNT(DISTINCT sub.clientid) AS np_visits
-    FROM (
-        SELECT DISTINCT pr.id, map.groupid AS branch_id, inv.clientid
-        FROM tblinvoicepaymentrecords pr
-        JOIN tblinvoices inv ON inv.id = pr.invoiceid
-        JOIN tblcustomer_groups map ON map.customer_id = inv.clientid
-        WHERE pr.date >= '$from_date_esc'
-          AND pr.date <= '$to_date_esc'
-          AND $first_appt_exists
-    ) sub
-    GROUP BY sub.branch_id
-";
-$np_appt_result = $CI->db->query($np_appt_sql)->result_array();
-$np_appt_lookup = [];
-foreach ($np_appt_result as $r) {
-    $np_appt_lookup[(int) $r['branch_id']] = (int) $r['np_visits'];
-}
 
 // ---- Fetch NP Visits from Payment Category ('First Appointment') ----
 $np_paycat_sql = "
@@ -155,27 +136,6 @@ foreach ($np_reg_result as $r) {
     $np_reg_lookup[(int) $r['branch_id']] = (int) $r['np_reg'];
 }
 
-// ---- Fetch NP Registration (MR. No): First Appointment patients with non-empty mr_no ----
-$np_mrno_sql = "
-    SELECT sub.branch_id, COUNT(DISTINCT sub.clientid) AS np_mrno
-    FROM (
-        SELECT DISTINCT pr.id, map.groupid AS branch_id, inv.clientid
-        FROM tblinvoicepaymentrecords pr
-        JOIN tblinvoices inv ON inv.id = pr.invoiceid
-        JOIN tblcustomer_groups map ON map.customer_id = inv.clientid
-        JOIN tblclients_new_fields cnf ON cnf.userid = inv.clientid
-        WHERE cnf.mr_no IS NOT NULL AND cnf.mr_no <> ''
-          AND pr.date >= '$from_date_esc'
-          AND pr.date <= '$to_date_esc'
-          AND $first_appt_exists
-    ) sub
-    GROUP BY sub.branch_id
-";
-$np_mrno_result = $CI->db->query($np_mrno_sql)->result_array();
-$np_mrno_lookup = [];
-foreach ($np_mrno_result as $r) {
-    $np_mrno_lookup[(int) $r['branch_id']] = (int) $r['np_mrno'];
-}
 
 // ---- Fetch Enquiry Consultation Fee: paid amount where Package='Consultation Fee' for patients with 'First Appointment' ----
 // Matches payment_detail_report logic: appointment type is derived from the latest appointment on the payment date
@@ -293,19 +253,16 @@ foreach ($result as $row) {
   $total_gt_goal += $gt_goal;
   $total_gt_achieved += $gt_achieved;
   $total_gt_projection = (isset($total_gt_projection) ? $total_gt_projection : 0) + $gt_projection;
-  $total_np_appt = (isset($total_np_appt) ? $total_np_appt : 0) + (isset($np_appt_lookup[$bid]) ? $np_appt_lookup[$bid] : 0);
   $total_np_paycat = (isset($total_np_paycat) ? $total_np_paycat : 0) + (isset($np_paycat_lookup[$bid]) ? $np_paycat_lookup[$bid] : 0);
   $np_reg = isset($np_reg_lookup[$bid]) ? $np_reg_lookup[$bid] : 0;
   $total_np_reg = (isset($total_np_reg) ? $total_np_reg : 0) + $np_reg;
-  $np_mrno = isset($np_mrno_lookup[$bid]) ? $np_mrno_lookup[$bid] : 0;
-  $total_np_mrno = (isset($total_np_mrno) ? $total_np_mrno : 0) + $np_mrno;
   $enq_confee = isset($enq_confee_lookup[$bid]) ? round($enq_confee_lookup[$bid]) : 0;
   $total_enq_confee = (isset($total_enq_confee) ? $total_enq_confee : 0) + $enq_confee;
   $np_paid = isset($np_paid_lookup[$bid]) ? round($np_paid_lookup[$bid]) : 0;
   $total_np_paid = (isset($total_np_paid) ? $total_np_paid : 0) + $np_paid;
   $total_enquiry_goal += $enquiry_goal;
 
-  $np_visits_appt = isset($np_appt_lookup[$bid]) ? $np_appt_lookup[$bid] : 0;
+  $np_visits_paycat = isset($np_paycat_lookup[$bid]) ? $np_paycat_lookup[$bid] : 0;
 
   $output['data'][] = [
     $row['branch_name'],         // Branch
@@ -313,15 +270,12 @@ foreach ($result as $row) {
     $gt_achieved,                // GT Achieved
     $gt_achieved_pct . '%',      // GT Achieved %
     $gt_projection,              // GT Projection
-    isset($np_appt_lookup[$bid]) ? $np_appt_lookup[$bid] : 0,     // NP Visits (Appt Type)
     isset($np_paycat_lookup[$bid]) ? $np_paycat_lookup[$bid] : 0, // NP Visits (Pay Cat)
     $np_reg,                     // NP Registration (Package)
-    $np_mrno,                    // NP Registration (MR. No)
-    ($np_visits_appt > 0) ? round(($np_reg / $np_visits_appt) * 100) . '%' : '0%',   // NP Reg % (Package)
-    ($np_visits_appt > 0) ? round(($np_mrno / $np_visits_appt) * 100) . '%' : '0%',  // NP Reg % (MR. No)
+    ($np_visits_paycat > 0) ? round(($np_reg / $np_visits_paycat) * 100) . '%' : '0%',   // NP Reg % (Package)
     $enq_confee,                 // Enquiry Consultation Fee
     $np_paid,                    // NP Paid
-    ($np_visits_appt > 0) ? round($np_paid / $np_visits_appt) : 0, // NP Ticket Value
+    ($np_visits_paycat > 0) ? round($np_paid / $np_visits_paycat) : 0, // NP Ticket Value
     0,                           // Enquiry Due Collected
     (0 + $np_paid),              // Enquiry GT = Enquiry Due Collected + NP Paid
     ($enquiry_goal > 0) ? round(((0 + $np_paid) / $enquiry_goal) * 100) . '%' : '0%', // Enquiry Achieved %
@@ -355,15 +309,12 @@ $output['totals'] = [
   '<strong>' . $total_gt_achieved . '</strong>',         // GT Achieved
   '<strong>' . $total_gt_achieved_pct . '%</strong>',    // GT Achieved %
   '<strong>' . $total_gt_projection . '</strong>',       // GT Projection
-  '<strong>' . $total_np_appt . '</strong>',              // NP Visits (Appt Type)
   '<strong>' . $total_np_paycat . '</strong>',            // NP Visits (Pay Cat)
   '<strong>' . $total_np_reg . '</strong>',                // NP Registration (Package)
-  '<strong>' . $total_np_mrno . '</strong>',               // NP Registration (MR. No)
-  '<strong>' . (($total_np_appt > 0) ? round(($total_np_reg / $total_np_appt) * 100) : 0) . '%</strong>',  // NP Reg % (Package)
-  '<strong>' . (($total_np_appt > 0) ? round(($total_np_mrno / $total_np_appt) * 100) : 0) . '%</strong>', // NP Reg % (MR. No)
+  '<strong>' . (($total_np_paycat > 0) ? round(($total_np_reg / $total_np_paycat) * 100) : 0) . '%</strong>',  // NP Reg % (Package)
   '<strong>' . $total_enq_confee . '</strong>',            // Enquiry Consultation Fee
   '<strong>' . $total_np_paid . '</strong>',                // NP Paid
-  '<strong>' . (($total_np_appt > 0) ? round($total_np_paid / $total_np_appt) : 0) . '</strong>', // NP Ticket Value
+  '<strong>' . (($total_np_paycat > 0) ? round($total_np_paid / $total_np_paycat) : 0) . '</strong>', // NP Ticket Value
   '<strong>0</strong>',                                   // Enquiry Due Collected
   '<strong>' . (0 + $total_np_paid) . '</strong>',         // Enquiry GT
   '<strong>' . (($total_enquiry_goal > 0) ? round(((0 + $total_np_paid) / $total_enquiry_goal) * 100) : 0) . '%</strong>', // Enquiry Achieved %
