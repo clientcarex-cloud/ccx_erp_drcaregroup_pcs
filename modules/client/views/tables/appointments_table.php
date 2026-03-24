@@ -221,8 +221,9 @@ foreach ($results as $aRow) {
     $row[] = $aRow['appointment_type_name'];
     $row[] = !empty($aRow['branch_name']) ? ucfirst($aRow['branch_name']) : '-';
     $row[] = !empty($aRow['registration_start_date']) && $aRow['registration_start_date'] != '1970-01-01' && !empty($aRow['mr_no']) ? _d($aRow['registration_start_date']) : '-';
+    $row[] = !empty($aRow['registration_end_date']) && $aRow['registration_end_date'] != '1970-01-01' && !empty($aRow['mr_no']) ? _d($aRow['registration_end_date']) : '-';
     $row[] = $renewal_date ? _d($renewal_date) : '-';
-    $row[] = $renewal_end_date ? _d($renewal_end_date) : _d($aRow['registration_end_date']);
+    $row[] = $renewal_end_date ? _d($renewal_end_date) : '-';
     //$row[] = $aRow['enquiry_type_name'];
 
     $total = $check_payment->total ?? 0;

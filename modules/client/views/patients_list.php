@@ -370,6 +370,7 @@ if ($master_data) {
                                         _l('appointment_type'),
                                         _l('branch'),
                                         _l('registration_date'),
+                                        _l('registration_end_date'),
                                         _l('renewal_date'),
                                         _l('renewal_end_date'),
                                         _l('consultation_fee'),
