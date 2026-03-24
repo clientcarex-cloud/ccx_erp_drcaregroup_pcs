@@ -197,9 +197,13 @@ foreach ($results as $aRow) {
     $row[] = '<b><a href="' . $url . '">' . $aRow['patient_name'] . '</a></b>';
     $row[] = $aRow['mr_no'] ?? '-';
     $row[] = $aRow['source_name'] ?? '-';
-    $row[] = (staff_can('mobile_masking', 'customers') && !is_admin())
-        ? mask_last_5_digits_2($aRow['patient_mobile'])
-        : $aRow['patient_mobile'];
+    $masked_mobile = mask_last_5_digits_2($aRow['patient_mobile']);
+    $full_mobile = $aRow['patient_mobile'];
+    $uid = $aRow['appointment_id'];
+    $row[] = '<span id="masked_mob_' . $uid . '">' . $masked_mobile . '</span>'
+           . '<span id="full_mob_' . $uid . '" style="display:none;">' . $full_mobile . '</span> '
+           . '<a href="javascript:void(0);" onclick="toggleMobile(' . $uid . ')" title="Show/Hide" style="margin-left:5px;">'
+           . '<i id="mob_icon_' . $uid . '" class="fa fa-eye"></i></a>';
     $row[] = get_staff_full_name($aRow['enquiry_doctor_id']);
     $row[] = _d($aRow['appointment_date']);
     $row[] = _d($aRow['consulted_date']);

@@ -576,6 +576,21 @@ if ($master_data) {
         }
     }
 
+    function toggleMobile(uid) {
+        var masked = document.getElementById('masked_mob_' + uid);
+        var full = document.getElementById('full_mob_' + uid);
+        var icon = document.getElementById('mob_icon_' + uid);
+        if (masked.style.display !== 'none') {
+            masked.style.display = 'none';
+            full.style.display = 'inline';
+            icon.className = 'fa fa-eye-slash';
+        } else {
+            masked.style.display = 'inline';
+            full.style.display = 'none';
+            icon.className = 'fa fa-eye';
+        }
+    }
+
 
 
 </script>
