@@ -24,6 +24,7 @@ $CI->db->select([
     'appointments.consulted_date',
     'appointments.consultation_fee_id',
     'new.mr_no',
+    'new.registration_start_date',
     'new.registration_end_date',
     'patients.company as patient_name',
     'patients.phonenumber as patient_mobile',
@@ -32,7 +33,8 @@ $CI->db->select([
     'appointments.visit_status',
     'enquiry_type.enquiry_type_name',
     'appointment_type.appointment_type_name',
-    'branch.name as branch_name'
+    'branch.name as branch_name',
+    'source.name as source_name'
 ]);
 
 $CI->db->from(db_prefix() . 'appointment appointments');
@@ -43,6 +45,7 @@ $CI->db->join(db_prefix() . 'appointment_type appointment_type', 'appointment_ty
 $CI->db->join(db_prefix() . 'clients_new_fields new', 'new.userid = patients.userid', 'left');
 $CI->db->join(db_prefix() . 'customers_groups branch', 'branch.id = appointments.branch_id', 'left');
 $CI->db->join(db_prefix() . 'staff staff', 'staff.staffid = appointments.enquiry_doctor_id', 'left');
+$CI->db->join(db_prefix() . 'leads_sources source', 'source.id = new.patient_source_id', 'left');
 
 if (!staff_can('view_global_appointments', 'customers')) {
 	// Filter by doctor
@@ -137,6 +140,7 @@ if (!empty($search_value)) {
     $CI->db->or_like('appointment_type.appointment_type_name', $search_value);
     $CI->db->or_like('enquiry_type.enquiry_type_name', $search_value);
     $CI->db->or_like('new.mr_no', $search_value);
+    $CI->db->or_like('source.name', $search_value);
 	$CI->db->or_like('staff.firstname', $search_value); // 👈 First name
     $CI->db->or_like('staff.lastname', $search_value);  // 👈 Last name
     $CI->db->group_end();
@@ -182,11 +186,17 @@ foreach ($results as $aRow) {
         ? '<span class="label label-info">First Appointment (' . $total_appointments . ')</span>'
         : '<span class="label label-success">Follow up Appointment (' . $total_appointments . ')</span>';
 
+    // Get renewal dates from estimates
+    $estimate_info = get_latest_estimate_dates($aRow['userid']);
+    $total_estimates = $estimate_info['total_estimates'] ?? 0;
+    $renewal_date = ($total_estimates > 1 && !empty($estimate_info['date'])) ? $estimate_info['date'] : null;
+    $renewal_end_date = ($total_estimates > 1 && !empty($estimate_info['expirydate'])) ? $estimate_info['expirydate'] : null;
+
     $row = [];
     $url = admin_url('client/get_patient_list/' . $aRow['userid']);
-    //$row[] = $aRow['mr_no'];
-    //$row[] = $aRow['visit_id'];
     $row[] = '<b><a href="' . $url . '">' . $aRow['patient_name'] . '</a></b>';
+    $row[] = $aRow['mr_no'] ?? '-';
+    $row[] = $aRow['source_name'] ?? '-';
     $row[] = (staff_can('mobile_masking', 'customers') && !is_admin())
         ? mask_last_5_digits_2($aRow['patient_mobile'])
         : $aRow['patient_mobile'];
@@ -206,7 +216,9 @@ foreach ($results as $aRow) {
     $row[] = get_treatments_by_userid($aRow['userid'], $aRow['appointment_id']);
     $row[] = $aRow['appointment_type_name'];
     $row[] = !empty($aRow['branch_name']) ? ucfirst($aRow['branch_name']) : '-';
-    $row[] = _d($aRow['registration_end_date']);
+    $row[] = !empty($aRow['registration_start_date']) && $aRow['registration_start_date'] != '1970-01-01' && !empty($aRow['mr_no']) ? _d($aRow['registration_start_date']) : '-';
+    $row[] = $renewal_date ? _d($renewal_date) : '-';
+    $row[] = $renewal_end_date ? _d($renewal_end_date) : _d($aRow['registration_end_date']);
     //$row[] = $aRow['enquiry_type_name'];
 
     $total = $check_payment->total ?? 0;

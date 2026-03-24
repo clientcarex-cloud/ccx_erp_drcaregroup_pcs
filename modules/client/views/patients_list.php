@@ -359,6 +359,8 @@ if ($master_data) {
 
                                     <?= render_datatable([
                                         _l('patient_name'),
+                                        _l('mr_no'),
+                                        _l('lead_source'),
                                         _l('patient_mobile'),
                                         _l('assigned_doctor'),
                                         _l('appointment_date'),
@@ -367,7 +369,9 @@ if ($master_data) {
                                         _l('treatment'),
                                         _l('appointment_type'),
                                         _l('branch'),
-                                        _l('registration_end_date'),
+                                        _l('registration_date'),
+                                        _l('renewal_date'),
+                                        _l('renewal_end_date'),
                                         _l('consultation_fee'),
                                         _l('payment_status'),
                                         _l('action'),
