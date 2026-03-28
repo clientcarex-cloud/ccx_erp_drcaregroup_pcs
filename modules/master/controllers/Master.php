@@ -285,18 +285,23 @@ class Master extends AdminController
 			$this->app->get_table_data($table);
 		} else {
 			if ($this->input->post()) {
-				if (!is_admin() && !staff_can("view", "master")) {
-					access_denied($table);
-				}
 				$data = $this->input->post();
 				$id_field = $table . '_id';
 
 				if (isset($data[$id_field]) && $data[$id_field] != '') {
+					// Edit operation
+					if (!is_admin() && !staff_can('edit', 'master')) {
+						access_denied($table);
+					}
 					$success = $this->master_model->update($table, $data[$id_field], $data);
 					if ($success) {
 						set_alert('success', _l('updated_successfully'));
 					}
 				} else {
+					// Create operation
+					if (!is_admin() && !staff_can('create', 'master')) {
+						access_denied($table);
+					}
 					$id = $this->master_model->add($table, $data);
 					if ($id) {
 						set_alert('success', _l('added_successfully'));
@@ -346,7 +351,9 @@ class Master extends AdminController
 
     public function delete($table, $id)
     {
-        $this->check_customer_permissions();
+        if (!is_admin() && !staff_can('delete', 'master')) {
+            access_denied('master');
+        }
         if (!$id) {
             redirect(admin_url('master/' . $table));
         }

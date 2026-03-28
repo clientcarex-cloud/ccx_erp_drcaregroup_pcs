@@ -26,7 +26,7 @@ if (!isset($field_name)) {
 <div class="panel-body">
 <h4 class="no-margin">
 <?php echo _l($title); ?>
-<?php if (staff_can('create', 'customers')): ?>
+<?php if (is_admin() || staff_can('create', 'master')): ?>
     <a class="btn btn-info mbot30 pull-right" data-toggle="modal" data-target="#myModal">
     Add <?php echo $title; ?>
     </a>
@@ -61,10 +61,10 @@ if (!isset($field_name)) {
     <?php if ($slug == 'pincode') { echo '<td>' . $r['city_name'] . '</td>'; } ?>
     <?php if ($slug == 'treatment_sub_type') { echo '<td>' . $r['treatment_type_name'] . '</td>'; echo '<td>' . $r['treatment_sub_type_price'] . '</td>'; } ?>
     <td>
-        <?php if (staff_can('edit', $slug)): ?>
+        <?php if (is_admin() || staff_can('edit', 'master')): ?>
             <a href="javascript:void(0);" onclick="editRecord(<?php echo $r[$id_column]; ?>)" class="btn btn-sm btn-primary">Edit</a>
         <?php endif; ?>
-        <?php if (staff_can('delete', $slug)): ?>
+        <?php if (is_admin() || staff_can('delete', 'master')): ?>
             <a href="<?php echo admin_url('master/delete/' . $slug . '/' . $r[$id_column]); ?>" class="btn btn-sm btn-danger _delete">Delete</a>
         <?php endif; ?>
     </td>
@@ -80,7 +80,7 @@ if (!isset($field_name)) {
 </div>
 
 <!-- Add Modal -->
-<?php if (staff_can('create', $slug)): ?>
+<?php if (is_admin() || staff_can('create', 'master')): ?>
 <div id="myModal" class="modal fade" role="dialog">
 <div class="modal-dialog">
 <div class="modal-content">
@@ -155,7 +155,7 @@ echo render_select(
 <?php endif; ?>
 
 <!-- Edit Modal -->
-<?php if (staff_can('edit', $slug)): ?>
+<?php if (is_admin() || staff_can('edit', 'master')): ?>
 <div id="myeditModal" class="modal fade" role="dialog">
 <div class="modal-dialog">
 <div class="modal-content">
