@@ -168,9 +168,9 @@ foreach ($data as $row) {
     $company = '<a href="' . $url . '" class="tw-font-medium">' . $row['patient_name'] . '</a>';
 
     $dataRow[] = $company;
-    $dataRow[] = (staff_can('mobile_masking', 'customers') && !is_admin()) 
-        ? mask_last_5_digits_1($row['phonenumber']) 
-        : $row['phonenumber'];
+    $masked_mobile = mask_last_5_digits_1($row['phonenumber']);
+    $full_mobile = e($row['phonenumber']);
+    $dataRow[] = '<span class="masked-mobile">' . $masked_mobile . '</span><span class="full-mobile" style="display:none">' . $full_mobile . '</span> <a href="javascript:void(0);" onclick="toggleMobileMask(this)" style="margin-left:3px;"><i class="fa fa-eye"></i></a>';
     $dataRow[] = $row['mr_no'];
     $dataRow[] = $row['branch_name'];
     $dataRow[] = $row['treatment_name'];

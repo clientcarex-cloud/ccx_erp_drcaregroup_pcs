@@ -180,9 +180,9 @@ foreach ($results as $aRow) {
     $row = [];
     $url = admin_url('client/get_patient_list/' . $aRow['userid']);
     $row[] = '<b><a href="' . $url . '">' . $aRow['patient_name'] . '</a></b>';
-    $row[] = (staff_can('mobile_masking', 'customers') && !is_admin())
-        ? pcs_mask_last_5_digits($aRow['patient_mobile'])
-        : $aRow['patient_mobile'];
+    $masked_mobile = pcs_mask_last_5_digits($aRow['patient_mobile']);
+    $full_mobile = e($aRow['patient_mobile']);
+    $row[] = '<span class="masked-mobile">' . $masked_mobile . '</span><span class="full-mobile" style="display:none">' . $full_mobile . '</span> <a href="javascript:void(0);" onclick="toggleMobileMask(this)" style="margin-left:3px;"><i class="fa fa-eye"></i></a>';
     $row[] = get_staff_full_name($aRow['enquiry_doctor_id']);
     $row[] = _d($aRow['appointment_date']);
     $row[] = _d($aRow['consulted_date']);

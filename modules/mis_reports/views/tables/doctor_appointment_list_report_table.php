@@ -95,7 +95,9 @@ foreach ($rResult as $aRow) {
     $row[] = '<b><a href="' . $url . '">'.
 			$aRow['patient_name'].'
 		</a></b>';
-    $row[] = mask_mobile_number_1($aRow['patient_mobile']);
+    $masked_mobile = mask_mobile_number_1($aRow['patient_mobile']);
+    $full_mobile = e($aRow['patient_mobile']);
+    $row[] = '<span class="masked-mobile">' . $masked_mobile . '</span><span class="full-mobile" style="display:none">' . $full_mobile . '</span> <a href="javascript:void(0);" onclick="toggleMobileMask(this)" style="margin-left:3px;"><i class="fa fa-eye"></i></a>';
     $row[] = _d($aRow['appointment_date']);
     $row[] = _d($aRow['consulted_date']);
 	
@@ -172,17 +174,11 @@ foreach ($rResult as $aRow) {
 }
 
 function mask_mobile_number_1($number) {
-	
-	if (staff_can('mobile_masking', 'customers') && !is_admin()) {
-		
-		$length = strlen($number);
-		if ($length <= 5) {
-			return $number; // no masking needed
-		}
-		return str_repeat('*', $length - 5) . substr($number, -5);
-	}else{
+	$length = strlen($number);
+	if ($length <= 5) {
 		return $number;
 	}
+	return str_repeat('*', $length - 5) . substr($number, -5);
 }
 function get_treatments_by_userid($userid)
 {

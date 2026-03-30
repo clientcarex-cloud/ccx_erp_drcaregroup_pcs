@@ -116,8 +116,10 @@ return App_table::find('clients')
 
             $row[] = $company;
 			//Primary Contact
+			$masked_phone = mask_mobile_number($aRow['phonenumber']);
+			$full_phone = e(trim($aRow['phonenumber']));
 			$row[] = ($aRow['phonenumber']
-			? '<a href="' . admin_url('client/client/add_client/' . $aRow['userid'] . '/Patient') . '"class="tw-font-medium">' . e(trim(mask_mobile_number($aRow['phonenumber']))) . '</a>'
+			? '<a href="' . admin_url('client/client/add_client/' . $aRow['userid'] . '/Patient') . '"class="tw-font-medium"><span class="masked-mobile">' . e(trim($masked_phone)) . '</span><span class="full-mobile" style="display:none">' . $full_phone . '</span></a> <a href="javascript:void(0);" onclick="toggleMobileMask(this)" style="margin-left:3px;"><i class="fa fa-eye"></i></a>'
 			: '');
 
 			

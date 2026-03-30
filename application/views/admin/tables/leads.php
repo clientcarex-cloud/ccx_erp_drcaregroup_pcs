@@ -229,12 +229,9 @@ return App_table::find('leads')
             // COLUMN 4: Phone Number
             //$row[] = ($aRow['phonenumber'] != '' ? '<a href="tel:' . e($aRow['phonenumber']) . '">' . e($aRow['phonenumber']) . '</a>' : '');
 			
-			if (staff_can('mobile_masking', 'customers') && !is_admin()) {
-				$phonenumber = mask_last_5_digits($aRow['phonenumber']);
-			} else {
-				$phonenumber = $aRow['phonenumber'];
-			}
-			$row[] = $phonenumber;
+			$masked_phone = mask_last_5_digits($aRow['phonenumber']);
+			$full_phone = e($aRow['phonenumber']);
+			$row[] = '<span class="masked-mobile">' . $masked_phone . '</span><span class="full-mobile" style="display:none">' . $full_phone . '</span> <a href="javascript:void(0);" onclick="toggleMobileMask(this)" style="margin-left:3px;"><i class="fa fa-eye"></i></a>';
 			
 
             // COLUMN 5: Lead Gender

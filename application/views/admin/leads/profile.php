@@ -197,12 +197,10 @@
 									$masked .= $char;
 								}
 							}
+						echo '<span class="masked-mobile">' . strrev($masked) . '</span>';
+						echo '<span class="full-mobile" style="display:none">' . e($lead->phonenumber) . '</span>';
+						echo ' <a href="javascript:void(0);" onclick="toggleMobileMask(this)" style="margin-left:3px;"><i class="fa fa-eye"></i></a>';
 
-							if (staff_can('mobile_masking', 'customers')) {
-									echo strrev($masked);
-							} else {
-									echo $lead->phonenumber;
-							}
 						} else {
 							echo '-';
 						}
@@ -231,12 +229,10 @@
 									$masked .= $char;
 								}
 							}
+						echo '<span class="masked-mobile">' . strrev($masked) . '</span>';
+						echo '<span class="full-mobile" style="display:none">' . e($lead->lead_alternate_number) . '</span>';
+						echo ' <a href="javascript:void(0);" onclick="toggleMobileMask(this)" style="margin-left:3px;"><i class="fa fa-eye"></i></a>';
 
-							if (staff_can('mobile_masking', 'customers')) {
-									echo strrev($masked);
-							} else {
-									echo $lead->lead_alternate_number;
-							}
 						} else {
 							echo '-';
 						}

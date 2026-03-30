@@ -547,7 +547,7 @@ hooks()->add_filter('staff_permissions', function ($permissions) {
             //New
             'view_all_appointments' => _l('permission_view_all_appointments'),
             'add_task_attendance_api' => _l('permission_add_task_attendance_api'),
-            'mobile_masking' => _l('permission_patient_mobile_masking'),
+
             'export_patients' => _l('permission_export_patients'),
             'import_patients' => _l('permission_import_patients'),
             'calling' => _l('permission_calling'),
@@ -676,6 +676,21 @@ hooks()->add_action('app_admin_footer', function () {
                 }
             }, 500);
         });
+        // Global toggle for masked mobile numbers
+        window.toggleMobileMask = function(btn) {
+            var $btn = $(btn);
+            var $masked = $btn.siblings('.masked-mobile');
+            var $full = $btn.siblings('.full-mobile');
+            if ($full.is(':visible')) {
+                $full.hide();
+                $masked.show();
+                $btn.find('i').removeClass('fa-eye-slash').addClass('fa-eye');
+            } else {
+                $full.show();
+                $masked.hide();
+                $btn.find('i').removeClass('fa-eye').addClass('fa-eye-slash');
+            }
+        };
     </script>
     <?php
 });
