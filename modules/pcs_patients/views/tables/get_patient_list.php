@@ -309,9 +309,15 @@ foreach ($results as $row) {
     $url = admin_url('client/get_patient_list/' . $row['userid']);
     $company = '<a href="' . $url . '" class="tw-font-medium">' . $company . '</a>';
 
-    $phonenumber = (staff_can('mobile_masking', 'customers') && !is_admin())
-        ? mask_last_5_digits_1($row['phonenumber'])
-        : $row['phonenumber'];
+    $should_mask = (staff_can('mobile_masking', 'customers') && !is_admin());
+    $raw_number = $row['phonenumber'];
+    $masked_phone = mask_last_5_digits_1($raw_number);
+    if ($should_mask && !empty($raw_number)) {
+        $phonenumber = '<span class="masked-number" data-full="' . e($raw_number) . '" data-masked="' . e($masked_phone) . '">' . e($masked_phone) . '</span>'
+            . ' <a href="javascript:void(0);" class="toggle-mask-btn" style="cursor:pointer; color:#888;" title="Show/Hide Number"><i class="fa fa-eye-slash"></i></a>';
+    } else {
+        $phonenumber = e($raw_number);
+    }
 
     $callLog = $callLogMap[$row['userid']] ?? ['last_calling_date' => '', 'next_calling_date' => ''];
     $status = $leadStatuses[$row['userid']] ?? ['status' => 1, 'status_name' => 'Unknown', 'status_color' => '#7cb342'];

@@ -911,13 +911,17 @@
           <td><span class="patient-value"><strong><?= _l('contact_number'); ?>:</strong>
               <?php
               $number = $client->phonenumber;
-              if (staff_can('mobile_masking', 'customers') && !is_admin()) {
-                $length = strlen($number);
-                echo ($length <= 5) ? str_repeat('*', $length) : substr($number, 0, $length - 5) . str_repeat('*', 5);
-              } else {
-                echo $number;
-              }
+              $masked_number = mask_last_5_digits_1($number);
+              $should_mask = (staff_can('mobile_masking', 'customers') && !is_admin());
               ?>
+              <span class="masked-number" data-full="<?= e($number) ?>" data-masked="<?= e($masked_number) ?>">
+                <?= $should_mask ? e($masked_number) : e($number) ?>
+              </span>
+              <?php if ($should_mask && !empty($number)): ?>
+              <a href="javascript:void(0);" class="toggle-mask-btn" style="margin-left:5px; cursor:pointer; color:#888;" title="Show/Hide Number">
+                <i class="fa fa-eye-slash"></i>
+              </a>
+              <?php endif; ?>
           </span></td>
           <td><span class="patient-value"><strong><?= _l('current_status'); ?>:</strong>
               <?php
@@ -936,7 +940,20 @@
       </tr>
       <!-- Row 6: Alternate Number | Treatment -->
       <tr>
-          <td><span class="patient-value"><strong><?= _l('alternate_number'); ?>:</strong> <?= $client->alt_number1 ?? $customer_new_fields->alt_number1 ?? '' ?></span></td>
+          <td><span class="patient-value"><strong><?= _l('alternate_number'); ?>:</strong>
+              <?php
+              $alt_number = $client->alt_number1 ?? $customer_new_fields->alt_number1 ?? '';
+              $masked_alt = mask_last_5_digits_1($alt_number);
+              ?>
+              <span class="masked-number" data-full="<?= e($alt_number) ?>" data-masked="<?= e($masked_alt) ?>">
+                <?= $should_mask ? e($masked_alt) : e($alt_number) ?>
+              </span>
+              <?php if ($should_mask && !empty($alt_number)): ?>
+              <a href="javascript:void(0);" class="toggle-mask-btn" style="margin-left:5px; cursor:pointer; color:#888;" title="Show/Hide Number">
+                <i class="fa fa-eye-slash"></i>
+              </a>
+              <?php endif; ?>
+          </span></td>
           <td><span class="patient-value"><strong><?= _l('treatment'); ?>:</strong> <?= $latest_treatment; ?></span></td>
       </tr>
       <!-- Row 7: Email ID | Medicine End Date -->
@@ -1037,6 +1054,27 @@
   </div>
 
       
+
+  <script>
+  // Toggle mask/unmask for phone numbers
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.toggle-mask-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var span = this.closest('td').querySelector('.masked-number');
+        var icon = this.querySelector('i');
+        if (!span) return;
+        var isCurrentlyMasked = (span.textContent.trim() === span.getAttribute('data-masked'));
+        if (isCurrentlyMasked) {
+          span.textContent = span.getAttribute('data-full');
+          icon.className = 'fa fa-eye';
+        } else {
+          span.textContent = span.getAttribute('data-masked');
+          icon.className = 'fa fa-eye-slash';
+        }
+      });
+    });
+  });
+  </script>
 
   <script>
   document.addEventListener('DOMContentLoaded', function () {

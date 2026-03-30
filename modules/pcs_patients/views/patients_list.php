@@ -145,5 +145,20 @@
                 $('.table-patients').DataTable().ajax.reload();
             }
         });
+        // Toggle mask/unmask for phone numbers in DataTable
+        $(document).on('click', '.table-patients .toggle-mask-btn', function(e) {
+            e.preventDefault();
+            var $span = $(this).siblings('.masked-number');
+            var $icon = $(this).find('i');
+            if (!$span.length) return;
+            var isMasked = ($span.text().trim() === $span.attr('data-masked'));
+            if (isMasked) {
+                $span.text($span.attr('data-full'));
+                $icon.removeClass('fa-eye-slash').addClass('fa-eye');
+            } else {
+                $span.text($span.attr('data-masked'));
+                $icon.removeClass('fa-eye').addClass('fa-eye-slash');
+            }
+        });
     });
 </script>
