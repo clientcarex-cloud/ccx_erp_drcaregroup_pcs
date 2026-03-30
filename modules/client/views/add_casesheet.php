@@ -10,7 +10,10 @@
 <div class="panel-body">
 <?php
 
-$case = $case[0];
+$case = isset($case[0]) ? $case[0] : [];
+if (!isset($casesheet_data) || !is_array($casesheet_data)) {
+	$casesheet_data = isset($casesheet[0]) ? $casesheet[0] : [];
+}
 $patient_name = '';
 
 if (!empty($case['company'])) {

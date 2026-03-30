@@ -1929,9 +1929,12 @@ class Client extends AdminController
 		$this->load->model('taxes_model');
 		$this->load->model('invoice_items_model');
 		$this->load->model('estimates_model');
-		// Normal view loading
+		// Normal view loading – initialise $case as a blank row so every
+		// form field starts empty on a brand-new casesheet.
+		$case = [[]];                       // view does $case = $case[0]
 		$data['case'] = $case;
-		$data['prescription'] = $this->client_model->get_patient_prescription($patientid, $casesheet_id);
+		$data['casesheet_data'] = [];       // used by the view for treatment / diagnostics defaults
+		$data['prescription'] = $this->client_model->get_patient_prescription($patientid, null);
 		$data['client'] = $this->client_model->get($patientid);
 		$data['prev_treatments'] = $this->client_model->prev_treatments($patientid);
 		$data['casesheet'] = $this->client_model->get_casesheet($patientid);
