@@ -143,7 +143,7 @@ if (isset($casesheet_data['duration_value']) && $casesheet_data['duration_value'
                 <div class="progress-bar bg-success" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
             </div>
         </div>-->
-		<div class="col-md-4">
+		<div class="col-md-3">
 		<?PHP
 		if ($casesheet_data['suggested_diagnostics_id']) {
 			$selected_diagnostic_id = isset($casesheet_data['suggested_diagnostics_id']) ? $casesheet_data['suggested_diagnostics_id'] : '';
@@ -164,7 +164,7 @@ if (isset($casesheet_data['duration_value']) && $casesheet_data['duration_value'
 
 		?>
 </div>
-<div class="col-md-3">
+<div class="col-md-2">
 	<label>Status</label>
 	<select name="treatment_status" class="form-control" style="padding: 1px" required>
 		<option value="Other">Other</option>
@@ -173,7 +173,10 @@ if (isset($casesheet_data['duration_value']) && $casesheet_data['duration_value'
 		<option value="First Consultation">First Consultation</option>
 		<option value="SQ">SQ</option>
 	</select>
-		
+	</div>
+	<div class="col-md-2">
+		<label>Other Diagnostics</label>
+		<input type="text" name="other_diagnostics" class="form-control" placeholder="Other Diagnostics" value="<?= isset($casesheet_data['other_diagnostics']) ? htmlspecialchars($casesheet_data['other_diagnostics']) : '' ?>">
 	</div>
         <!--<div class="col-md-1">
 		<br>
