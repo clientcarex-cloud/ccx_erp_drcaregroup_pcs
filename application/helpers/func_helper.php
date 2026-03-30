@@ -346,17 +346,7 @@ if (!function_exists('time_ago')) {
      */
     function time_ago($date)
     {
-        $CI = &get_instance();
-
-        $localization = [];
-
-        foreach (['time_ago_just_now', 'time_ago_minute', 'time_ago_minutes', 'time_ago_hour', 'time_ago_hours', 'time_ago_yesterday', 'time_ago_days', 'time_ago_week', 'time_ago_weeks', 'time_ago_month', 'time_ago_months', 'time_ago_year', 'time_ago_years'] as $langKey) {
-            if (isset($CI->lang->language[$langKey])) {
-                $localization[$langKey] = $CI->lang->language[$langKey];
-            }
-        }
-
-        return \app\services\utilities\Date::timeAgoString($date, $localization);
+        return _dt($date);
     }
 }
 

@@ -25,7 +25,7 @@ $aColumns = [
     'l.doctor_id',
     'l.slot_time',
     'l.followup_date',
-    'leads.addedfrom',
+    'l.enquired_by',
     'res.patient_response_name',
     'l.comments'
 ];
@@ -57,7 +57,7 @@ $CI->db->select("
     itm.description AS item_description,
 	payment_mode.name as payment_type,
     l.followup_date,
-    leads.addedfrom,
+    l.enquired_by,
     res.name AS response_name,
     l.comments
 ");
@@ -119,7 +119,7 @@ foreach ($results as $aRow) {
     $row[] = !empty($aRow['followup_date']) ? _d($aRow['followup_date']) : '';
 	$row[] = $aRow['comments'] ?? '';
     $row[] = $aRow['branch_name'] ?? '';
-    $row[] = get_staff_full_name($aRow['addedfrom']);
+    $row[] = get_staff_full_name($aRow['enquired_by']);
     
     
     $data[] = $row;
