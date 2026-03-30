@@ -93,18 +93,23 @@ $first_appt_exists = "
 ";
 
 
-// ---- Fetch NP Visits from Payment Category ('First Appointment') ----
+// ---- Fetch NP Visits: unique patients with 'First Appointment', excluding referral lead sources ----
 $np_paycat_sql = "
-    SELECT sub.branch_id, COUNT(DISTINCT sub.clientid) AS np_visits
+    SELECT sub.branch_id, COUNT(DISTINCT sub.userid) AS np_visits
     FROM (
-        SELECT DISTINCT pr.id, map.groupid AS branch_id, inv.clientid
-        FROM tblinvoicepaymentrecords pr
-        JOIN tblinvoices inv ON inv.id = pr.invoiceid
-        JOIN tblappointment_type paycat ON paycat.appointment_type_id = inv.appointment_type_id
-        JOIN tblcustomer_groups map ON map.customer_id = inv.clientid
-        WHERE paycat.appointment_type_name = 'First Appointment'
-          AND pr.date >= '$from_date_esc'
-          AND pr.date <= '$to_date_esc'
+        SELECT a.userid, map.groupid AS branch_id
+        FROM tblappointment a
+        JOIN tblappointment_type atype ON atype.appointment_type_id = a.appointment_type_id
+        JOIN tblcustomer_groups map ON map.customer_id = a.userid
+        LEFT JOIN tblclients_new_fields nf ON nf.userid = a.userid
+        WHERE atype.appointment_type_name = 'First Appointment'
+          AND a.appointment_date >= '$from_date_esc'
+          AND a.appointment_date <= '$to_date_esc 23:59:59'
+          AND NOT EXISTS (
+              SELECT 1 FROM tblgoal_lead_sources gls
+              WHERE gls.source_id = nf.patient_source_id
+                AND gls.category = 'referral'
+          )
     ) sub
     GROUP BY sub.branch_id
 ";
