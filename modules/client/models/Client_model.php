@@ -77,7 +77,7 @@ class Client_model extends App_Model
         city.city_name as city_name,
         state.state_name as state_name,
         pincode.pincode_name as pincode_name,
-        lead_src.name as source_name,
+        COALESCE(patient_src.name, lead_src.name) as source_name,
         lead.source as lead_source_id
     '); // Select everything plus latest status and lead source details
 
@@ -92,6 +92,7 @@ class Client_model extends App_Model
 		$this->db->join(db_prefix() . 'state state', 'state.state_id = c.state', 'left');
 		$this->db->join(db_prefix() . 'leads lead', 'lead.id = c.leadid', 'left');
 		$this->db->join(db_prefix() . 'leads_sources lead_src', 'lead_src.id = lead.source', 'left');
+		$this->db->join(db_prefix() . 'leads_sources patient_src', 'patient_src.id = new.patient_source_id', 'left');
 
 		// 👇 Join latest journey per client
 		$this->db->join(

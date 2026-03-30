@@ -936,12 +936,12 @@
       </tr>
       <!-- Row 6: Alternate Number | Treatment -->
       <tr>
-          <td><span class="patient-value"><strong><?= _l('alternate_number'); ?>:</strong> <?= $client->alt_number1 ?></span></td>
+          <td><span class="patient-value"><strong><?= _l('alternate_number'); ?>:</strong> <?= $client->alt_number1 ?? $customer_new_fields->alt_number1 ?? '' ?></span></td>
           <td><span class="patient-value"><strong><?= _l('treatment'); ?>:</strong> <?= $latest_treatment; ?></span></td>
       </tr>
       <!-- Row 7: Email ID | Medicine End Date -->
       <tr>
-          <td><span class="patient-value"><strong><?= _l('email_id'); ?>:</strong> <?= $client->email_id; ?></span></td>
+          <td><span class="patient-value"><strong><?= _l('email_id'); ?>:</strong> <?= $client->email_id ?? $customer_new_fields->email_id ?? '' ?></span></td>
           <td><span class="patient-value"><strong><?= _l('medicine_end_date'); ?>:</strong>
             <?php
             if (!empty($latest_casesheet->followup_date) && $latest_casesheet->followup_date != '0000-00-00') {
@@ -952,7 +952,7 @@
       </tr>
       <!-- Row 8: Marital Status | Registration Date -->
       <tr>
-          <td><span class="patient-value"><strong><?= _l('marital_status'); ?>:</strong> <?= $client->marital_status; ?></span></td>
+          <td><span class="patient-value"><strong><?= _l('marital_status'); ?>:</strong> <?= $client->marital_status ?? $customer_new_fields->marital_status ?? '' ?></span></td>
           <td><span class="patient-value"><strong><?= _l('registration_date'); ?>:</strong>
               <?php
               if (!empty($client->registration_start_date) && $client->registration_start_date != '1970-01-01' && !empty($customer_new_fields->mr_no)) {
@@ -978,7 +978,7 @@
       </tr>
       <!-- Row 10: Area | Renewal Start Date -->
       <tr>
-          <td><span class="patient-value"><strong><?= _l('area'); ?>:</strong> <?= $client->area; ?></span></td>
+          <td><span class="patient-value"><strong><?= _l('area'); ?>:</strong> <?= $client->area ?? $customer_new_fields->area ?? '' ?></span></td>
           <td><span class="patient-value"><strong><?= _l('renewal_start_date'); ?>:</strong>
             <?php
             if ($total_estimates > 1 && $renewal_start_date) {
