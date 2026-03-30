@@ -191,7 +191,7 @@ if (isset($casesheet_data['duration_value']) && $casesheet_data['duration_value'
 			
             <div class="col-md-4">
               <label for="medicine_days"><?php echo _l('medicine_days'); ?><!-- <span class="text-danger">*</span> --></label>
-              <input type="number" name="medicine_days" id="medicine_days" value="<?php echo $case['medicine_days'];?>" class="form-control" min="1" <!-- required --> >
+              <input type="number" name="medicine_days" id="medicine_days" value="<?php echo $case['medicine_days'];?>" class="form-control" min="0" <!-- required --> >
             </div>
 			<div class="col-md-4">
               <label for="followup_date"><?php echo _l('followup_date'); ?></label>

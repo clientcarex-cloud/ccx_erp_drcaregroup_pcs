@@ -1468,7 +1468,7 @@
             <label><strong><?= _l('medicine_days'); ?>(In Days)</strong></label>
             <input type="number" class="form-control form-control-sm medicine-days-input" 
                    name="medicine_days" placeholder="Enter number of days"
-                   value="${medicine_days}" min=1>
+                   value="${medicine_days}" min=0>
           </div>
 
           <div class="col-md-3">
@@ -1497,6 +1497,20 @@
             </div>
           </div>
         </div>
+
+        <div class="row mt-3">
+          <div class="col-md-4">
+            <label><strong><?= _l('attachment'); ?></strong></label>
+            <input type="file" class="form-control form-control-sm prescription-attachment-input" 
+                   data-id="${prescription_id}" accept="image/*,.pdf,.doc,.docx">
+          </div>
+          <div class="col-md-8">
+            <label><strong>Uploaded Attachments</strong></label>
+            <div class="prescription-attachments-list" data-id="${prescription_id}">
+              <small class="text-muted">Loading...</small>
+            </div>
+          </div>
+        </div>
       <br></div>`;
 
   $content.html(html);
@@ -1505,7 +1519,7 @@
 // Auto-fill followup date based on medicine days
 $(document).on('input', '.medicine-days-input', function () {
   const days = parseInt($(this).val(), 10);
-  if (!isNaN(days) && days > 0) {
+  if (!isNaN(days) && days >= 0) {
     const today = new Date();
     today.setDate(today.getDate() + days);
     
@@ -1532,8 +1546,8 @@ $(document).on('click', '.save-remarks-btn', function () {
   const followup_date = $(`.followup-date-input`).val();
   const notifyDoctor = $(`#notifyDoctor${prescription_id}`).is(':checked');
 
-  // ✅ Validate mandatory field
-  if (!medicine_days || parseInt(medicine_days, 10) <= 0) {
+  // ✅ Validate mandatory field (allow 0)
+  if (medicine_days === '' || medicine_days === null || parseInt(medicine_days, 10) < 0) {
     alert_float('danger', 'Please enter medicine days');
     $(`.medicine-days-input`).focus();
     return; // stop save
@@ -1591,6 +1605,120 @@ $(document).on('change', '.select-all-meds', function () {
       $input.val('Given');
     } else if (!isChecked) {
       $input.val('');
+    }
+  });
+});
+
+// Load existing attachments when prescription row is expanded
+$(document).on('click', '.toggle-medicines', function () {
+  const prescription_id = $(this).data('id');
+  setTimeout(function() {
+    loadPrescriptionAttachments(prescription_id);
+  }, 300);
+});
+
+function loadPrescriptionAttachments(prescription_id) {
+  const $container = $(`.prescription-attachments-list[data-id="${prescription_id}"]`);
+  if (!$container.length) return;
+  
+  $.get(admin_url + 'client/get_prescription_attachments/' + prescription_id, function(res) {
+    try {
+      res = typeof res === 'string' ? JSON.parse(res) : res;
+    } catch(e) {
+      $container.html('<small class="text-muted">No attachments</small>');
+      return;
+    }
+    
+    if (res.attachments && res.attachments.length > 0) {
+      let html = '<div class="d-flex flex-wrap" style="gap:8px;">';
+      res.attachments.forEach(function(file, index) {
+        const fileName = file.split('/').pop();
+        const ext = fileName.split('.').pop().toLowerCase();
+        const isImage = ['jpg','jpeg','png','gif','webp','bmp'].includes(ext);
+        
+        html += `<div class="prescription-attachment-item" style="border:1px solid #ddd; border-radius:6px; padding:6px; position:relative; display:inline-flex; align-items:center; gap:6px; background:#f9f9f9; margin-bottom:5px;">`;
+        
+        if (isImage) {
+          html += `<a href="${site_url}${file}" target="_blank"><img src="${site_url}${file}" style="height:40px; width:40px; object-fit:cover; border-radius:4px;"></a>`;
+        } else {
+          html += `<a href="${site_url}${file}" target="_blank"><i class="fa fa-file" style="font-size:20px;"></i></a>`;
+        }
+        
+        html += `<a href="${site_url}${file}" target="_blank" style="font-size:12px; max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${fileName}</a>`;
+        html += `<button type="button" class="btn btn-xs btn-danger delete-prescription-attachment" 
+                    data-prescription-id="${prescription_id}" 
+                    data-file-index="${index}" 
+                    title="Delete" style="padding:2px 5px; font-size:10px;">
+                    <i class="fa fa-trash"></i>
+                 </button>`;
+        html += `</div>`;
+      });
+      html += '</div>';
+      $container.html(html);
+    } else {
+      $container.html('<small class="text-muted">No attachments</small>');
+    }
+  }).fail(function() {
+    $container.html('<small class="text-muted">No attachments</small>');
+  });
+}
+
+// Upload prescription attachment
+$(document).on('change', '.prescription-attachment-input', function() {
+  const file = this.files[0];
+  if (!file) return;
+  
+  const prescription_id = $(this).data('id');
+  const $input = $(this);
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('prescription_id', prescription_id);
+  formData.append('<?= $this->security->get_csrf_token_name(); ?>', '<?= $this->security->get_csrf_hash(); ?>');
+  
+  $input.prop('disabled', true);
+  
+  $.ajax({
+    url: admin_url + 'client/upload_prescription_attachment',
+    type: 'POST',
+    data: formData,
+    processData: false,
+    contentType: false,
+    success: function(res) {
+      try { res = typeof res === 'string' ? JSON.parse(res) : res; } catch(e) {}
+      if (res.success) {
+        alert_float('success', 'Attachment uploaded successfully');
+        loadPrescriptionAttachments(prescription_id);
+        $input.val('');
+      } else {
+        alert_float('danger', res.message || 'Upload failed');
+      }
+      $input.prop('disabled', false);
+    },
+    error: function() {
+      alert_float('danger', 'Upload failed');
+      $input.prop('disabled', false);
+    }
+  });
+});
+
+// Delete prescription attachment
+$(document).on('click', '.delete-prescription-attachment', function() {
+  if (!confirm('Are you sure you want to delete this attachment?')) return;
+  
+  const prescription_id = $(this).data('prescription-id');
+  const file_index = $(this).data('file-index');
+  
+  $.post(admin_url + 'client/delete_prescription_attachment', {
+    prescription_id: prescription_id,
+    file_index: file_index,
+    '<?= $this->security->get_csrf_token_name(); ?>': '<?= $this->security->get_csrf_hash(); ?>'
+  }, function(res) {
+    try { res = typeof res === 'string' ? JSON.parse(res) : res; } catch(e) {}
+    if (res.success) {
+      alert_float('success', 'Attachment deleted');
+      loadPrescriptionAttachments(prescription_id);
+    } else {
+      alert_float('danger', res.message || 'Delete failed');
     }
   });
 });
@@ -2383,7 +2511,7 @@ if (staff_can('view_casesheet', 'customers')) {
             </div>
             <div class="col-md-4">
               <label for="medicine_days"><?php echo _l('medicine_period') . '(In Days)'; ?><!-- <span class="text-danger">*</span> --></label>
-              <input type="number" name="medicine_days" id="medicine_days" class="form-control" min="1">
+              <input type="number" name="medicine_days" id="medicine_days" class="form-control" min="0">
             </div>
       <div class="col-md-4">
       <?PHP
