@@ -643,9 +643,9 @@ foreach ($result as $row) {
     $np_ticket,                  // NP Ticket Value
     $enq_confee,                 // Enquiry Consultation Fee
     $enq_due,                    // Enquiry Due Collected
+    $enquiry_goal,               // Enquiry Goal
     $enq_gt,                     // Enquiry GT
     $enq_achieved_pct,           // Enquiry Achieved %
-    $enquiry_goal,               // Enquiry Goal
     $enq_projection,             // Enquiry Projection
     $ren_visits,                 // Renewal Visits
     $renewed,                    // Renewed
@@ -653,9 +653,9 @@ foreach ($result as $row) {
     $ren_confee,                 // Follow-up Consultation Fee
     $ren_paid,                   // Renewal Paid
     $ren_due,                    // Renewal Due
+    $renewal_goal,               // Renewal Goal
     $ren_gt,                     // Renewal GT
     $ren_achieved_pct,           // Renewal Achieved %
-    $renewal_goal,               // Renewal Goal
     $ren_projection,             // Renewal Projection
     $ren_ticket,                 // Renewal Ticket Value
     $ref_visits,                 // Referral Visits
@@ -663,9 +663,9 @@ foreach ($result as $row) {
     $ref_reg_pct,                // Referral %
     $ref_paid,                   // Referral Paid
     $ref_due,                    // Referral Due
+    $referral_goal,              // Referral Goal
     $ref_gt,                     // Referral GT
     $ref_achieved_pct,           // Referral Achieved %
-    $referral_goal,              // Referral Goal
     $ref_projection,             // Referral Projection
     $ref_ticket,                 // Referral Ticket Value
     $refund,                     // Refund Amount
@@ -701,9 +701,9 @@ $output['totals'] = [
   '<strong>' . (($total_np_paycat > 0) ? round($total_np_paid / $total_np_paycat) : 0) . '</strong>',          // NP Ticket Value
   '<strong>' . $total_enq_confee . '</strong>',                                    // Enquiry Consultation Fee
   '<strong>' . $total_enq_due . '</strong>',                                       // Enquiry Due Collected
+  '<strong>' . $total_enquiry_goal . '</strong>',                                  // Enquiry Goal
   '<strong>' . $total_enq_gt . '</strong>',                                        // Enquiry GT
   '<strong>' . $total_enq_achieved_pct . '%</strong>',                             // Enquiry Achieved %
-  '<strong>' . $total_enquiry_goal . '</strong>',                                  // Enquiry Goal
   '<strong>' . $total_enq_projection . '</strong>',                                // Enquiry Projection
   '<strong>' . $total_renewal_visits . '</strong>',                                // Renewal Visits
   '<strong>' . $total_renewed . '</strong>',                                       // Renewed
@@ -711,9 +711,9 @@ $output['totals'] = [
   '<strong>' . $total_renewal_confee . '</strong>',                                // Follow-up Consultation Fee
   '<strong>' . $total_renewal_paid . '</strong>',                                  // Renewal Paid
   '<strong>' . $total_renewal_due . '</strong>',                                   // Renewal Due
+  '<strong>' . $total_renewal_goal . '</strong>',                                  // Renewal Goal
   '<strong>' . $total_ren_gt . '</strong>',                                        // Renewal GT
   '<strong>' . $total_ren_achieved_pct . '%</strong>',                             // Renewal Achieved %
-  '<strong>' . $total_renewal_goal . '</strong>',                                  // Renewal Goal
   '<strong>' . $total_ren_projection . '</strong>',                                // Renewal Projection
   '<strong>' . $total_ren_ticket . '</strong>',                                    // Renewal Ticket Value
   '<strong>' . $total_ref_visits . '</strong>',                                    // Referral Visits
@@ -721,9 +721,9 @@ $output['totals'] = [
   '<strong>' . $total_ref_reg_pct . '%</strong>',                                  // Referral %
   '<strong>' . $total_ref_paid . '</strong>',                                      // Referral Paid
   '<strong>' . $total_ref_due . '</strong>',                                       // Referral Due
+  '<strong>' . $total_referral_goal . '</strong>',                                 // Referral Goal
   '<strong>' . $total_ref_gt . '</strong>',                                        // Referral GT
   '<strong>' . $total_ref_achieved_pct . '%</strong>',                             // Referral Achieved %
-  '<strong>' . $total_referral_goal . '</strong>',                                 // Referral Goal
   '<strong>' . $total_ref_projection . '</strong>',                                // Referral Projection
   '<strong>' . $total_ref_ticket . '</strong>',                                    // Referral Ticket Value
   '<strong>' . $total_refund . '</strong>',                                        // Refund Amount
