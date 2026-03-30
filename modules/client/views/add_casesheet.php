@@ -422,21 +422,40 @@ if (isset($casesheet_data['duration_value']) && $casesheet_data['duration_value'
 		</div>
 		</div>
 
-		<!-- Presenting Complaints -->
-		<div class="form-group mtop20">
-			<label for="presenting_complaints" class="control-label">
-				<?php echo _l('presenting_complaints'); ?>
-			</label>
-			<textarea id="presenting_complaints" name="presenting_complaints" class="form-control tinymce" rows="6"><?php echo $case['presenting_complaints'];?></textarea>
+		<!-- Presenting Complaints & History Section -->
+		<div class="casesheet-section">
+			<div class="casesheet-section-header" data-toggle-section="presentingComplaintsBody">
+				<span class="casesheet-section-title"><i class="fa fa-file-text-o"></i> Presenting Complaints & History</span>
+				<button type="button" class="btn btn-sm casesheet-toggle-btn" title="Toggle section">
+					<i class="fa fa-chevron-up"></i>
+				</button>
+			</div>
+			<div class="casesheet-section-body" id="presentingComplaintsBody">
+				<div class="form-group mtop20">
+					<label for="presenting_complaints" class="control-label">
+						<?php echo _l('presenting_complaints'); ?>
+					</label>
+					<textarea id="presenting_complaints" name="presenting_complaints" class="form-control tinymce" rows="6"><?php echo $case['presenting_complaints'];?></textarea>
+				</div>
+			</div>
 		</div>
-		
-		
-		<!--Complaints -->
-		<div class="form-group mtop20">
-			<label for="complaint" class="control-label">
-				<?php echo _l('complaints'); ?>
-			</label>
-			<textarea id="complaint" name="complaint" class="form-control tinymce" rows="6"><?php echo $case['complaint'];?></textarea>
+
+		<!-- Complaints Section -->
+		<div class="casesheet-section">
+			<div class="casesheet-section-header" data-toggle-section="complaintsBody">
+				<span class="casesheet-section-title"><i class="fa fa-list-alt"></i> <?php echo _l('complaints'); ?></span>
+				<button type="button" class="btn btn-sm casesheet-toggle-btn" title="Toggle section">
+					<i class="fa fa-chevron-up"></i>
+				</button>
+			</div>
+			<div class="casesheet-section-body" id="complaintsBody">
+				<div class="form-group mtop20">
+					<label for="complaint" class="control-label">
+						<?php echo _l('complaints'); ?>
+					</label>
+					<textarea id="complaint" name="complaint" class="form-control tinymce" rows="6"><?php echo $case['complaint'];?></textarea>
+				</div>
+			</div>
 		</div>
         </div>
      
@@ -444,35 +463,50 @@ if (isset($casesheet_data['duration_value']) && $casesheet_data['duration_value'
 
     <!-- Clinical Observation Tab -->
     <div class="card">
-	
-	   <h4>
-	   <br>
-          <strong><?php echo _l('clinical_observation'); ?></strong> 
-        </h4>
-		<hr>
-        <div class="card-body">
-          <!-- Clinical Observation Content -->
-          <div class="row mtop10">
-           
-            <div class="col-md-12">
-              <label for="clinical_observation"><?php echo _l('clinical_observation'); ?></label>
-              <textarea name="clinical_observation" id="clinical_observation" class="form-control tinymce" rows="6"><?php echo $case['clinical_observation'];?></textarea>
-            </div>
-          </div>
-
-        </div>
-      
+		<div class="casesheet-section">
+			<div class="casesheet-section-header" data-toggle-section="clinicalObservationBody">
+				<span class="casesheet-section-title"><i class="fa fa-stethoscope"></i> <?php echo _l('clinical_observation'); ?></span>
+				<button type="button" class="btn btn-sm casesheet-toggle-btn" title="Toggle section">
+					<i class="fa fa-chevron-up"></i>
+				</button>
+			</div>
+			<div class="casesheet-section-body" id="clinicalObservationBody">
+				<div class="card-body">
+					<div class="row mtop10">
+						<div class="col-md-12">
+							<label for="clinical_observation"><?php echo _l('clinical_observation'); ?></label>
+							<textarea name="clinical_observation" id="clinical_observation" class="form-control tinymce" rows="6"><?php echo $case['clinical_observation'];?></textarea>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
     </div>
 
     <!-- Personal History Tab -->
     <div class="card">
-	
-	  <h4>
-	  <br>
-          <strong><?php echo _l('personal_history'); ?></strong> 
-        </h4>
-		<hr>
-        <div class="card-body">
+		<?php
+		// Count filled Personal History fields for badge
+		$ph_fields = ['appetite','thirst','desires','aversion','tongue','urine','bowels','sweat','sleep','sun_headache','thermals','habits','addiction','side','dreams','diabetes','thyroid','hypertension','hyperlipidemia','menstrual_obstetric_history','family_history','past_treatment_history'];
+		$ph_filled = 0;
+		foreach ($ph_fields as $phf) {
+			if (!empty($case[$phf])) $ph_filled++;
+		}
+		?>
+		<div class="casesheet-section">
+			<div class="casesheet-section-header collapsed" data-toggle-section="personalHistoryBody">
+				<span class="casesheet-section-title"><i class="fa fa-user"></i> <?php echo _l('personal_history'); ?></span>
+				<span class="casesheet-section-right">
+					<span class="casesheet-data-badge <?php echo $ph_filled > 0 ? 'has-data' : 'no-data'; ?>">
+						<?php echo $ph_filled; ?>/<?php echo count($ph_fields); ?> fields
+					</span>
+					<button type="button" class="btn btn-sm casesheet-toggle-btn" title="Toggle section">
+						<i class="fa fa-chevron-down"></i>
+					</button>
+				</span>
+			</div>
+			<div class="casesheet-section-body" id="personalHistoryBody" style="display:none;">
+				<div class="card-body">
           <!-- Personal History Content -->
 					  <div class="row">
 			  <!-- Row 1 -->
@@ -597,17 +631,37 @@ if (isset($casesheet_data['duration_value']) && $casesheet_data['duration_value'
 				<textarea name="past_treatment_history" class="form-control" placeholder="<?php echo _l('past_treatment_history'); ?>"><?php echo $case['past_treatment_history'];?></textarea>
 			  </div>
 			</div>
-        </div>
+				</div>
+			</div>
+		</div>
     </div>
 
     <!-- General Examination Tab -->
     <div class="card">
-	   <h4>
-	   <br>
-          <strong><?php echo _l('general_examination'); ?></strong> 
-        </h4>
-		<hr>
-        <div class="card-body">
+		<?php
+		// Count filled General Examination fields for badge
+		$ge_simple_fields = ['bp','pulse','weight','height','temperature','bmi'];
+		$ge_textarea_fields = ['mental_generals','pg','particulars','miasmatic_diagnosis','analysis_evaluation','reportorial_result','management','diet','exercise','critical','level_of_assent','dos_and_donts','level_of_assurance','criteria_future_plan_rx','nutrition'];
+		$ge_all_fields = array_merge($ge_simple_fields, $ge_textarea_fields);
+		$ge_filled = 0;
+		foreach ($ge_all_fields as $gef) {
+			if (!empty($case[$gef])) $ge_filled++;
+		}
+		?>
+		<div class="casesheet-section">
+			<div class="casesheet-section-header collapsed" data-toggle-section="generalExaminationBody">
+				<span class="casesheet-section-title"><i class="fa fa-heartbeat"></i> <?php echo _l('general_examination'); ?></span>
+				<span class="casesheet-section-right">
+					<span class="casesheet-data-badge <?php echo $ge_filled > 0 ? 'has-data' : 'no-data'; ?>">
+						<?php echo $ge_filled; ?>/<?php echo count($ge_all_fields); ?> fields
+					</span>
+					<button type="button" class="btn btn-sm casesheet-toggle-btn" title="Toggle section">
+						<i class="fa fa-chevron-down"></i>
+					</button>
+				</span>
+			</div>
+			<div class="casesheet-section-body" id="generalExaminationBody" style="display:none;">
+				<div class="card-body">
           <!-- General Examination Content -->
           <div class="row">
 			<div class="col-md-2">
@@ -674,26 +728,31 @@ if (isset($casesheet_data['duration_value']) && $casesheet_data['duration_value'
 			<?php endforeach; ?>
 		</div>
 		<?php endforeach; ?>
-        </div>
+				</div>
+			</div>
+		</div>
     </div>
 
     <!-- Mind Tab -->
     <div class="card">
-	
-	  <h4>
-	  <br>
-          <strong><?php echo _l('mind'); ?></strong> 
-        </h4>
-		<hr>
-        <div class="card-body">
-          <!-- Mind Content -->
-          <div class="form-group mtop20">
-			<label for="mind" class="control-label">
-				<?php echo _l('mind'); ?>
-			</label>
-			<textarea id="mind" name="mind" class="form-control tinymce" rows="6"><?php echo $case['mind'];?></textarea>
+		<div class="casesheet-section">
+			<div class="casesheet-section-header" data-toggle-section="mindBody">
+				<span class="casesheet-section-title"><i class="fa fa-brain"></i> <?php echo _l('mind'); ?></span>
+				<button type="button" class="btn btn-sm casesheet-toggle-btn" title="Toggle section">
+					<i class="fa fa-chevron-up"></i>
+				</button>
+			</div>
+			<div class="casesheet-section-body" id="mindBody">
+				<div class="card-body">
+					<div class="form-group mtop20">
+						<label for="mind" class="control-label">
+							<?php echo _l('mind'); ?>
+						</label>
+						<textarea id="mind" name="mind" class="form-control tinymce" rows="6"><?php echo $case['mind'];?></textarea>
+					</div>
+				</div>
+			</div>
 		</div>
-        </div>
     </div>
 
 
@@ -723,6 +782,122 @@ if (isset($casesheet_data['duration_value']) && $casesheet_data['duration_value'
 </div>
 
 <?php init_tail(); ?>
+
+<!-- Casesheet Section Toggle Styles -->
+<style>
+.casesheet-section {
+	margin-bottom: 0;
+	border-radius: 6px;
+	overflow: hidden;
+}
+.casesheet-section-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 12px 18px;
+	background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+	border-bottom: 2px solid #dee2e6;
+	cursor: pointer;
+	transition: all 0.25s ease;
+	user-select: none;
+}
+.casesheet-section-header:hover {
+	background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
+}
+.casesheet-section-header.collapsed {
+	border-bottom: 2px solid #dee2e6;
+}
+.casesheet-section-title {
+	font-size: 15px;
+	font-weight: 600;
+	color: #2c3e50;
+	letter-spacing: 0.3px;
+}
+.casesheet-section-title i {
+	margin-right: 8px;
+	color: #4a90d9;
+	font-size: 14px;
+}
+.casesheet-section-right {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+.casesheet-toggle-btn {
+	background: #fff;
+	border: 1px solid #ced4da;
+	border-radius: 50%;
+	width: 30px;
+	height: 30px;
+	padding: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: all 0.3s ease;
+	box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+.casesheet-toggle-btn:hover {
+	background: #4a90d9;
+	border-color: #4a90d9;
+	color: #fff;
+	box-shadow: 0 2px 6px rgba(74,144,217,0.35);
+}
+.casesheet-toggle-btn i {
+	font-size: 12px;
+	transition: transform 0.3s ease;
+	color: #6c757d;
+}
+.casesheet-toggle-btn:hover i {
+	color: #fff;
+}
+.casesheet-section-body {
+	transition: all 0.35s ease;
+}
+.casesheet-data-badge {
+	font-size: 12px;
+	font-weight: 600;
+	padding: 3px 10px;
+	border-radius: 12px;
+	letter-spacing: 0.3px;
+}
+.casesheet-data-badge.has-data {
+	background-color: #d4edda;
+	color: #155724;
+	border: 1px solid #c3e6cb;
+}
+.casesheet-data-badge.no-data {
+	background-color: #f8d7da;
+	color: #721c24;
+	border: 1px solid #f5c6cb;
+}
+</style>
+
+<!-- Casesheet Section Toggle Script -->
+<script>
+$(document).ready(function() {
+	// Click handler for section headers
+	$(document).on('click', '.casesheet-section-header', function(e) {
+		// Don't trigger if clicking inside an input/select/textarea
+		if ($(e.target).is('input, select, textarea')) return;
+		
+		var targetId = $(this).data('toggle-section');
+		var $body = $('#' + targetId);
+		var $icon = $(this).find('.casesheet-toggle-btn i');
+		var $header = $(this);
+		
+		if ($body.is(':visible')) {
+			$body.slideUp(300);
+			$icon.removeClass('fa-chevron-up').addClass('fa-chevron-down');
+			$header.addClass('collapsed');
+		} else {
+			$body.slideDown(300);
+			$icon.removeClass('fa-chevron-down').addClass('fa-chevron-up');
+			$header.removeClass('collapsed');
+		}
+	});
+});
+</script>
+
 <script>
 let consultationStartTime = null;
 let consultationInterval = null;
