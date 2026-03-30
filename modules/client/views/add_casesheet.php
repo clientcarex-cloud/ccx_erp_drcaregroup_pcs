@@ -404,16 +404,10 @@ if (isset($casesheet_data['duration_value']) && $casesheet_data['duration_value'
 					}
 
 					if (e.target.classList.contains('auto-fill-remark')) {
-						const index = e.target.dataset.index;
-						const remarkInputs = document.querySelectorAll('input[name="prescription_medicine_remarks[]"]');
-						if (index !== "new" && remarkInputs[index]) {
-							remarkInputs[index].value = e.target.checked ? 'Given' : '';
-						} else if (index === "new") {
-							const row = e.target.closest('tr');
-							const remarkInput = row.querySelector('.prescription-medicine-remarks');
-							if (remarkInput) {
-								remarkInput.value = e.target.checked ? 'Given' : '';
-							}
+						const row = e.target.closest('tr');
+						const remarkInput = row.querySelector('textarea[readonly]');
+						if (remarkInput) {
+							remarkInput.value = e.target.checked ? 'Given' : '';
 						}
 					}
 				});
