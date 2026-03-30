@@ -593,8 +593,11 @@ if ($master_data) {
     }
 
     // Toggle mask/unmask for phone numbers in DataTable (delegated)
+    // Scoped to exclude the popup modal to avoid double-toggle with the popup's own handler
     $(document).on('click', '.toggle-mask-btn', function(e) {
         e.preventDefault();
+        // Skip if inside the patient popup modal (it has its own handler)
+        if ($(this).closest('.modal').length) return;
         var $span = $(this).siblings('.masked-number');
         if (!$span.length) $span = $(this).closest('td').find('.masked-number');
         var $icon = $(this).find('i');
