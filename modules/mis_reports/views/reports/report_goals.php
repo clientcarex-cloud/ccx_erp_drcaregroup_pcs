@@ -202,10 +202,9 @@
                             $categories = [
                                 'referral' => ['label' => 'Referral', 'color' => '#8e44ad', 'bg' => '#f5eef8', 'icon' => 'fa-users'],
                                 'enquiry'  => ['label' => 'Enquiry',  'color' => '#2980b9', 'bg' => '#ebf5fb', 'icon' => 'fa-phone'],
-                                'renewal'  => ['label' => 'Renewal',  'color' => '#e67e22', 'bg' => '#fef5e7', 'icon' => 'fa-refresh'],
                             ];
                             foreach ($categories as $cat_key => $cat_info) { ?>
-                            <div class="col-md-4">
+                            <div class="col-md-6">
                                 <div class="goal-source-card" style="border-top: 3px solid <?= $cat_info['color']; ?>; background: <?= $cat_info['bg']; ?>;">
                                     <h5 style="color: <?= $cat_info['color']; ?>; font-weight:700; margin-bottom:12px;">
                                         <i class="fa <?= $cat_info['icon']; ?>"></i> <?= $cat_info['label']; ?>
@@ -327,7 +326,7 @@ $(function () {
     allSources.forEach(function (s) { sourceMap[s.id] = s.name; });
 
     // Track selected IDs per category
-    var selected = { referral: [], enquiry: [], renewal: [] };
+    var selected = { referral: [], enquiry: [] };
 
     // NO Select2 — using native multi-select with search filter
 
