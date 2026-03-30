@@ -470,7 +470,7 @@ foreach ($ref_due_result as $r) {
 $refund_sql = "
     SELECT map.groupid AS branch_id, COALESCE(SUM(cr.amount), 0) AS total_refund
     FROM tblcreditnote_refunds cr
-    JOIN tblcredit_notes cn ON cn.id = cr.credit_note_id
+    JOIN tblcreditnotes cn ON cn.id = cr.credit_note_id
     JOIN tblcustomer_groups map ON map.customer_id = cn.clientid
     WHERE cr.refunded_on >= '$from_date_esc'
       AND cr.refunded_on <= '$to_date_esc'
