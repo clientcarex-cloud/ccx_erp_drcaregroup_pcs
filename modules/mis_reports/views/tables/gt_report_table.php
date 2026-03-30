@@ -635,9 +635,9 @@ foreach ($result as $row) {
     $np_visits,                  // NP Visits
     $np_reg,                     // NP Registration
     $np_reg_pct,                 // NP Reg %
-    $enq_confee,                 // Enquiry Consultation Fee
     $np_paid,                    // NP Paid
     $np_ticket,                  // NP Ticket Value
+    $enq_confee,                 // Enquiry Consultation Fee
     $enq_due,                    // Enquiry Due Collected
     $enq_gt,                     // Enquiry GT
     $enq_achieved_pct,           // Enquiry Achieved %
@@ -683,9 +683,9 @@ $output['totals'] = [
   '<strong>' . $total_np_paycat . '</strong>',                                     // NP Visits
   '<strong>' . $total_np_reg . '</strong>',                                        // NP Registration
   '<strong>' . (($total_np_paycat > 0) ? round(($total_np_reg / $total_np_paycat) * 100) : 0) . '%</strong>',  // NP Reg %
-  '<strong>' . $total_enq_confee . '</strong>',                                    // Enquiry Consultation Fee
   '<strong>' . $total_np_paid . '</strong>',                                       // NP Paid
   '<strong>' . (($total_np_paycat > 0) ? round($total_np_paid / $total_np_paycat) : 0) . '</strong>',          // NP Ticket Value
+  '<strong>' . $total_enq_confee . '</strong>',                                    // Enquiry Consultation Fee
   '<strong>' . $total_enq_due . '</strong>',                                       // Enquiry Due Collected
   '<strong>' . $total_enq_gt . '</strong>',                                        // Enquiry GT
   '<strong>' . $total_enq_achieved_pct . '%</strong>',                             // Enquiry Achieved %
