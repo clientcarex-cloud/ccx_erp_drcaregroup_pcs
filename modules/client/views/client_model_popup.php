@@ -912,7 +912,7 @@
               <?php
               $number = $client->phonenumber;
               $masked_number = mask_last_5_digits_1($number);
-              $should_mask = (staff_can('mobile_masking', 'customers') && !is_admin());
+              $should_mask = true;
               ?>
               <span class="masked-number" data-full="<?= e($number) ?>" data-masked="<?= e($masked_number) ?>">
                 <?= $should_mask ? e($masked_number) : e($number) ?>

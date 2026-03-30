@@ -492,7 +492,7 @@ foreach ($results as $row) {
     $url = admin_url('client/get_patient_list/' . $row['userid']);
     $company = '<a href="' . $url . '" class="tw-font-medium">' . $company . '</a>';
 
-    $should_mask = (staff_can('mobile_masking', 'customers') && !is_admin());
+    $should_mask = true;
     $raw_number = $row['phonenumber'];
     $masked_phone = mask_last_5_digits_1($raw_number);
     if ($should_mask && !empty($raw_number)) {
