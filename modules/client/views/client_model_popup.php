@@ -862,18 +862,51 @@
       
 
             <table class="patient-table">
+      <?php
+      // Pre-compute treatment and doctor from appointments
+      $latest_doctor_id = null;
+      $latest_treatment = null;
+      $latest_time = 0;
+      foreach ($appointment_data as $row) {
+        $appointment_time = strtotime($row['appointment_date']);
+        if ($appointment_time > $latest_time) {
+          $latest_time = $appointment_time;
+          $latest_doctor_id = $row['enquiry_doctor_id'];
+          $latest_treatment = $row['description'];
+        }
+      }
+      ?>
+      <!-- Row 1: MR.No | Branch -->
       <tr>
           <td><span class="patient-value"><strong><?= _l('mr_no'); ?>:</strong> <?= $customer_new_fields->mr_no; ?></span></td>
-          <td><span class="patient-value"><strong><?= _l('city_state_country'); ?>:</strong> <?= $client->city_name; ?>, <?= $client->state_name; ?></span></td>
+          <td><span class="patient-value"><strong><?= _l('branch'); ?>:</strong> <?= $client->branch_name ?></span></td>
       </tr>
+      <!-- Row 2: Patient Name | Lead Source -->
       <tr>
           <td><span class="patient-value"><strong><?= _l('patient_name'); ?>:</strong> <?= $client->company; ?></span></td>
-          <td><span class="patient-value"><strong><?= _l('pincode'); ?>:</strong> <?= $client->pincode_name; ?></span></td>
+          <td><span class="patient-value"><strong><?= _l('lead_source'); ?>:</strong> <?= $client->source_name ?? ''; ?></span></td>
       </tr>
+      <!-- Row 3: Gender | Consultation Fee -->
+      <tr>
+          <td><span class="patient-value"><strong><?= _l('gender'); ?>:</strong> <?= $customer_new_fields->gender; ?></span></td>
+          <td><span class="patient-value"><strong><?= _l('consultation_fee'); ?>:</strong>
+            <?php echo $first_appointment->total; ?>
+          </span></td>
+      </tr>
+      <!-- Row 4: Age | Patient Status -->
       <tr>
           <td><span class="patient-value"><strong><?= _l('age'); ?>:</strong> <?= $customer_new_fields->age; ?></span></td>
-          <td><span class="patient-value"><strong><?= _l('gender'); ?>:</strong> <?= $customer_new_fields->gender; ?></span></td>
+          <td>
+              <span class="patient-value"><strong><?= _l('patient_status'); ?>:</strong>
+                  <?php
+                  $status_name = $client->status_name;
+                  $color = $client->status_color;
+                  echo '<span class="lead-status label" style="color:' . $color . ';border:1px solid ' . adjust_hex_brightness($color, 0.4) . ';background:' . adjust_hex_brightness($color, 0.04) . ';">' . e($status_name) . '</span>';
+                  ?>
+              </span>
+          </td>
       </tr>
+      <!-- Row 5: Contact Number | Current Status -->
       <tr>
           <td><span class="patient-value"><strong><?= _l('contact_number'); ?>:</strong>
               <?php
@@ -886,29 +919,6 @@
               }
               ?>
           </span></td>
-          <td><span class="patient-value"><strong><?= _l('marital_status'); ?>:</strong> <?= $client->marital_status; ?></span></td>
-      </tr>
-      <tr>
-          <td><span class="patient-value"><strong><?= _l('email_id'); ?>:</strong> <?= $client->email_id; ?></span></td>
-          <td><span class="patient-value"><strong><?= _l('language_known'); ?>:</strong> <?= $client->default_language; ?></span></td>
-      </tr>
-      <tr>
-          <td><span class="patient-value"><strong><?= _l('area'); ?>:</strong> <?= $client->area; ?></span></td>
-          <td><span class="patient-value"><strong><?= _l('lead_source'); ?>:</strong> <?= $client->source_name ?? ''; ?></span></td>
-      </tr>
-      <tr>
-          <td><span class="patient-value"><strong><?= _l('address'); ?>:</strong> <?= $client->address; ?></span></td>
-          <td>
-              <span class="patient-value"><strong><?= _l('patient_status'); ?>:</strong>
-                  <?php
-                  $status_name = $client->status_name;
-                  $color = $client->status_color;
-                  echo '<span class="lead-status label" style="color:' . $color . ';border:1px solid ' . adjust_hex_brightness($color, 0.4) . ';background:' . adjust_hex_brightness($color, 0.04) . ';">' . e($status_name) . '</span>';
-                  ?>
-              </span>
-          </td>
-      </tr>
-      <tr>
           <td><span class="patient-value"><strong><?= _l('current_status'); ?>:</strong>
               <?php
               $current_status_name = $client->current_status ?? '';
@@ -923,6 +933,26 @@
               }
               ?>
           </span></td>
+      </tr>
+      <!-- Row 6: Alternate Number | Treatment -->
+      <tr>
+          <td><span class="patient-value"><strong><?= _l('alternate_number'); ?>:</strong> <?= $client->alt_number1 ?></span></td>
+          <td><span class="patient-value"><strong><?= _l('treatment'); ?>:</strong> <?= $latest_treatment; ?></span></td>
+      </tr>
+      <!-- Row 7: Email ID | Medicine End Date -->
+      <tr>
+          <td><span class="patient-value"><strong><?= _l('email_id'); ?>:</strong> <?= $client->email_id; ?></span></td>
+          <td><span class="patient-value"><strong><?= _l('medicine_end_date'); ?>:</strong>
+            <?php
+            if (!empty($latest_casesheet->followup_date) && $latest_casesheet->followup_date != '0000-00-00') {
+              echo date("d-m-Y", strtotime($latest_casesheet->followup_date));
+            }
+            ?>
+          </span></td>
+      </tr>
+      <!-- Row 8: Marital Status | Registration Date -->
+      <tr>
+          <td><span class="patient-value"><strong><?= _l('marital_status'); ?>:</strong> <?= $client->marital_status; ?></span></td>
           <td><span class="patient-value"><strong><?= _l('registration_date'); ?>:</strong>
               <?php
               if (!empty($client->registration_start_date) && $client->registration_start_date != '1970-01-01' && !empty($customer_new_fields->mr_no)) {
@@ -933,82 +963,61 @@
               ?>
           </span></td>
       </tr>
-    
-      <?php if ($total_estimates > 1): ?>
-            <tr>
-                <td><span class="patient-value"><strong><?= _l('renewal_start_date'); ?>:</strong> <?= $renewal_start_date ? _d($renewal_start_date) : '-'; ?></span></td>
-                <td><span class="patient-value"><strong><?= _l('renewal_end_date'); ?>:</strong> <?= $renewal_end_date ? _d($renewal_end_date) : '-'; ?></span></td>
-            </tr>
-      <?php else: ?>
-            <tr>
-                <td><span class="patient-value"><strong><?= _l('registration_end_date'); ?>:</strong>
-                    <?php
-                    if (!empty($client->registration_end_date) && $client->registration_end_date != '1970-01-01' && !empty($customer_new_fields->mr_no)) {
-                      echo _d($client->registration_end_date);
-                    } else {
-                      echo "-";
-                    }
-                    ?>
-                </span></td>
-                <td></td>
-            </tr>
-      <?php endif; ?>
+      <!-- Row 9: Language Known | Registration End Date -->
       <tr>
-          <td><span class="patient-value"><strong><?= _l('treatment'); ?>:</strong>
+          <td><span class="patient-value"><strong><?= _l('language_known'); ?>:</strong> <?= $client->default_language; ?></span></td>
+          <td><span class="patient-value"><strong><?= _l('registration_end_date'); ?>:</strong>
               <?php
-              $latest_doctor_id = null;
-              $latest_treatment = null;
-              $latest_time = 0;
-              foreach ($appointment_data as $row) {
-                $appointment_time = strtotime($row['appointment_date']);
-                if ($appointment_time > $latest_time) {
-                  $latest_time = $appointment_time;
-                  $latest_doctor_id = $row['enquiry_doctor_id'];
-                  $latest_treatment = $row['description'];
-                }
+              if (!empty($client->registration_end_date) && $client->registration_end_date != '1970-01-01' && !empty($customer_new_fields->mr_no)) {
+                echo _d($client->registration_end_date);
+              } else {
+                echo "-";
               }
-              echo $latest_treatment;
               ?>
           </span></td>
+      </tr>
+      <!-- Row 10: Area | Renewal Start Date -->
+      <tr>
+          <td><span class="patient-value"><strong><?= _l('area'); ?>:</strong> <?= $client->area; ?></span></td>
+          <td><span class="patient-value"><strong><?= _l('renewal_start_date'); ?>:</strong>
+            <?php
+            if ($total_estimates > 1 && $renewal_start_date) {
+              echo _d($renewal_start_date);
+            } else {
+              echo '-';
+            }
+            ?>
+          </span></td>
+      </tr>
+      <!-- Row 11: City, State, Country | Renewal End Date -->
+      <tr>
+          <td><span class="patient-value"><strong><?= _l('city_state_country'); ?>:</strong> <?= $client->city_name; ?>, <?= $client->state_name; ?></span></td>
+          <td><span class="patient-value"><strong><?= _l('renewal_end_date'); ?>:</strong>
+            <?php
+            if ($total_estimates > 1 && $renewal_end_date) {
+              echo _d($renewal_end_date);
+            } else {
+              echo '-';
+            }
+            ?>
+          </span></td>
+      </tr>
+      <!-- Row 12: Address | Doctor -->
+      <tr>
+          <td><span class="patient-value"><strong><?= _l('address'); ?>:</strong> <?= $client->address; ?></span></td>
           <td><span class="patient-value"><strong><?= _l('doctor'); ?>:</strong> <?= get_staff_full_name($latest_doctor_id); ?></span></td>
       </tr>
-    <tr>
-      <td><span class="patient-value"><strong><?= _l('branch'); ?>:</strong>
-        <?= $client->branch_name ?>
-      </span></td>
-      <td><span class="patient-value"><strong><?= _l('pro_ownership'); ?>:</strong>
-        <?PHP
-        if ($client->pro_ownership) {
-          echo get_staff_full_name($client->pro_ownership);
-        }
-        ?>
-      </span></td>
-    </tr>
-    <tr>
-      <td><span class="patient-value"><strong><?= _l('alternate_number'); ?>:</strong>
-        <?= $client->alt_number1 ?>
-      </span></td>
-      <td><span class="patient-value"><strong><?= _l('consultation_fee'); ?>:</strong>
-        <?PHP
-        echo $first_appointment->total;
-        ?>
-      </span></td>
-    </tr>
-    <tr>
-      <td><span class="patient-value"><strong><?= _l('medicine_end_date'); ?>:</strong>
-        <?php
-        if (!empty($latest_casesheet->followup_date) && $latest_casesheet->followup_date != '0000-00-00') {
-          echo date("d-m-Y", strtotime($latest_casesheet->followup_date));
-        }
-        ?>
-
-      </span></td>
-      <td><span class="patient-value"><strong></strong>
-        <?PHP
-
-        ?>
-      </span></td>
-    </tr>
+      <!-- Row 13: Pincode | PRO Ownership -->
+      <tr>
+          <td><span class="patient-value"><strong><?= _l('pincode'); ?>:</strong> <?= $client->pincode_name; ?></span></td>
+          <td><span class="patient-value"><strong><?= _l('pro_ownership'); ?>:</strong>
+            <?php
+            if ($client->pro_ownership) {
+              echo get_staff_full_name($client->pro_ownership);
+            }
+            ?>
+          </span></td>
+      </tr>
   </table>
 
 
