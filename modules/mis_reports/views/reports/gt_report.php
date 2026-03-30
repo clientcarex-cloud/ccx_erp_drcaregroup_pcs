@@ -74,39 +74,45 @@
     .gt-section-btn[data-section="referral"] { background: #9b59b6; color: #fff; }
     .gt-section-btn[data-section="refund"]   { background: #e74c3c; color: #fff; }
 
-    /* ── Color-coded column headers ── */
+    /* ── Color-coded column headers (attribute-based, not nth-child) ── */
     .table-unit-gt-report thead th {
         white-space: nowrap;
         font-size: 12px;
         padding: 8px 10px !important;
     }
-    /* GT columns (1-4) */
-    .table-unit-gt-report thead th:nth-child(n+2):nth-child(-n+5) {
+    .table-unit-gt-report thead th[data-section="gt"] {
         background: #3498db !important;
         color: #fff !important;
     }
-    /* Enquiry columns (5-15) → th 6 to 16 */
-    .table-unit-gt-report thead th:nth-child(n+6):nth-child(-n+16) {
+    .table-unit-gt-report thead th[data-section="enquiry"] {
         background: #2ecc71 !important;
         color: #fff !important;
     }
-    /* Renewal columns (16-26) → th 17 to 27 */
-    .table-unit-gt-report thead th:nth-child(n+17):nth-child(-n+27) {
+    .table-unit-gt-report thead th[data-section="renewal"] {
         background: #e67e22 !important;
         color: #fff !important;
     }
-    /* Referral columns (27-36) → th 28 to 37 */
-    .table-unit-gt-report thead th:nth-child(n+28):nth-child(-n+37) {
+    .table-unit-gt-report thead th[data-section="referral"] {
         background: #9b59b6 !important;
         color: #fff !important;
     }
-    /* Refund column (37) → th 38 */
-    .table-unit-gt-report thead th:nth-child(38) {
+    .table-unit-gt-report thead th[data-section="refund"] {
         background: #e74c3c !important;
         color: #fff !important;
     }
+    /* Subtle tinting for data cells */
+    .table-unit-gt-report tbody td[data-section="gt"]       { background: rgba(52,152,219,0.04); }
+    .table-unit-gt-report tbody td[data-section="enquiry"]  { background: rgba(46,204,113,0.04); }
+    .table-unit-gt-report tbody td[data-section="renewal"]  { background: rgba(230,126,34,0.04); }
+    .table-unit-gt-report tbody td[data-section="referral"] { background: rgba(155,89,182,0.04); }
+    .table-unit-gt-report tbody td[data-section="refund"]   { background: rgba(231,76,60,0.04); }
+    /* Footer */
+    .table-unit-gt-report tfoot th[data-section="gt"]       { background: rgba(52,152,219,0.08) !important; }
+    .table-unit-gt-report tfoot th[data-section="enquiry"]  { background: rgba(46,204,113,0.08) !important; }
+    .table-unit-gt-report tfoot th[data-section="renewal"]  { background: rgba(230,126,34,0.08) !important; }
+    .table-unit-gt-report tfoot th[data-section="referral"] { background: rgba(155,89,182,0.08) !important; }
+    .table-unit-gt-report tfoot th[data-section="refund"]   { background: rgba(231,76,60,0.08) !important; }
 
-    /* Subtle row tinting for data cells */
     .table-unit-gt-report tbody td { font-size: 12px; }
     .table-unit-gt-report tfoot th { font-size: 12px; }
 </style>
@@ -337,17 +343,25 @@
                     $table.append(tfootHtml);
                 }
 
+                // Tag thead th with data-section BEFORE init (so initial render has colors)
+                applyColumnSections(tableSelector);
+
                 initDataTable(tableSelector, ajaxUrl, [0], [0]);
+
+                // Re-apply section tags on every draw (handles new rows)
+                $table.on('draw.dt', function () {
+                    applyColumnSections(tableSelector);
+                });
 
                 // Add an event listener to capture totals from the server response
                 $table.on('xhr.dt', function (e, settings, json, xhr) {
                     if (json && json.totals) {
                         var $tfoot = $table.find('tfoot tr');
-                        // Ensure we wait for the table draw to finish before manipulating the layout
                         setTimeout(function () {
                             $.each(json.totals, function (index, value) {
                                 $tfoot.find('th').eq(index).html(value);
                             });
+                            applyColumnSections(tableSelector);
                         }, 100);
                     }
                 });
@@ -370,6 +384,47 @@
                 }, 200);
             }
         });
+
+        // ── Function to tag all cells with data-section attribute ──
+        function applyColumnSections(tableSelector) {
+            var $tbl = $(tableSelector);
+            if (!$.fn.DataTable.isDataTable(tableSelector)) {
+                // Pre-init: tag thead only by DOM index
+                $tbl.find('thead th').each(function (i) {
+                    $(this).attr('data-section', getSectionForCol(i));
+                });
+                $tbl.find('tfoot th').each(function (i) {
+                    $(this).attr('data-section', getSectionForCol(i));
+                });
+                return;
+            }
+
+            var dt = $tbl.DataTable();
+
+            // Tag thead and tfoot using column API (respects visibility)
+            dt.columns().every(function (colIdx) {
+                var section = getSectionForCol(colIdx);
+                $(this.header()).attr('data-section', section);
+                $(this.footer()).attr('data-section', section);
+            });
+
+            // Tag tbody cells
+            $tbl.find('tbody tr').each(function () {
+                var visibleCols = dt.columns(':visible')[0]; // array of visible col indexes
+                $(this).find('td').each(function (tdIdx) {
+                    if (visibleCols[tdIdx] !== undefined) {
+                        $(this).attr('data-section', getSectionForCol(visibleCols[tdIdx]));
+                    }
+                });
+            });
+        }
+
+        function getSectionForCol(idx) {
+            for (var section in sectionColumns) {
+                if (sectionColumns[section].indexOf(idx) !== -1) return section;
+            }
+            return '';
+        }
     });
 
 </script>
