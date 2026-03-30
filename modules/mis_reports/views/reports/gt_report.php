@@ -4,13 +4,6 @@
     .swal2-popup {
         font-size: 1.6rem !important;
     }
-    /* Highlight pending/WIP columns (index 20-30) with amber background */
-    .table-unit-gt-report thead th:nth-child(n+22),
-    .table-unit-gt-report tbody td:nth-child(n+22),
-    .table-unit-gt-report tfoot th:nth-child(n+22) {
-        background-color: #fff3cd !important;
-        color: #856404 !important;
-    }
     /* Info icon styling */
     .col-info-icon {
         display: inline-block;
@@ -134,16 +127,21 @@
                             gt_col('Renewed %', '<b>(Renewed ÷ Renewal Visits) × 100</b><br>Renewal conversion rate.'),
                             gt_col('Follow-up Consultation Fee', 'Total <b>Consultation Fee</b> paid by follow-up (non-First-Appointment) patients.'),
                             gt_col('Renewal Paid', 'Total paid by follow-up patients, <b>excluding Consultation Fee</b>.'),
-                            // ── Pending columns (highlighted amber) ──
                             gt_col('Renewal Due', 'Payments made in this period on <b>older invoices</b> for follow-up patients.'),
-                            gt_col('Renewal Projection', '<b>(Renewal Paid ÷ Current Day) × Total Days</b><br>Projected renewal revenue by end of month.'),
+                            gt_col('Renewal GT', '<b>Renewal Due + Renewal Paid</b><br>Total renewal revenue.'),
+                            gt_col('Renewal Achieved %', '<b>(Renewal GT ÷ Renewal Goal) × 100</b><br>Percentage of renewal target achieved.'),
+                            gt_col('Renewal Goal', 'Monthly renewal target set in <b>Report Goals</b> settings.'),
+                            gt_col('Renewal Projection', '<b>(Renewal GT ÷ Current Day) × Total Days</b><br>Projected renewal revenue by end of month.'),
                             gt_col('Renewal Ticket Value', '<b>Renewal Paid ÷ Renewal Visits</b><br>Average revenue per renewal patient.'),
                             gt_col('Referral Visits', 'Count of <b>unique patients</b> with <b>First Appointment</b> whose lead source is categorized as <b>Referral</b> in Report Goals.'),
                             gt_col('Referral Registrations', 'Referral patients who have a <b>non-Consultation-Fee package</b> in their invoice.'),
                             gt_col('Referral %', '<b>(Referral Registrations ÷ Referral Visits) × 100</b><br>Referral registration conversion rate.'),
                             gt_col('Referral Paid', 'Total paid by referral patients, <b>excluding Consultation Fee</b>.'),
                             gt_col('Referral Due', 'Payments made in this period on <b>older invoices</b> for referral patients.'),
-                            gt_col('Referral Projection', '<b>(Referral Paid ÷ Current Day) × Total Days</b><br>Projected referral revenue by end of month.'),
+                            gt_col('Referral GT', '<b>Referral Due + Referral Paid</b><br>Total referral revenue.'),
+                            gt_col('Referral Achieved %', '<b>(Referral GT ÷ Referral Goal) × 100</b><br>Percentage of referral target achieved.'),
+                            gt_col('Referral Goal', 'Monthly referral target set in <b>Report Goals</b> settings.'),
+                            gt_col('Referral Projection', '<b>(Referral GT ÷ Current Day) × Total Days</b><br>Projected referral revenue by end of month.'),
                             gt_col('Referral Ticket Value', '<b>Referral Paid ÷ Referral Visits</b><br>Average revenue per referral patient.'),
                             gt_col('Refund Amount', 'Total <b>credit note refunds</b> processed in the date range.'),
                         ];

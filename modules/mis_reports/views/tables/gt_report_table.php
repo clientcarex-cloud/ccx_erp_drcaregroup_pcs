@@ -587,7 +587,9 @@ foreach ($result as $row) {
   $ren_confee  = isset($renewal_confee_lookup[$bid]) ? round($renewal_confee_lookup[$bid]) : 0;
   $ren_paid    = isset($renewal_paid_lookup[$bid]) ? round($renewal_paid_lookup[$bid]) : 0;
   $ren_due     = isset($renewal_due_lookup[$bid]) ? round($renewal_due_lookup[$bid]) : 0;
-  $ren_projection  = ($current_day > 0) ? round(($ren_paid / $current_day) * $days_in_month) : 0;
+  $ren_gt      = $ren_due + $ren_paid;
+  $ren_achieved_pct = ($renewal_goal > 0) ? round(($ren_gt / $renewal_goal) * 100) . '%' : '0%';
+  $ren_projection  = ($current_day > 0) ? round(($ren_gt / $current_day) * $days_in_month) : 0;
   $ren_ticket      = ($ren_visits > 0) ? round($ren_paid / $ren_visits) : 0;
 
   // ===================== Referral Section =====================
@@ -596,7 +598,9 @@ foreach ($result as $row) {
   $ref_reg_pct = ($ref_visits > 0) ? round(($ref_reg / $ref_visits) * 100) . '%' : '0%';
   $ref_paid    = isset($ref_paid_lookup[$bid]) ? round($ref_paid_lookup[$bid]) : 0;
   $ref_due     = isset($ref_due_lookup[$bid]) ? round($ref_due_lookup[$bid]) : 0;
-  $ref_projection  = ($current_day > 0) ? round(($ref_paid / $current_day) * $days_in_month) : 0;
+  $ref_gt      = $ref_due + $ref_paid;
+  $ref_achieved_pct = ($referral_goal > 0) ? round(($ref_gt / $referral_goal) * 100) . '%' : '0%';
+  $ref_projection  = ($current_day > 0) ? round(($ref_gt / $current_day) * $days_in_month) : 0;
   $ref_ticket      = ($ref_visits > 0) ? round($ref_paid / $ref_visits) : 0;
 
   // ===================== Refund =====================
@@ -649,6 +653,9 @@ foreach ($result as $row) {
     $ren_confee,                 // Follow-up Consultation Fee
     $ren_paid,                   // Renewal Paid
     $ren_due,                    // Renewal Due
+    $ren_gt,                     // Renewal GT
+    $ren_achieved_pct,           // Renewal Achieved %
+    $renewal_goal,               // Renewal Goal
     $ren_projection,             // Renewal Projection
     $ren_ticket,                 // Renewal Ticket Value
     $ref_visits,                 // Referral Visits
@@ -656,6 +663,9 @@ foreach ($result as $row) {
     $ref_reg_pct,                // Referral %
     $ref_paid,                   // Referral Paid
     $ref_due,                    // Referral Due
+    $ref_gt,                     // Referral GT
+    $ref_achieved_pct,           // Referral Achieved %
+    $referral_goal,              // Referral Goal
     $ref_projection,             // Referral Projection
     $ref_ticket,                 // Referral Ticket Value
     $refund,                     // Refund Amount
@@ -668,10 +678,14 @@ $total_enq_gt = $total_enq_due + $total_np_paid;
 $total_enq_achieved_pct = ($total_enquiry_goal > 0) ? round(($total_enq_gt / $total_enquiry_goal) * 100) : 0;
 $total_enq_projection = ($current_day > 0) ? round(($total_enq_gt / $current_day) * $days_in_month) : 0;
 $total_renewed_pct = ($total_renewal_visits > 0) ? round(($total_renewed / $total_renewal_visits) * 100) : 0;
-$total_ren_projection = ($current_day > 0) ? round(($total_renewal_paid / $current_day) * $days_in_month) : 0;
+$total_ren_gt = $total_renewal_due + $total_renewal_paid;
+$total_ren_achieved_pct = ($total_renewal_goal > 0) ? round(($total_ren_gt / $total_renewal_goal) * 100) : 0;
+$total_ren_projection = ($current_day > 0) ? round(($total_ren_gt / $current_day) * $days_in_month) : 0;
 $total_ren_ticket = ($total_renewal_visits > 0) ? round($total_renewal_paid / $total_renewal_visits) : 0;
 $total_ref_reg_pct = ($total_ref_visits > 0) ? round(($total_ref_reg / $total_ref_visits) * 100) : 0;
-$total_ref_projection = ($current_day > 0) ? round(($total_ref_paid / $current_day) * $days_in_month) : 0;
+$total_ref_gt = $total_ref_due + $total_ref_paid;
+$total_ref_achieved_pct = ($total_referral_goal > 0) ? round(($total_ref_gt / $total_referral_goal) * 100) : 0;
+$total_ref_projection = ($current_day > 0) ? round(($total_ref_gt / $current_day) * $days_in_month) : 0;
 $total_ref_ticket = ($total_ref_visits > 0) ? round($total_ref_paid / $total_ref_visits) : 0;
 
 $output['totals'] = [
@@ -697,6 +711,9 @@ $output['totals'] = [
   '<strong>' . $total_renewal_confee . '</strong>',                                // Follow-up Consultation Fee
   '<strong>' . $total_renewal_paid . '</strong>',                                  // Renewal Paid
   '<strong>' . $total_renewal_due . '</strong>',                                   // Renewal Due
+  '<strong>' . $total_ren_gt . '</strong>',                                        // Renewal GT
+  '<strong>' . $total_ren_achieved_pct . '%</strong>',                             // Renewal Achieved %
+  '<strong>' . $total_renewal_goal . '</strong>',                                  // Renewal Goal
   '<strong>' . $total_ren_projection . '</strong>',                                // Renewal Projection
   '<strong>' . $total_ren_ticket . '</strong>',                                    // Renewal Ticket Value
   '<strong>' . $total_ref_visits . '</strong>',                                    // Referral Visits
@@ -704,6 +721,9 @@ $output['totals'] = [
   '<strong>' . $total_ref_reg_pct . '%</strong>',                                  // Referral %
   '<strong>' . $total_ref_paid . '</strong>',                                      // Referral Paid
   '<strong>' . $total_ref_due . '</strong>',                                       // Referral Due
+  '<strong>' . $total_ref_gt . '</strong>',                                        // Referral GT
+  '<strong>' . $total_ref_achieved_pct . '%</strong>',                             // Referral Achieved %
+  '<strong>' . $total_referral_goal . '</strong>',                                 // Referral Goal
   '<strong>' . $total_ref_projection . '</strong>',                                // Referral Projection
   '<strong>' . $total_ref_ticket . '</strong>',                                    // Referral Ticket Value
   '<strong>' . $total_refund . '</strong>',                                        // Refund Amount
