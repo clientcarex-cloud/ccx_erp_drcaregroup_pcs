@@ -228,7 +228,8 @@ foreach ($np_paid_result as $r) {
     $np_paid_lookup[(int) $r['branch_id']] = (float) $r['total_np_paid'];
 }
 
-// ---- Enquiry Due Collected: payments on OLD invoices (created before date range) for First Appointment patients (excl referral) ----
+// ---- Enquiry Due Collected: Any due amount collected from new patients (First Appointment, excl referral) within the date range ----
+// A "new patient" is anyone who has ever had a 'First Appointment'. "Due" = payment on an invoice where payment date > invoice date.
 $enq_due_sql = "
     SELECT sub.branch_id, COALESCE(SUM(sub.amount), 0) AS total_due_collected
     FROM (
@@ -238,8 +239,13 @@ $enq_due_sql = "
         JOIN tblcustomer_groups map ON map.customer_id = inv.clientid
         WHERE pr.date >= '$from_date_esc'
           AND pr.date <= '$to_date_esc'
-          AND inv.date < '$from_date_esc'
-          AND $first_appt_exists
+          AND pr.date > inv.date
+          AND EXISTS (
+              SELECT 1 FROM tblappointment a
+              JOIN tblappointment_type atype ON atype.appointment_type_id = a.appointment_type_id
+              WHERE a.userid = inv.clientid
+                AND atype.appointment_type_name = 'First Appointment'
+          )
           AND $not_referral_source_filter
     ) sub
     GROUP BY sub.branch_id

@@ -225,7 +225,7 @@
                             gt_col('NP Paid', 'Total paid for <b>First Appointment</b> patients (excl referral), <b>excluding Consultation Fee</b>.'),
                             gt_col('NP Ticket Value', '<b>NP Paid ÷ NP Visits</b><br>Average revenue per new patient (excluding consultation fee).'),
                             gt_col('Enquiry Consultation Fee', 'Total <b>Consultation Fee</b> paid by <b>First Appointment</b> patients (excl referral sources).'),
-                            gt_col('Enquiry Due Collected', 'Payments made in this period on <b>older invoices</b> (created before date range) for First Appointment patients.'),
+                            gt_col('Enquiry Due Collected', 'Any <b>due amount collected</b> from new patients (First Appointment, excl referral) within the date range.<br>Due = payment date is after the invoice date.'),
                             gt_col('Enquiry Goal', 'Monthly enquiry target set in <b>Report Goals</b> settings.'),
                             gt_col('Enquiry GT', '<b>Enquiry Due Collected + NP Paid</b><br>Total enquiry revenue.'),
                             gt_col('Enquiry Achieved %', '<b>(Enquiry GT ÷ Enquiry Goal) × 100</b><br>Percentage of enquiry target achieved.'),
