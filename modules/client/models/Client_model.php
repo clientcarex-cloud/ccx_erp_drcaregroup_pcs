@@ -2389,6 +2389,7 @@ class Client_model extends App_Model
 	{
 		$client_id = $this->input->post('userid');
 		$groupid = $this->input->post('groupid');
+		$is_profile_update_only = (int) $this->input->post('profile_update_only') === 1;
 
 		$due_amount = $this->get_client_due($client_id);
 
@@ -2561,7 +2562,7 @@ class Client_model extends App_Model
 			'created_at' => date('Y-m-d H:i:s'),
 		);
 
-		if ($this->input->post('assign_doctor_id')) {
+		if (!$is_profile_update_only && $this->input->post('assign_doctor_id')) {
 
 			// ✅ Duplicate restriction check
 			if (staff_can('multiple_appointments_restriction', 'customers')) {
@@ -2668,7 +2669,7 @@ class Client_model extends App_Model
 		}
 
 
-		if ($this->input->post('assign_doctor_id')) {
+		if (!$is_profile_update_only && $this->input->post('assign_doctor_id')) {
 
 			$this->load->model('invoices_model');
 

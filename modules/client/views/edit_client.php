@@ -29,6 +29,7 @@
             <form method="post" action="<?= admin_url('client/update_client'); ?>">
               <?= form_hidden($this->security->get_csrf_token_name(), $this->security->get_csrf_hash()); ?>
               <?= form_hidden('userid', $patient['userid']); ?>
+                            <?= form_hidden('profile_update_only', '1'); ?>
 
               <div class="form-group">
                 <?= render_input('contact_number', 'contact_number', $patient['phonenumber'], 'text', [
