@@ -941,6 +941,34 @@ $(document).ready(function(){
                 return y + '-' + m + '-' + d;
             }
 
+            function daysInMonth(year, monthIndexZeroBased) {
+                return new Date(year, monthIndexZeroBased + 1, 0).getDate();
+            }
+
+            function getAgeBreakdown(fromDate, toDate) {
+                let years = toDate.getFullYear() - fromDate.getFullYear();
+                let months = toDate.getMonth() - fromDate.getMonth();
+                let days = toDate.getDate() - fromDate.getDate();
+
+                if (days < 0) {
+                    months -= 1;
+                    const prevMonthIndex = (toDate.getMonth() + 11) % 12;
+                    const prevMonthYear = toDate.getMonth() === 0 ? toDate.getFullYear() - 1 : toDate.getFullYear();
+                    days += daysInMonth(prevMonthYear, prevMonthIndex);
+                }
+
+                if (months < 0) {
+                    years -= 1;
+                    months += 12;
+                }
+
+                return {
+                    years: years,
+                    months: months,
+                    days: days,
+                };
+            }
+
             function getAgeMeta(dobRaw) {
                 if (!dobRaw) {
                     return { state: 'empty' };
@@ -967,9 +995,14 @@ $(document).ready(function(){
                     return { state: 'future' };
                 }
 
+                const breakdown = getAgeBreakdown(birth, todayOnly);
+
                 return {
                     state: 'ok',
                     age: age,
+                    years: breakdown.years,
+                    months: breakdown.months,
+                    days: breakdown.days,
                     normalizedDob: formatDateYmd(birth),
                 };
             }
@@ -996,7 +1029,12 @@ $(document).ready(function(){
                     return;
                 }
 
-                $calculated.text('Calculated age: ' + meta.age + ' years').show();
+                if (meta.years === 0) {
+                    $calculated.text('Calculated age: ' + meta.months + ' months ' + meta.days + ' days').show();
+                    return;
+                }
+
+                $calculated.text('Calculated age: ' + meta.years + ' years ' + meta.months + ' months ' + meta.days + ' days').show();
             }
 
             function syncHiddenValues() {
