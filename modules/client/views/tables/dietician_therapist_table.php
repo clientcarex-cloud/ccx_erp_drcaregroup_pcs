@@ -40,7 +40,17 @@ $data = [];
 foreach ($results as $row) {
     $attachment_link = '-';
     if (!empty($row['attachment'])) {
-        $attachment_link = '<a href="' . base_url($row['attachment']) . '" target="_blank">' . _l('view') . '</a>';
+        $attachment_url = base_url($row['attachment']);
+        $ext = strtolower(pathinfo((string) $row['attachment'], PATHINFO_EXTENSION));
+        $is_image = in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'], true);
+
+        if ($is_image) {
+            $attachment_link = '<a href="' . $attachment_url . '" target="_blank">'
+                . '<img src="' . $attachment_url . '" alt="attachment" style="max-width:60px;max-height:60px;border:1px solid #ddd;border-radius:4px;" />'
+                . '</a>';
+        } else {
+            $attachment_link = '<a href="' . $attachment_url . '" target="_blank">' . _l('view') . '</a>';
+        }
     }
 
     $created_by = trim(($row['firstname'] ?? '') . ' ' . ($row['lastname'] ?? ''));

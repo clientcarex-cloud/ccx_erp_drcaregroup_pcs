@@ -1567,10 +1567,19 @@ class Client extends AdminController
 		$attachment_path = null;
 		if (isset($_FILES['attachment']) && !empty($_FILES['attachment']['name'])) {
 			$this->load->library('upload');
-			$upload_path = FCPATH . 'uploads/dietician_therapist_attachments/';
+			$upload_dir = 'uploads/dietician_therapist_attachments/';
+			$upload_path = FCPATH . $upload_dir;
 
 			if (!is_dir($upload_path)) {
-				mkdir($upload_path, 0755, true);
+				if (!mkdir($upload_path, 0755, true) && !is_dir($upload_path)) {
+					echo json_encode(['success' => false, 'message' => 'Unable to create attachment directory.']);
+					return;
+				}
+			}
+
+			if (!is_writable($upload_path)) {
+				echo json_encode(['success' => false, 'message' => 'Attachment directory is not writable.']);
+				return;
 			}
 
 			$_FILES['file']['name'] = $_FILES['attachment']['name'];
@@ -1580,13 +1589,20 @@ class Client extends AdminController
 			$_FILES['file']['size'] = $_FILES['attachment']['size'];
 
 			$config['upload_path'] = $upload_path;
-			$config['allowed_types'] = 'jpg|jpeg|png|pdf|doc|docx|xls|xlsx|txt';
-			$config['file_name'] = uniqid('dt_', true);
+			$config['allowed_types'] = 'jpg|jpeg|png|gif|webp|pdf|doc|docx|xls|xlsx|txt';
+			$config['encrypt_name'] = true;
+			$config['max_size'] = 10240;
 
 			$this->upload->initialize($config);
 			if ($this->upload->do_upload('file')) {
 				$upload_data = $this->upload->data();
-				$attachment_path = 'uploads/dietician_therapist_attachments/' . $upload_data['file_name'];
+				$attachment_path = $upload_dir . $upload_data['file_name'];
+			} else {
+				echo json_encode([
+					'success' => false,
+					'message' => strip_tags((string) $this->upload->display_errors('', '')),
+				]);
+				return;
 			}
 		}
 
