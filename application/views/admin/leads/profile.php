@@ -894,21 +894,84 @@ $(document).ready(function(){
             const $dobHidden = $('#lead_dob_hidden');
             const $calculated = $('#lead_age_dob_calculated');
 
-            function calculateAge(dob) {
-                if (!dob) {
+            function parseDob(value) {
+                if (!value) {
                     return null;
                 }
-                const birth = new Date(dob + 'T00:00:00');
-                if (isNaN(birth.getTime())) {
+
+                const raw = String(value).trim();
+                let y;
+                let m;
+                let d;
+
+                if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+                    const parts = raw.split('-');
+                    y = parseInt(parts[0], 10);
+                    m = parseInt(parts[1], 10);
+                    d = parseInt(parts[2], 10);
+                } else if (/^\d{2}[\/-]\d{2}[\/-]\d{4}$/.test(raw)) {
+                    const parts = raw.split(/[\/-]/);
+                    d = parseInt(parts[0], 10);
+                    m = parseInt(parts[1], 10);
+                    y = parseInt(parts[2], 10);
+                } else {
+                    const fallback = new Date(raw);
+                    if (!isNaN(fallback.getTime())) {
+                        return new Date(fallback.getFullYear(), fallback.getMonth(), fallback.getDate());
+                    }
                     return null;
                 }
+
+                const date = new Date(y, m - 1, d);
+                if (
+                    date.getFullYear() !== y ||
+                    date.getMonth() !== (m - 1) ||
+                    date.getDate() !== d
+                ) {
+                    return null;
+                }
+
+                return date;
+            }
+
+            function formatDateYmd(dateObj) {
+                const y = dateObj.getFullYear();
+                const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+                const d = String(dateObj.getDate()).padStart(2, '0');
+                return y + '-' + m + '-' + d;
+            }
+
+            function getAgeMeta(dobRaw) {
+                if (!dobRaw) {
+                    return { state: 'empty' };
+                }
+
+                const birth = parseDob(dobRaw);
+                if (!birth) {
+                    return { state: 'invalid' };
+                }
+
                 const today = new Date();
+                const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                if (birth > todayOnly) {
+                    return { state: 'future' };
+                }
+
                 let age = today.getFullYear() - birth.getFullYear();
                 const monthDiff = today.getMonth() - birth.getMonth();
                 if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
                     age--;
                 }
-                return age >= 0 ? age : null;
+
+                if (age < 0) {
+                    return { state: 'future' };
+                }
+
+                return {
+                    state: 'ok',
+                    age: age,
+                    normalizedDob: formatDateYmd(birth),
+                };
             }
 
             function updateCalculatedAge() {
@@ -916,19 +979,36 @@ $(document).ready(function(){
                     $calculated.hide().text('');
                     return;
                 }
-                const age = calculateAge($input.val());
-                if (age === null) {
-                    $calculated.hide().text('');
+
+                const meta = getAgeMeta($input.val());
+                if (meta.state === 'empty') {
+                    $calculated.text('Select DOB to see calculated age').show();
                     return;
                 }
-                $calculated.text('Calculated age: ' + age + ' years').show();
+
+                if (meta.state === 'invalid') {
+                    $calculated.text('Please enter a valid DOB').show();
+                    return;
+                }
+
+                if (meta.state === 'future') {
+                    $calculated.text('DOB cannot be in the future').show();
+                    return;
+                }
+
+                $calculated.text('Calculated age: ' + meta.age + ' years').show();
             }
 
             function syncHiddenValues() {
                 if ($mode.val() === 'dob') {
-                    $dobHidden.val($input.val());
-                    const age = calculateAge($input.val());
-                    $ageHidden.val(age === null ? '' : age);
+                    const meta = getAgeMeta($input.val());
+                    if (meta.state === 'ok') {
+                        $dobHidden.val(meta.normalizedDob);
+                        $ageHidden.val(meta.age);
+                    } else {
+                        $dobHidden.val('');
+                        $ageHidden.val('');
+                    }
                 } else {
                     const ageOnly = ($input.val() || '').replace(/[^0-9]/g, '').slice(0, 3);
                     $input.val(ageOnly);
