@@ -4401,6 +4401,20 @@ $(function () {
 </script>
 
                 <br>
+                <ul class="nav nav-pills" id="callLogsFilterTabs" style="margin-bottom:10px;">
+                  <li class="active">
+                    <a href="javascript:void(0);" class="call-log-filter-tab" data-target="patient">
+                      Pt. Logs <span class="badge" id="pt-logs-count">0</span>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="javascript:void(0);" class="call-log-filter-tab" data-target="lead">
+                      Lead Logs <span class="badge" id="lead-logs-count">0</span>
+                    </a>
+                  </li>
+                </ul>
+
+                <div id="patient-call-logs-wrap">
         <?= render_datatable([
           _l('s_no'),
           _l('called_by'),
@@ -4412,6 +4426,21 @@ $(function () {
           _l('created_date'),
           _l('comments'),
         ], 'call-logs-table'); ?>
+                </div>
+
+                <div id="lead-call-logs-wrap" style="display:none;">
+        <?= render_datatable([
+          _l('s_no'),
+          _l('called_by'),
+          _l('call_type'),
+          _l('next_calling_date'),
+          _l('better_patient'),
+          _l('pharmacy_medicine_days'),
+          _l('patient_took_medicine_days'),
+          _l('created_date'),
+          _l('comments'),
+        ], 'lead-call-logs-table'); ?>
+                </div>
                 <!-- Table -->
                 
 
@@ -6024,19 +6053,75 @@ $(function () {
 $(function () {
   let client_id = <?= $client->userid ?>;
   let admin_url = "<?= admin_url(); ?>";
+  let leadLogsInitialized = false;
 
-  // Check if #tab_calls is active on page load
-  if ($('#tab_calls').length && $('#tab_calls').hasClass('active')) {
+  function initPatientLogs() {
     if (!$.fn.DataTable.isDataTable('.table-call-logs-table')) {
       initDataTable('.table-call-logs-table', admin_url + 'client/get_call_logs_table_data/' + client_id, [1], [1]);
     }
   }
 
+  function initLeadLogs() {
+    if (!leadLogsInitialized && !$.fn.DataTable.isDataTable('.table-lead-call-logs-table')) {
+      initDataTable('.table-lead-call-logs-table', admin_url + 'client/get_lead_call_logs_table_data/' + client_id, [1], [1]);
+      leadLogsInitialized = true;
+    }
+  }
+
+  function showPatientLogs() {
+    $('#lead-call-logs-wrap').hide();
+    $('#patient-call-logs-wrap').show();
+    $('#callLogsFilterTabs li').removeClass('active');
+    $('.call-log-filter-tab[data-target="patient"]').closest('li').addClass('active');
+    if ($.fn.DataTable.isDataTable('.table-call-logs-table')) {
+      $('.table-call-logs-table').DataTable().columns.adjust().draw(false);
+    }
+  }
+
+  function showLeadLogs() {
+    initLeadLogs();
+    $('#patient-call-logs-wrap').hide();
+    $('#lead-call-logs-wrap').show();
+    $('#callLogsFilterTabs li').removeClass('active');
+    $('.call-log-filter-tab[data-target="lead"]').closest('li').addClass('active');
+    if ($.fn.DataTable.isDataTable('.table-lead-call-logs-table')) {
+      $('.table-lead-call-logs-table').DataTable().columns.adjust().draw(false);
+    }
+  }
+
+  $(document).on('click', '.call-log-filter-tab', function () {
+    const target = $(this).data('target');
+    if (target === 'lead') {
+      showLeadLogs();
+    } else {
+      showPatientLogs();
+    }
+  });
+
+  $(document).on('xhr.dt', '.table-call-logs-table', function (e, settings, json) {
+    if (json && typeof json.iTotalRecords !== 'undefined') {
+      $('#pt-logs-count').text(json.iTotalRecords);
+    }
+  });
+
+  $(document).on('xhr.dt', '.table-lead-call-logs-table', function (e, settings, json) {
+    if (json && typeof json.iTotalRecords !== 'undefined') {
+      $('#lead-logs-count').text(json.iTotalRecords);
+    }
+  });
+
+  // Check if #tab_calls is active on page load
+  if ($('#tab_calls').length && $('#tab_calls').hasClass('active')) {
+    initPatientLogs();
+    showPatientLogs();
+    initLeadLogs();
+  }
+
   // Also bind for manual tab switch
   $('a[href="#tab_calls"]').on('shown.bs.tab', function () {
-    if (!$.fn.DataTable.isDataTable('.table-call-logs-table')) {
-      initDataTable('.table-call-logs-table', admin_url + 'client/get_call_logs_table_data/' + client_id, [1], [1]);
-    }
+    initPatientLogs();
+    showPatientLogs();
+    initLeadLogs();
   });
 });
 </script>

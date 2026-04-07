@@ -3736,6 +3736,14 @@ class Client extends AdminController
 		}
 	}
 
+	public function get_lead_call_logs_table_data($id)
+	{
+		if ($this->input->is_ajax_request()) {
+			$data['client_id'] = $id;
+			echo $this->app->get_table_data(module_views_path('client', 'tables/lead_call_logs_table'), $data);
+		}
+	}
+
 	public function get_estimates_table_data($id)
 	{
 		if ($this->input->is_ajax_request()) {
