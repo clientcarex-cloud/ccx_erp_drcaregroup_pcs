@@ -464,10 +464,10 @@ if ($patient_name !== '') {
 			<strong><?php echo _l('presenting_complaints'); ?></strong>
 			<span>
 				<span class="badge" style="background:#5bc0de;color:#fff;padding:3px 8px;border-radius:10px;"><?= $pc_words ?> words</span>
-				<span class="collapsible-arrow" style="margin-left:6px;">&#9650;</span>
+				<span class="collapsible-arrow" style="margin-left:6px;">&#9660;</span>
 			</span>
 		</div>
-		<div id="collapse-presenting-complaints" class="form-group mtop20">
+		<div id="collapse-presenting-complaints" class="form-group mtop20" style="display:none;">
 			<textarea id="presenting_complaints" name="presenting_complaints" class="form-control tinymce" rows="6"><?php echo $case['presenting_complaints'];?></textarea>
 		</div>
 
@@ -477,10 +477,10 @@ if ($patient_name !== '') {
 			<strong><?php echo _l('complaints'); ?></strong>
 			<span>
 				<span class="badge" style="background:#5bc0de;color:#fff;padding:3px 8px;border-radius:10px;"><?= $comp_words ?> words</span>
-				<span class="collapsible-arrow" style="margin-left:6px;">&#9650;</span>
+				<span class="collapsible-arrow" style="margin-left:6px;">&#9660;</span>
 			</span>
 		</div>
-		<div id="collapse-complaints" class="form-group mtop20">
+		<div id="collapse-complaints" class="form-group mtop20" style="display:none;">
 			<textarea id="complaint" name="complaint" class="form-control tinymce" rows="6"><?php echo $case['complaint'];?></textarea>
 		</div>
         </div>
@@ -495,10 +495,10 @@ if ($patient_name !== '') {
 	   <br>
           <strong><?php echo _l('clinical_observation'); ?></strong>
           <span class="badge" style="background:#5bc0de;color:#fff;padding:3px 8px;border-radius:10px;margin-left:8px;font-size:13px;"><?= $clin_obs_words ?> words</span>
-          <span class="collapsible-arrow" style="float:right;margin-right:4px;">&#9650;</span>
+          <span class="collapsible-arrow" style="float:right;margin-right:4px;">&#9660;</span>
         </h4>
 		<hr>
-        <div class="card-body" id="collapse-clinical-obs">
+        <div class="card-body" id="collapse-clinical-obs" style="display:none;">
           <!-- Clinical Observation Content -->
           <div class="row mtop10">
            
@@ -529,10 +529,10 @@ if ($patient_name !== '') {
 	  <br>
           <strong><?php echo _l('personal_history'); ?></strong>
           <span class="badge" style="background:#5bc0de;color:#fff;padding:3px 8px;border-radius:10px;margin-left:8px;font-size:13px;"><?= $ph_count ?>/22 fields</span>
-          <span class="collapsible-arrow" style="float:right;margin-right:4px;">&#9650;</span>
+          <span class="collapsible-arrow" style="float:right;margin-right:4px;">&#9660;</span>
         </h4>
 		<hr>
-        <div class="card-body" id="collapse-personal-history">
+        <div class="card-body" id="collapse-personal-history" style="display:none;">
           <!-- Personal History Content -->
 					  <div class="row">
 			  <!-- Row 1 -->
@@ -677,10 +677,10 @@ if ($patient_name !== '') {
 	   <br>
           <strong><?php echo _l('general_examination'); ?></strong>
           <span class="badge" style="background:#5bc0de;color:#fff;padding:3px 8px;border-radius:10px;margin-left:8px;font-size:13px;"><?= $ge_count ?>/21 fields</span>
-          <span class="collapsible-arrow" style="float:right;margin-right:4px;">&#9650;</span>
+          <span class="collapsible-arrow" style="float:right;margin-right:4px;">&#9660;</span>
         </h4>
 		<hr>
-        <div class="card-body" id="collapse-general-exam">
+        <div class="card-body" id="collapse-general-exam" style="display:none;">
           <!-- General Examination Content -->
           <div class="row">
 			<div class="col-md-2">
