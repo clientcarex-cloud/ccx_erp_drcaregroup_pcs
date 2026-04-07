@@ -197,7 +197,8 @@
 									$masked .= $char;
 								}
 							}
-						echo '<span class="masked-mobile">' . strrev($masked) . '</span>';
+
+						echo '<span class="masked-mobile">' . strrev($masked) . '</span>';
 						echo '<span class="full-mobile" style="display:none">' . e($lead->phonenumber) . '</span>';
 						echo ' <a href="javascript:void(0);" onclick="toggleMobileMask(this)" style="margin-left:3px;"><i class="fa fa-eye"></i></a>';
 
@@ -206,9 +207,9 @@
 						}
 						?>
 					</dd>
-					<dt class="lead-field-heading tw-font-normal tw-text-neutral-500">
-						<?= _l('lead_alternate_number'); ?>
-					</dt>
+                    <dt class="lead-field-heading tw-font-normal tw-text-neutral-500">
+                        Mother's Number
+                    </dt>
 					<dd class="tw-text-neutral-900 tw-mt-1">
 						<?php
 						if (isset($lead) && $lead->lead_alternate_number != '') {
@@ -229,7 +230,8 @@
 									$masked .= $char;
 								}
 							}
-						echo '<span class="masked-mobile">' . strrev($masked) . '</span>';
+
+						echo '<span class="masked-mobile">' . strrev($masked) . '</span>';
 						echo '<span class="full-mobile" style="display:none">' . e($lead->lead_alternate_number) . '</span>';
 						echo ' <a href="javascript:void(0);" onclick="toggleMobileMask(this)" style="margin-left:3px;"><i class="fa fa-eye"></i></a>';
 
@@ -238,6 +240,12 @@
 						}
 						?>
 					</dd>
+                    <dt class="lead-field-heading tw-font-normal tw-text-neutral-500">
+                        Father's Number
+                    </dt>
+                    <dd class="tw-text-neutral-900 tw-mt-1">
+                        <?= isset($lead) && !empty($lead->lead_father_number) ? e($lead->lead_father_number) : '-' ?>
+                    </dd>
 
                     <dt class="lead-field-heading tw-font-normal tw-text-neutral-500">
                         <?= _l('lead_value'); ?>
@@ -263,6 +271,12 @@
 					<dd class="tw-text-neutral-900 tw-mt-1 tw-whitespace-pre-line">
 						<?= isset($lead) && $lead->lead_age != '' ? e($lead->lead_age) : '-' ?>
 					</dd>
+                    <dt class="lead-field-heading tw-font-normal tw-text-neutral-500">
+                        DOB
+                    </dt>
+                    <dd class="tw-text-neutral-900 tw-mt-1 tw-whitespace-pre-line">
+                        <?= isset($lead) && !empty($lead->lead_dob) ? e(_d($lead->lead_dob)) : '-' ?>
+                    </dd>
 
 					<dt class="lead-field-heading tw-font-normal tw-text-neutral-500">
 						<?= _l('lead_gender'); ?>
@@ -741,7 +755,7 @@ $(document).ready(function(){
 }
 </style>
 <div class="form-group">
-    <label for="lead_alternate_number"><?= _l('lead_alternate_number'); ?> <span class="text-danger">*</span></label>
+    <label for="lead_alternate_number">Mother's Number <span class="text-danger">*</span></label>
     <div class="row no-gutters">
         <div class="col-md-3 pr-0">
             <select name="calling_code_alternate" id="calling_code_alternate" class="form-control selectpicker" data-live-search="true" required>
@@ -777,6 +791,21 @@ $(document).ready(function(){
             <small class="text-danger phone-error-alt" style="display:none;"></small>
         </div>
     </div>
+</div>
+
+<div class="form-group">
+    <label for="lead_father_number">Father's Number</label>
+    <input type="text"
+           name="lead_father_number"
+           id="lead_father_number"
+            value="<?= isset($lead) && isset($lead->lead_father_number) ? e($lead->lead_father_number) : ''; ?>"
+           class="form-control"
+           maxlength="10"
+           minlength="10"
+           pattern="\d{10}"
+           autocomplete="off"
+           oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,10);"
+    >
 </div>
 
 <script>
@@ -829,8 +858,11 @@ $(document).ready(function(){
         <?php $value = (isset($lead) ? $lead->lead_age : ''); ?>
         <?= render_input('lead_age', 'lead_input_add_edit_age', $value, 'text', [
     'maxlength' => '3',
-    'oninput' => "this.value = this.value.replace(/[^0-9]/g, '').slice(0, 3);"
+    'oninput' => "this.value = this.value.replace(/[^0-9]/g, '').slice(0, 3);",
 ]); ?>
+
+        <?php $value = (isset($lead) ? $lead->lead_dob : ''); ?>
+        <?= render_date_input('lead_dob', 'DOB', $value); ?>
 
 
         <?= render_select(

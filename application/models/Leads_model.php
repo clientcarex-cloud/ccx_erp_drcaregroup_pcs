@@ -203,6 +203,17 @@ class Leads_model extends App_Model
 			$data['lead_alternate_number'] = $data['calling_code_alternate'].' '.$data['lead_alternate_number'];
             unset($data['calling_code_alternate']);
         }
+
+        if (isset($data['lead_father_number'])) {
+            $data['lead_father_number'] = preg_replace('/\D+/', '', (string) $data['lead_father_number']);
+            if ($data['lead_father_number'] === '') {
+                $data['lead_father_number'] = null;
+            }
+        }
+
+        if (isset($data['lead_dob']) && $data['lead_dob'] === '') {
+            $data['lead_dob'] = null;
+        }
 		
         if (isset($data['entity_type'])) {
 			$data['refer_type'] = $data['entity_type'];
@@ -236,6 +247,14 @@ class Leads_model extends App_Model
 		if (!$this->db->field_exists('lead_nature', db_prefix() . 'leads')) {
 			unset($data['lead_nature']); // Prevent error if it doesn't exist
 		}
+
+        if (!$this->db->field_exists('lead_father_number', db_prefix() . 'leads')) {
+            unset($data['lead_father_number']);
+        }
+
+        if (!$this->db->field_exists('lead_dob', db_prefix() . 'leads')) {
+            unset($data['lead_dob']);
+        }
 		
 		$languages = $this->input->post('languages');
         $data['languages'] = is_array($languages) ? implode(',', $languages) : $languages;
@@ -840,6 +859,17 @@ class Leads_model extends App_Model
             unset($data['calling_code_alternate']);
         }
 
+        if (isset($data['lead_father_number'])) {
+            $data['lead_father_number'] = preg_replace('/\D+/', '', (string) $data['lead_father_number']);
+            if ($data['lead_father_number'] === '') {
+                $data['lead_father_number'] = null;
+            }
+        }
+
+        if (isset($data['lead_dob']) && $data['lead_dob'] === '') {
+            $data['lead_dob'] = null;
+        }
+
         if (isset($data['remove_attachments'])) {
             foreach ($data['remove_attachments'] as $key => $val) {
                 $attachment = $this->get_lead_attachments($id, $key);
@@ -870,6 +900,14 @@ class Leads_model extends App_Model
 		if (!$this->db->field_exists('lead_nature', db_prefix() . 'leads')) {
 			unset($data['lead_nature']); // Prevent error if it doesn't exist
 		}
+
+        if (!$this->db->field_exists('lead_father_number', db_prefix() . 'leads')) {
+            unset($data['lead_father_number']);
+        }
+
+        if (!$this->db->field_exists('lead_dob', db_prefix() . 'leads')) {
+            unset($data['lead_dob']);
+        }
 		
 		$this->db->where('id', $id);
 		$existing_data = $this->db->get(db_prefix() . 'leads')->row_array(); // 1. Get old data

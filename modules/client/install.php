@@ -845,6 +845,13 @@ function client_install()
 			ADD COLUMN `lead_alternate_number` VARCHAR(45) NULL AFTER `branch_id`
 		');
 	}
+
+	if (!$CI->db->field_exists('lead_father_number', db_prefix() . 'leads')) {
+		$CI->db->query('
+			ALTER TABLE `' . db_prefix() . 'leads`
+			ADD COLUMN `lead_father_number` VARCHAR(45) NULL AFTER `lead_alternate_number`
+		');
+	}
 	
 	if (!$CI->db->field_exists('is_refunded', db_prefix() . 'clients_new_fields')) {
 		$CI->db->query('
