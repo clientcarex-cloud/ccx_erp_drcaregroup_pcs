@@ -459,19 +459,28 @@ if ($patient_name !== '') {
 </div>
 
 				<!-- Presenting Complaints -->
-		<div class="form-group mtop20">
-			<label for="presenting_complaints" class="control-label">
-				<?php echo _l('presenting_complaints'); ?>
-			</label>
+		<?php $pc_words = !empty(trim(strip_tags($case['presenting_complaints'] ?? ''))) ? str_word_count(strip_tags($case['presenting_complaints'])) : 0; ?>
+		<div class="collapsible-inline-header" data-target="collapse-presenting-complaints" style="cursor:pointer;padding:8px 4px;border-bottom:1px solid #e0e0e0;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;">
+			<strong><?php echo _l('presenting_complaints'); ?></strong>
+			<span>
+				<span class="badge" style="background:#5bc0de;color:#fff;padding:3px 8px;border-radius:10px;"><?= $pc_words ?> words</span>
+				<span class="collapsible-arrow" style="margin-left:6px;">&#9650;</span>
+			</span>
+		</div>
+		<div id="collapse-presenting-complaints" class="form-group mtop20">
 			<textarea id="presenting_complaints" name="presenting_complaints" class="form-control tinymce" rows="6"><?php echo $case['presenting_complaints'];?></textarea>
 		</div>
-		
-		
+
 		<!--Complaints -->
-		<div class="form-group mtop20">
-			<label for="complaint" class="control-label">
-				<?php echo _l('complaints'); ?>
-			</label>
+		<?php $comp_words = !empty(trim(strip_tags($case['complaint'] ?? ''))) ? str_word_count(strip_tags($case['complaint'])) : 0; ?>
+		<div class="collapsible-inline-header" data-target="collapse-complaints" style="cursor:pointer;padding:8px 4px;border-bottom:1px solid #e0e0e0;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;">
+			<strong><?php echo _l('complaints'); ?></strong>
+			<span>
+				<span class="badge" style="background:#5bc0de;color:#fff;padding:3px 8px;border-radius:10px;"><?= $comp_words ?> words</span>
+				<span class="collapsible-arrow" style="margin-left:6px;">&#9650;</span>
+			</span>
+		</div>
+		<div id="collapse-complaints" class="form-group mtop20">
 			<textarea id="complaint" name="complaint" class="form-control tinymce" rows="6"><?php echo $case['complaint'];?></textarea>
 		</div>
         </div>
@@ -479,14 +488,17 @@ if ($patient_name !== '') {
     </div>
 
     <!-- Clinical Observation Tab -->
+    <?php $clin_obs_words = !empty(trim(strip_tags($case['clinical_observation'] ?? ''))) ? str_word_count(strip_tags($case['clinical_observation'])) : 0; ?>
     <div class="card">
 	
-	   <h4>
+	   <h4 class="collapsible-card-header" data-target="collapse-clinical-obs" style="cursor:pointer;user-select:none;">
 	   <br>
-          <strong><?php echo _l('clinical_observation'); ?></strong> 
+          <strong><?php echo _l('clinical_observation'); ?></strong>
+          <span class="badge" style="background:#5bc0de;color:#fff;padding:3px 8px;border-radius:10px;margin-left:8px;font-size:13px;"><?= $clin_obs_words ?> words</span>
+          <span class="collapsible-arrow" style="float:right;margin-right:4px;">&#9650;</span>
         </h4>
 		<hr>
-        <div class="card-body">
+        <div class="card-body" id="collapse-clinical-obs">
           <!-- Clinical Observation Content -->
           <div class="row mtop10">
            
@@ -501,14 +513,26 @@ if ($patient_name !== '') {
     </div>
 
     <!-- Personal History Tab -->
+    <?php
+    $ph_count = count(array_filter([
+        $case['appetite'] ?? '', $case['thirst'] ?? '', $case['desires'] ?? '', $case['aversion'] ?? '',
+        $case['tongue'] ?? '', $case['urine'] ?? '', $case['bowels'] ?? '', $case['sweat'] ?? '',
+        $case['sleep'] ?? '', $case['sun_headache'] ?? '', $case['thermals'] ?? '', $case['habits'] ?? '',
+        $case['addiction'] ?? '', $case['side'] ?? '', $case['dreams'] ?? '', $case['diabetes'] ?? '',
+        $case['thyroid'] ?? '', $case['hypertension'] ?? '', $case['hyperlipidemia'] ?? '',
+        $case['menstrual_obstetric_history'] ?? '', $case['family_history'] ?? '', $case['past_treatment_history'] ?? ''
+    ], fn($v) => trim($v) !== ''));
+    ?>
     <div class="card">
 	
-	  <h4>
+	  <h4 class="collapsible-card-header" data-target="collapse-personal-history" style="cursor:pointer;user-select:none;">
 	  <br>
-          <strong><?php echo _l('personal_history'); ?></strong> 
+          <strong><?php echo _l('personal_history'); ?></strong>
+          <span class="badge" style="background:#5bc0de;color:#fff;padding:3px 8px;border-radius:10px;margin-left:8px;font-size:13px;"><?= $ph_count ?>/22 fields</span>
+          <span class="collapsible-arrow" style="float:right;margin-right:4px;">&#9650;</span>
         </h4>
 		<hr>
-        <div class="card-body">
+        <div class="card-body" id="collapse-personal-history">
           <!-- Personal History Content -->
 					  <div class="row">
 			  <!-- Row 1 -->
@@ -637,13 +661,26 @@ if ($patient_name !== '') {
     </div>
 
     <!-- General Examination Tab -->
+    <?php
+    $ge_count = count(array_filter([
+        $case['bp'] ?? '', $case['pulse'] ?? '', $case['weight'] ?? '', $case['height'] ?? '',
+        $case['temperature'] ?? '', $case['bmi'] ?? '',
+        $case['mental_generals'] ?? '', $case['pg'] ?? '', $case['particulars'] ?? '',
+        $case['miasmatic_diagnosis'] ?? '', $case['analysis_evaluation'] ?? '', $case['reportorial_result'] ?? '',
+        $case['management'] ?? '', $case['diet'] ?? '', $case['exercise'] ?? '',
+        $case['critical'] ?? '', $case['level_of_assent'] ?? '', $case['dos_and_donts'] ?? '',
+        $case['level_of_assurance'] ?? '', $case['criteria_future_plan_rx'] ?? '', $case['nutrition'] ?? ''
+    ], fn($v) => trim($v) !== ''));
+    ?>
     <div class="card">
-	   <h4>
+	   <h4 class="collapsible-card-header" data-target="collapse-general-exam" style="cursor:pointer;user-select:none;">
 	   <br>
-          <strong><?php echo _l('general_examination'); ?></strong> 
+          <strong><?php echo _l('general_examination'); ?></strong>
+          <span class="badge" style="background:#5bc0de;color:#fff;padding:3px 8px;border-radius:10px;margin-left:8px;font-size:13px;"><?= $ge_count ?>/21 fields</span>
+          <span class="collapsible-arrow" style="float:right;margin-right:4px;">&#9650;</span>
         </h4>
 		<hr>
-        <div class="card-body">
+        <div class="card-body" id="collapse-general-exam">
           <!-- General Examination Content -->
           <div class="row">
 			<div class="col-md-2">
@@ -732,6 +769,22 @@ if ($patient_name !== '') {
         </div>
     </div>
 
+
+<script>
+(function () {
+  document.querySelectorAll('.collapsible-card-header, .collapsible-inline-header').forEach(function (header) {
+    var targetId = header.getAttribute('data-target');
+    var target = document.getElementById(targetId);
+    var arrow = header.querySelector('.collapsible-arrow');
+    if (!target) return;
+    header.addEventListener('click', function () {
+      var isHidden = target.style.display === 'none';
+      target.style.display = isHidden ? '' : 'none';
+      if (arrow) arrow.innerHTML = isHidden ? '&#9650;' : '&#9660;';
+    });
+  });
+}());
+</script>
 
   </div> <!-- End of Accordion -->
 
