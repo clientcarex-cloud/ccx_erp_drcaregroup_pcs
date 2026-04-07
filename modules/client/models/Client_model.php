@@ -3454,11 +3454,16 @@ class Client_model extends App_Model
 
 
 
+		$presenting_complaints = html_purify($this->input->post('presenting_complaints', false));
+		$complaint             = html_purify($this->input->post('complaint', false));
+		$clinical_observation  = html_purify($this->input->post('clinical_observation', false));
+		$mind                  = html_purify($this->input->post('mind', false));
+
 		// Unified insert data for tblcasesheet
 		$data = [
 			'userid' => $patientid,
-			'presenting_complaints' => $this->input->post('presenting_complaints'),
-			'complaint' => $this->input->post('complaint'),
+			'presenting_complaints' => $presenting_complaints,
+			'complaint' => $complaint,
 
 			// Personal History
 			'appetite' => $this->input->post('appetite'),
@@ -3510,7 +3515,7 @@ class Client_model extends App_Model
 
 			// Clinical Observation
 			'progress' => $this->input->post('progress'),
-			'clinical_observation' => $this->input->post('clinical_observation'),
+			'clinical_observation' => $clinical_observation,
 			'suggested_duration' => $this->input->post('suggested_duration'),
 			'documents' => !empty($uploaded_files) ? json_encode($uploaded_files) : null,
 			'doctor_medicine_days' => $this->input->post('medicine_days'),
@@ -3519,7 +3524,7 @@ class Client_model extends App_Model
 			'patient_status' => $this->input->post('patient_status'),
 
 			// Mind Section
-			'mind' => $this->input->post('mind'),
+			'mind' => $mind,
 
 			'date' => date('Y-m-d'),
 			'created_at' => date('Y-m-d H:i:s'),
@@ -3737,11 +3742,16 @@ class Client_model extends App_Model
 		// Merge existing files with newly uploaded ones
 		$all_files = array_merge($existing_files, $uploaded_files);
 
+		$presenting_complaints = html_purify($this->input->post('presenting_complaints', false));
+		$complaint             = html_purify($this->input->post('complaint', false));
+		$clinical_observation  = html_purify($this->input->post('clinical_observation', false));
+		$mind                  = html_purify($this->input->post('mind', false));
+
 		// Prepare base data array
 		$data = [
 			'userid' => $patientid,
-			'presenting_complaints' => $this->input->post('presenting_complaints'),
-			'complaint' => $this->input->post('complaint'),
+			'presenting_complaints' => $presenting_complaints,
+			'complaint' => $complaint,
 			'appetite' => $this->input->post('appetite'),
 			'thirst' => $this->input->post('thirst'),
 			'desires' => $this->input->post('desires'),
@@ -3786,13 +3796,13 @@ class Client_model extends App_Model
 			'criteria_future_plan_rx' => $this->input->post('criteria_future_plan_rx'),
 			'nutrition' => $this->input->post('nutrition'),
 			'progress' => $this->input->post('progress'),
-			'clinical_observation' => $this->input->post('clinical_observation'),
+			'clinical_observation' => $clinical_observation,
 			'suggested_duration' => $this->input->post('suggested_duration'),
 			'doctor_medicine_days' => $this->input->post('medicine_days'),
 			'medicine_days' => $this->input->post('medicine_days'),
 			'followup_date' => $this->input->post('followup_date'),
 			'patient_status' => $this->input->post('patient_status'),
-			'mind' => $this->input->post('mind'),
+			'mind' => $mind,
 		];
 
 
