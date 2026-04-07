@@ -35,6 +35,172 @@ if ($patient_name !== '') {
   <!-- Accordion Tabs -->
   <div class="accordion" id="casesheetAccordion">
 
+<div class="card">
+  <h4><br><strong><?= _l('prescription'); ?></strong></h4>
+  <hr>
+  <div class="card-body">
+    <?php
+    $parsed_prescriptions = [];
+    $parsed_remarks = [];
+    if (!empty($prescription[0]['prescription_data'])) {
+      $items = explode('|', $prescription[0]['prescription_data']);
+      foreach ($items as $item) {
+        $item = trim(preg_replace('/^\d+\.\s*/', '', $item));
+        if ($item !== '') {
+          $parts = array_filter(array_map('trim', explode(';', $item)));
+          if (!empty($parts)) {
+            $parsed_prescriptions[] = array_values($parts);
+          }
+        }
+      }
+    }
+
+    if (!empty($prescription[0]['medicine_remarks'])) {
+      $parsed_remarks = array_map('trim', explode('|', $prescription[0]['medicine_remarks']));
+    }
+
+    // Dropdown options
+    $medicine_options = array_map(fn($m) => ['id' => $m['medicine_name'], 'name' => $m['medicine_name']], $medicines);
+    $potency_options = array_map(fn($p) => ['id' => $p['medicine_potency_name'], 'name' => $p['medicine_potency_name']], $potencies);
+    $dose_options = array_map(fn($d) => ['id' => $d['medicine_dose_name'], 'name' => $d['medicine_dose_name']], $doses);
+    $timing_options = array_map(fn($t) => ['id' => $t['medicine_timing_name'], 'name' => $t['medicine_timing_name']], $timings);
+    $remarks_options = array_map(fn($t) => ['id' => $t['medicine_timing_name'], 'name' => $t['medicine_timing_name']], $timings);
+    ?>
+
+    <table class="prescription-medicine-table table" id="prescriptionMedicineTable">
+      <thead>
+        <tr>
+          <th><?= _l('medicine_name'); ?></th>
+          <th><?= _l('potency'); ?></th>
+          <th><?= _l('dose'); ?></th>
+          <th><?= _l('timings'); ?></th>
+          <th><?= _l('doctor_remarks'); ?></th>
+          <th><?= _l('remarks'); ?></th>
+          <th><?= _l('given'); ?></th>
+          <th><?= _l('action'); ?></th>
+        </tr>
+      </thead>
+      <tbody id="prescriptionMedicineBody">
+        <?php foreach ($parsed_prescriptions as $i => $presc): ?>
+        <tr>
+          <td><input type="text" name="prescription_medicine_name[]" class="form-control" value="<?= htmlspecialchars($presc[0] ?? '') ?>"></td>
+          <td><input type="text" name="prescription_medicine_potency[]" class="form-control" value="<?= htmlspecialchars($presc[1] ?? '') ?>"></td>
+          <td><input type="text" name="prescription_medicine_dose[]" class="form-control" value="<?= htmlspecialchars($presc[2] ?? '') ?>"></td>
+          <td><input type="text" name="prescription_medicine_timings[]" class="form-control" value="<?= htmlspecialchars($presc[3] ?? '') ?>"></td>
+          <td>
+			  <textarea name="prescription_medicine_remarks[]" class="form-control"><?= htmlspecialchars($presc[4] ?? '') ?></textarea>
+			</td>
+			<td>
+			  <textarea  class="form-control prescription-medicine-remarks" readonly><?= htmlspecialchars($parsed_remarks[$i] ?? '') ?></textarea>
+			</td>
+
+          <td class="text-center">
+            <input type="checkbox" class="form-check-input auto-fill-remark" data-index="<?= $i ?>" <?= (strtolower(trim($parsed_remarks[$i] ?? '')) === 'given') ? 'checked' : '' ?>>
+          </td>
+          <td class="text-center">
+            <button type="button" class="btn btn-danger btn-sm remove-row-btn"><i class="fa fa-trash"></i></button>
+          </td>
+        </tr>
+        <?php endforeach; ?>
+
+        <!-- First dynamic row -->
+        <tr>
+          <td><?= render_select('prescription_medicine_name[]', $medicine_options, ['id', 'name'], '', '', [], [], '', 'prescription-medicine-name'); ?></td>
+          <td><?= render_select('prescription_medicine_potency[]', $potency_options, ['id', 'name'], '', '', [], [], '', 'prescription-medicine-potency'); ?></td>
+          <td><?= render_select('prescription_medicine_dose[]', $dose_options, ['id', 'name'], '', '', [], [], '', 'prescription-medicine-dose'); ?></td>
+          <td><?= render_select('prescription_medicine_timings[]', $timing_options, ['id', 'name'], '', '', [], [], '', 'prescription-medicine-timings'); ?></td>
+          <td>
+			  <textarea name="prescription_medicine_remarks[]" class="form-control prescription-medicine-remarks"></textarea>
+			</td>
+
+          <td>
+		  <textarea  class="form-control prescription-medicine-remarks" readonly></textarea>
+		  </td>
+          <td class="text-center">
+            <input type="checkbox" class="form-check-input auto-fill-remark" data-index="new">
+          </td>
+          <td class="text-center">
+            <button type="button" class="btn btn-success btn-sm" id="addPrescriptionRowBtn"><i class="fa fa-plus"></i></button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <script>
+    const medicineOptions = <?= json_encode($medicine_options); ?>;
+    const potencyOptions = <?= json_encode($potency_options); ?>;
+    const doseOptions = <?= json_encode($dose_options); ?>;
+    const timingOptions = <?= json_encode($timing_options); ?>;
+
+    function buildOptions(options) {
+      return `<option value="">-- Select --</option>` +
+             options.map(opt => `<option value="${opt.id}">${opt.name}</option>`).join('');
+    }
+
+    function createNewRow(index) {
+      return `
+        <tr>
+          <td><select name="prescription_medicine_name[]" class="form-control prescription-medicine-name">${buildOptions(medicineOptions)}</select></td>
+          <td><select name="prescription_medicine_potency[]" class="form-control prescription-medicine-potency">${buildOptions(potencyOptions)}</select></td>
+          <td><select name="prescription_medicine_dose[]" class="form-control prescription-medicine-dose">${buildOptions(doseOptions)}</select></td>
+          <td><select name="prescription_medicine_timings[]" class="form-control prescription-medicine-timings">${buildOptions(timingOptions)}</select></td>
+          <td>
+		  <textarea name="prescription_medicine_remarks[]" class="form-control prescription-medicine-remarks"></textarea>
+		  </td>
+		  <td><textarea  class="form-control prescription-prescription-remarks" readonly></textarea></td>
+          <td class="text-center">
+            <input type="checkbox" class="form-check-input auto-fill-remark" data-index="${index}">
+          </td>
+          <td class="text-center">
+            <button type="button" class="btn btn-danger btn-sm remove-row-btn"><i class="fa fa-trash"></i></button>
+          </td>
+        </tr>`;
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      const tableBody = document.getElementById('prescriptionMedicineBody');
+
+      document.getElementById('addPrescriptionRowBtn').addEventListener('click', function () {
+        const index = tableBody.querySelectorAll('tr').length;
+        tableBody.insertAdjacentHTML('beforeend', createNewRow(index));
+      });
+
+      tableBody.addEventListener('click', function (e) {
+        if (e.target.closest('.remove-row-btn')) {
+          e.target.closest('tr').remove();
+        }
+      });
+
+      tableBody.addEventListener('change', function (e) {
+        if (e.target.classList.contains('prescription-medicine-timings')) {
+          const all = document.querySelectorAll('.prescription-medicine-timings');
+          if (e.target === all[all.length - 1]) {
+            const index = all.length;
+            tableBody.insertAdjacentHTML('beforeend', createNewRow(index));
+          }
+        }
+
+        if (e.target.classList.contains('auto-fill-remark')) {
+          const index = e.target.dataset.index;
+          const remarkInputs = document.querySelectorAll('input[name="prescription_medicine_remarks[]"]');
+          if (index !== "new" && remarkInputs[index]) {
+            remarkInputs[index].value = e.target.checked ? 'Given' : '';
+          } else if (index === "new") {
+            // Find the closest remark input in the same row
+            const row = e.target.closest('tr');
+            const remarkInput = row.querySelector('.prescription-medicine-remarks');
+            if (remarkInput) {
+              remarkInput.value = e.target.checked ? 'Given' : '';
+            }
+          }
+        }
+      });
+    });
+    </script>
+  </div>
+</div>
+
+
     <!-- Preliminary Data Tab -->
     <div class="card">
         <h4>
@@ -563,173 +729,6 @@ if ($patient_name !== '') {
 		</div>
         </div>
     </div>
-	
-	
-<div class="card">
-  <h4><br><strong><?= _l('prescription'); ?></strong></h4>
-  <hr>
-  <div class="card-body">
-    <?php
-    $parsed_prescriptions = [];
-    $parsed_remarks = [];
-
-    if (!empty($prescription[0]['prescription_data'])) {
-      $items = explode('|', $prescription[0]['prescription_data']);
-      foreach ($items as $item) {
-        $item = trim(preg_replace('/^\d+\.\s*/', '', $item));
-        if ($item !== '') {
-          $parts = array_filter(array_map('trim', explode(';', $item)));
-          if (!empty($parts)) {
-            $parsed_prescriptions[] = array_values($parts);
-          }
-        }
-      }
-    }
-
-    if (!empty($prescription[0]['medicine_remarks'])) {
-      $parsed_remarks = array_map('trim', explode('|', $prescription[0]['medicine_remarks']));
-    }
-
-    // Dropdown options
-    $medicine_options = array_map(fn($m) => ['id' => $m['medicine_name'], 'name' => $m['medicine_name']], $medicines);
-    $potency_options = array_map(fn($p) => ['id' => $p['medicine_potency_name'], 'name' => $p['medicine_potency_name']], $potencies);
-    $dose_options = array_map(fn($d) => ['id' => $d['medicine_dose_name'], 'name' => $d['medicine_dose_name']], $doses);
-    $timing_options = array_map(fn($t) => ['id' => $t['medicine_timing_name'], 'name' => $t['medicine_timing_name']], $timings);
-    $remarks_options = array_map(fn($t) => ['id' => $t['medicine_timing_name'], 'name' => $t['medicine_timing_name']], $timings);
-    ?>
-
-    <table class="prescription-medicine-table table" id="prescriptionMedicineTable">
-      <thead>
-        <tr>
-          <th><?= _l('medicine_name'); ?></th>
-          <th><?= _l('potency'); ?></th>
-          <th><?= _l('dose'); ?></th>
-          <th><?= _l('timings'); ?></th>
-          <th><?= _l('doctor_remarks'); ?></th>
-          <th><?= _l('remarks'); ?></th>
-          <th><?= _l('given'); ?></th>
-          <th><?= _l('action'); ?></th>
-        </tr>
-      </thead>
-      <tbody id="prescriptionMedicineBody">
-        <?php foreach ($parsed_prescriptions as $i => $presc): ?>
-        <tr>
-          <td><input type="text" name="prescription_medicine_name[]" class="form-control" value="<?= htmlspecialchars($presc[0] ?? '') ?>"></td>
-          <td><input type="text" name="prescription_medicine_potency[]" class="form-control" value="<?= htmlspecialchars($presc[1] ?? '') ?>"></td>
-          <td><input type="text" name="prescription_medicine_dose[]" class="form-control" value="<?= htmlspecialchars($presc[2] ?? '') ?>"></td>
-          <td><input type="text" name="prescription_medicine_timings[]" class="form-control" value="<?= htmlspecialchars($presc[3] ?? '') ?>"></td>
-          <td>
-			  <textarea name="prescription_medicine_remarks[]" class="form-control"><?= htmlspecialchars($presc[4] ?? '') ?></textarea>
-			</td>
-			<td>
-			  <textarea  class="form-control prescription-medicine-remarks" readonly><?= htmlspecialchars($parsed_remarks[$i] ?? '') ?></textarea>
-			</td>
-
-          <td class="text-center">
-            <input type="checkbox" class="form-check-input auto-fill-remark" data-index="<?= $i ?>" <?= (strtolower(trim($parsed_remarks[$i] ?? '')) === 'given') ? 'checked' : '' ?>>
-          </td>
-          <td class="text-center">
-            <button type="button" class="btn btn-danger btn-sm remove-row-btn"><i class="fa fa-trash"></i></button>
-          </td>
-        </tr>
-        <?php endforeach; ?>
-
-        <!-- First dynamic row -->
-        <tr>
-          <td><?= render_select('prescription_medicine_name[]', $medicine_options, ['id', 'name'], '', '', [], [], '', 'prescription-medicine-name'); ?></td>
-          <td><?= render_select('prescription_medicine_potency[]', $potency_options, ['id', 'name'], '', '', [], [], '', 'prescription-medicine-potency'); ?></td>
-          <td><?= render_select('prescription_medicine_dose[]', $dose_options, ['id', 'name'], '', '', [], [], '', 'prescription-medicine-dose'); ?></td>
-          <td><?= render_select('prescription_medicine_timings[]', $timing_options, ['id', 'name'], '', '', [], [], '', 'prescription-medicine-timings'); ?></td>
-          <td>
-			  <textarea name="prescription_medicine_remarks[]" class="form-control prescription-medicine-remarks"></textarea>
-			</td>
-
-          <td>
-		  <textarea  class="form-control prescription-medicine-remarks" readonly></textarea>
-		  </td>
-          <td class="text-center">
-            <input type="checkbox" class="form-check-input auto-fill-remark" data-index="new">
-          </td>
-          <td class="text-center">
-            <button type="button" class="btn btn-success btn-sm" id="addPrescriptionRowBtn"><i class="fa fa-plus"></i></button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-
-    <script>
-    const medicineOptions = <?= json_encode($medicine_options); ?>;
-    const potencyOptions = <?= json_encode($potency_options); ?>;
-    const doseOptions = <?= json_encode($dose_options); ?>;
-    const timingOptions = <?= json_encode($timing_options); ?>;
-
-    function buildOptions(options) {
-      return `<option value="">-- Select --</option>` +
-             options.map(opt => `<option value="${opt.id}">${opt.name}</option>`).join('');
-    }
-
-    function createNewRow(index) {
-      return `
-        <tr>
-          <td><select name="prescription_medicine_name[]" class="form-control prescription-medicine-name">${buildOptions(medicineOptions)}</select></td>
-          <td><select name="prescription_medicine_potency[]" class="form-control prescription-medicine-potency">${buildOptions(potencyOptions)}</select></td>
-          <td><select name="prescription_medicine_dose[]" class="form-control prescription-medicine-dose">${buildOptions(doseOptions)}</select></td>
-          <td><select name="prescription_medicine_timings[]" class="form-control prescription-medicine-timings">${buildOptions(timingOptions)}</select></td>
-          <td>
-		  <textarea name="prescription_medicine_remarks[]" class="form-control prescription-medicine-remarks"></textarea>
-		  </td>
-		  <td><textarea  class="form-control prescription-prescription-remarks" readonly></textarea></td>
-          <td class="text-center">
-            <input type="checkbox" class="form-check-input auto-fill-remark" data-index="${index}">
-          </td>
-          <td class="text-center">
-            <button type="button" class="btn btn-danger btn-sm remove-row-btn"><i class="fa fa-trash"></i></button>
-          </td>
-        </tr>`;
-    }
-
-    document.addEventListener('DOMContentLoaded', function () {
-      const tableBody = document.getElementById('prescriptionMedicineBody');
-
-      document.getElementById('addPrescriptionRowBtn').addEventListener('click', function () {
-        const index = tableBody.querySelectorAll('tr').length;
-        tableBody.insertAdjacentHTML('beforeend', createNewRow(index));
-      });
-
-      tableBody.addEventListener('click', function (e) {
-        if (e.target.closest('.remove-row-btn')) {
-          e.target.closest('tr').remove();
-        }
-      });
-
-      tableBody.addEventListener('change', function (e) {
-        if (e.target.classList.contains('prescription-medicine-timings')) {
-          const all = document.querySelectorAll('.prescription-medicine-timings');
-          if (e.target === all[all.length - 1]) {
-            const index = all.length;
-            tableBody.insertAdjacentHTML('beforeend', createNewRow(index));
-          }
-        }
-
-        if (e.target.classList.contains('auto-fill-remark')) {
-          const index = e.target.dataset.index;
-          const remarkInputs = document.querySelectorAll('input[name="prescription_medicine_remarks[]"]');
-          if (index !== "new" && remarkInputs[index]) {
-            remarkInputs[index].value = e.target.checked ? 'Given' : '';
-          } else if (index === "new") {
-            // Find the closest remark input in the same row
-            const row = e.target.closest('tr');
-            const remarkInput = row.querySelector('.prescription-medicine-remarks');
-            if (remarkInput) {
-              remarkInput.value = e.target.checked ? 'Given' : '';
-            }
-          }
-        }
-      });
-    });
-    </script>
-  </div>
-</div>
 
 
   </div> <!-- End of Accordion -->
