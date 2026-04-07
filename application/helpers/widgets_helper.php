@@ -11,7 +11,10 @@ defined('BASEPATH') or exit('No direct script access allowed');
 function get_dashboard_widgets()
 {
     $widgets = [
-        // Default widgets removed as per user request
+        [
+            'path'      => 'admin/dashboard/widgets/my_reminders',
+            'container' => 'middle-right-6',
+        ],
     ];
 
     return hooks()->apply_filters('get_dashboard_widgets', $widgets);
