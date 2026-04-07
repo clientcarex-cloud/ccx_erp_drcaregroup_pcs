@@ -155,6 +155,7 @@
 							$mis_sections['Other Reports'][] = ['Reports Goals', 'Set month-wise GT, Enquiry, Renewal & Referral goals per branch.', admin_url('mis_reports/report_goals')];
 
 						$mis_sections['Other Reports'][] = ['Staff Referral Reward Report', 'Staff-wise referral lead details with conversion tracking.', admin_url('mis_reports/staff_referral_reward_report')];
+						$mis_sections['Other Reports'][] = ['Patient Referral Reward Report', 'Patient-wise referral lead details with conversion tracking.', admin_url('mis_reports/patient_referral_reward_report')];
 						}
 
 						if (staff_can('manager_reports', 'customers')) {
