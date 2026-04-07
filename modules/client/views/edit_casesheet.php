@@ -1076,6 +1076,11 @@ $(document).ready(function () {
 $("body").on("submit", "#casesheetForm", function (e) {
   e.preventDefault();
 
+  // Sync all TinyMCE editors back to their textareas before reading form data
+  if (typeof tinymce !== 'undefined') {
+    tinymce.triggerSave();
+  }
+
   var form = $(this)[0]; // Get raw DOM element
   var formData = new FormData(form); // Create FormData object (includes files automatically)
 
