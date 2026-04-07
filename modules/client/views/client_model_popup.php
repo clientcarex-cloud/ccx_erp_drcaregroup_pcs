@@ -5674,6 +5674,28 @@ $(function () {
   let client_id = <?= $client->userid ?>;
   let admin_url = "<?= admin_url(); ?>";
 
+  function autoOpenLatestPrescription() {
+    const $table = $('.table-doctor-prescription');
+    if (!$table.length || !$.fn.DataTable.isDataTable($table)) {
+      return;
+    }
+
+    const $firstButton = $table.find('tbody tr:first .toggle-medicines').first();
+    if (!$firstButton.length) {
+      return;
+    }
+
+    if ($firstButton.closest('tr').hasClass('shown')) {
+      return;
+    }
+
+    $firstButton.trigger('click');
+  }
+
+  $(document).on('draw.dt', '.table-doctor-prescription', function () {
+    autoOpenLatestPrescription();
+  });
+
   // Initialize if already active on page load
   if ($('#tab_prescription').length && $('#tab_prescription').hasClass('active')) {
     if (!$.fn.DataTable.isDataTable('.table-doctor-prescription')) {
@@ -5684,6 +5706,8 @@ $(function () {
         [1]  // disable ordering on column
       );
       prescriptionInitialized = true;
+    } else {
+      autoOpenLatestPrescription();
     }
   }
 
@@ -5699,11 +5723,21 @@ $(function () {
           [1]
         );
         prescriptionInitialized = true;
+      } else {
+        autoOpenLatestPrescription();
       }
     }
   });
 });
 </script>
+
+<style>
+  .auto-open-view-btn {
+    pointer-events: none;
+    opacity: 0.65;
+    cursor: not-allowed;
+  }
+</style>
 
 <script>
 $(function () {

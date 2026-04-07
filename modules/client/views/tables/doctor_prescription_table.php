@@ -36,9 +36,9 @@ if (!empty($search)) {
 // Get total before limit
 $total_records = $CI->db->count_all_results('', false);
 
-// Apply ordering and limit
-//$CI->db->order_by($order_column_name, $order_dir);
-$CI->db->order_by("created_datetime", "DESC");
+// Always show latest prescription first.
+$CI->db->order_by('created_datetime', 'DESC');
+$CI->db->order_by('patient_prescription_id', 'DESC');
 $CI->db->limit($length, $start);
 
 // Fetch result rows
@@ -66,13 +66,14 @@ foreach ($results as $row) {
 
     // Build view button with all required data attributes
     $view_button = '<button 
-        class="btn btn-sm btn-outline-info toggle-medicines" 
+        class="btn btn-sm btn-outline-info toggle-medicines auto-open-view-btn" 
         data-id="' . $prescription_id . '"
         data-casesheet-id="' . $casesheet_id . '"
         data-prescription="' . htmlspecialchars(json_encode($items), ENT_QUOTES, 'UTF-8') . '"
         data-remarks="' . htmlspecialchars(json_encode($remarks), ENT_QUOTES, 'UTF-8') . '"
         data-medicine-days="' . htmlspecialchars($medicine_days, ENT_QUOTES, 'UTF-8') . '"
-        data-followup-date="' . htmlspecialchars($followup_date, ENT_QUOTES, 'UTF-8') . '">
+        data-followup-date="' . htmlspecialchars($followup_date, ENT_QUOTES, 'UTF-8') . '"
+        title="Auto-opened">
         <i class="fa fa-eye"></i>
     </button>';
 
