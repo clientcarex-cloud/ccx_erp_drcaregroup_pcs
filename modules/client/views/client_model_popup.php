@@ -1439,7 +1439,7 @@
             <th><?= _l('timings'); ?></th>
             <th><?= _l('doctor_remarks'); ?></th>
             <th><?= _l('remarks'); ?></th>
-            <th><input type="checkbox" class="select-all-meds" title="Select All"></th>
+            <th>Status</th>
           </tr>
         </thead>
         <tbody>`;
@@ -1448,7 +1448,7 @@
       const cleaned = item.trim().replace(/^\d+\.\s*/, '');
       const parts = cleaned.split(';').map(p => p.trim());
       const remark = remarks[i] || '';
-      const isChecked = remark !== '' ? 'checked' : '';
+      const statusValue = remark !== '' ? 'given' : 'not_given';
 
       html += `<tr>
       <td>${i + 1}</td>
@@ -1464,7 +1464,10 @@
                value="${remark.replace(/"/g, '&quot;')}">
       </td>
       <td>
-        <input type="checkbox" class="medicine-checkbox" data-index="${i}" ${isChecked}>
+        <select class="form-control form-control-sm medicine-status-select" data-index="${i}">
+          <option value="given" ${statusValue === 'given' ? 'selected' : ''}>Given</option>
+          <option value="not_given" ${statusValue === 'not_given' ? 'selected' : ''}>Not Given</option>
+        </select>
       </td>
     </tr>`;
   });
@@ -1591,32 +1594,15 @@ $(document).on('click', '.save-remarks-btn', function () {
   });
 });
 
-// Handle single checkbox: Clear/Set remark
-$(document).on('change', '.medicine-checkbox', function () {
+// Handle single status dropdown: Clear/Set remark
+$(document).on('change', '.medicine-status-select', function () {
   const index = $(this).data('index');
   const $input = $(`.remark-input[data-index="${index}"]`);
-  if (!$(this).is(':checked')) {
+  if ($(this).val() === 'not_given') {
     $input.val('');
   } else {
     $input.val('Given');
   }
-});
-
-// Select All
-$(document).on('change', '.select-all-meds', function () {
-  const isChecked = $(this).is(':checked');
-  const $tbody = $(this).closest('table').find('tbody');
-
-  $tbody.find('.medicine-checkbox').each(function () {
-    $(this).prop('checked', isChecked);
-    const index = $(this).data('index');
-    const $input = $(`.remark-input[data-index="${index}"]`);
-    if (isChecked && !$input.val()) {
-      $input.val('Given');
-    } else if (!isChecked) {
-      $input.val('');
-    }
-  });
 });
 
 // Load existing attachments when prescription row is expanded
