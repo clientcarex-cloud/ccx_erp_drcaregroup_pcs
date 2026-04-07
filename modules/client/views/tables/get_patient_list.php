@@ -18,6 +18,16 @@ $order_dir = $incoming_order_dir === 'asc' ? 'asc' : 'desc';
 
 $summary_filter = $CI->input->get('summary_filter');
 
+$applyRegistrationDateFilter = static function ($query, $from, $to) {
+    if (empty($from) || empty($to)) {
+        return;
+    }
+
+    // Keep this index-friendly by avoiding DATE(column) wrappers.
+    $query->where('new.registration_start_date >=', $from . ' 00:00:00');
+    $query->where('new.registration_start_date <=', $to . ' 23:59:59');
+};
+
 // Map DataTable columns to actual SQL columns/aliases (null means fallback to default)
 $columns = [
     'c.userid',
@@ -155,14 +165,13 @@ $applyBranchFilter = static function ($query) use ($branchFilterIds) {
 
 $totalQuery = $CI->db;
 $totalQuery->reset_query();
-$totalQuery->select('COUNT(DISTINCT c.userid) as total');
+$totalQuery->select('COUNT(*) as total');
 $totalQuery->from(db_prefix() . 'clients c');
 $totalQuery->join(db_prefix() . 'clients_new_fields new', 'new.userid = c.userid', 'left');
-$totalQuery->join(db_prefix() . 'customer_groups group', 'group.customer_id = c.userid', 'left');
 
 $applyBranchFilter($totalQuery);
 if ($from_date && $to_date && $summary_filter != 'not_registered') {
-    $totalQuery->where("DATE(new.registration_start_date) BETWEEN '$from_date' AND '$to_date'");
+    $applyRegistrationDateFilter($totalQuery, $from_date, $to_date);
 }
 
 if ($summary_filter === 'due') {
@@ -184,7 +193,7 @@ if ($summary_filter === 'due') {
     $totalQuery->group_end();
 
 } elseif ($summary_filter === 'renewal') {
-    $CI->db->where('new.mr_no IS NOT NULL'); // ensure registered
+    $totalQuery->where('new.mr_no IS NOT NULL'); // ensure registered
 
     $today = date('Y-m-d');
 
@@ -201,12 +210,12 @@ if ($summary_filter === 'due') {
 
     // Apply range or expiry check AFTER finding the max date
     if ($from_date && $to_date) {
-        $subquery .= ' AND DATE(e.duedate) BETWEEN "' . $from_date . '" AND "' . $to_date . '"';
+		$subquery .= ' AND e.duedate >= "' . $from_date . '" AND e.duedate <= "' . $to_date . '"';
     } else {
         $subquery .= ' AND e.duedate <= "' . $today . '"';
     }
 
-    $CI->db->where('EXISTS (' . $subquery . ')', null, false);
+    $totalQuery->where('EXISTS (' . $subquery . ')', null, false);
 } elseif ($summary_filter === 'new_patients') {
     $totalQuery->where('new.mr_no IS NOT NULL');
 }
@@ -217,15 +226,14 @@ $totalRecords = $totalQuery->get()->row()->total;
 // Filtered count
 $filterQuery = $CI->db;
 $filterQuery->reset_query();
-$filterQuery->select('COUNT(DISTINCT c.userid) as total');
+$filterQuery->select('COUNT(*) as total');
 $filterQuery->from(db_prefix() . 'clients c');
 $filterQuery->join(db_prefix() . 'clients_new_fields new', 'new.userid = c.userid', 'left');
-$filterQuery->join(db_prefix() . 'customer_groups group', 'group.customer_id = c.userid', 'left');
 $filterQuery->join(db_prefix() . 'leads_sources source', 'source.id = new.patient_source_id', 'left');
 
 $applyBranchFilter($filterQuery);
 if ($from_date && $to_date && $summary_filter != 'not_registered') {
-    $filterQuery->where("DATE(new.registration_start_date) BETWEEN '$from_date' AND '$to_date'");
+    $applyRegistrationDateFilter($filterQuery, $from_date, $to_date);
 }
 
 // Apply summary filter
@@ -248,7 +256,7 @@ if ($summary_filter === 'due') {
     $filterQuery->group_end();
 
 } elseif ($summary_filter === 'renewal') {
-    $CI->db->where('new.mr_no IS NOT NULL'); // ensure registered
+    $filterQuery->where('new.mr_no IS NOT NULL'); // ensure registered
 
     $today = date('Y-m-d');
 
@@ -265,12 +273,12 @@ if ($summary_filter === 'due') {
 
     // Now apply date condition on the outer query
     if ($from_date && $to_date) {
-        $subquery .= ' AND DATE(e.duedate) BETWEEN "' . $from_date . '" AND "' . $to_date . '"';
+		$subquery .= ' AND e.duedate >= "' . $from_date . '" AND e.duedate <= "' . $to_date . '"';
     } else {
         $subquery .= ' AND e.duedate <= "' . $today . '"';
     }
 
-    $CI->db->where('EXISTS (' . $subquery . ')', null, false);
+    $filterQuery->where('EXISTS (' . $subquery . ')', null, false);
 } elseif ($summary_filter === 'new_patients') {
     $filterQuery->where('new.mr_no IS NOT NULL');
 }
@@ -300,11 +308,10 @@ $CI->db->select('c.userid, c.company, c.phonenumber, c.datecreated, new.mr_no, n
     ) AS branch_names');
 $CI->db->from(db_prefix() . 'clients c');
 $CI->db->join(db_prefix() . 'clients_new_fields new', 'new.userid = c.userid', 'left');
-$CI->db->join(db_prefix() . 'customer_groups group', 'group.customer_id = c.userid', 'left');
 $CI->db->join(db_prefix() . 'leads_sources source', 'source.id = new.patient_source_id', 'left');
 $applyBranchFilter($CI->db);
 if ($from_date && $to_date && $summary_filter != 'not_registered') {
-    $CI->db->where("DATE(new.registration_start_date) BETWEEN '$from_date' AND '$to_date'");
+    $applyRegistrationDateFilter($CI->db, $from_date, $to_date);
 }
 
 if (!empty($search)) {
@@ -359,7 +366,7 @@ if ($summary_filter === 'due') {
 
     // Add optional from_date and to_date condition
     if ($from_date && $to_date) {
-        $subquery .= ' AND DATE(e.duedate) BETWEEN "' . $from_date . '" AND "' . $to_date . '"';
+		$subquery .= ' AND e.duedate >= "' . $from_date . '" AND e.duedate <= "' . $to_date . '"';
     } else {
         $subquery .= ' AND e.duedate <= "' . $today . '"';
     }
@@ -421,17 +428,18 @@ if (!empty($userIds)) {
         $callLogMap[$log['patientid']] = $log;
     }
 
-    // Latest journey status
+    // Latest journey status (single row per user)
     $CI->db->select('j.userid, j.status, s.name as status_name, s.color as status_color');
     $CI->db->from(db_prefix() . 'lead_patient_journey j');
+    $CI->db->join(
+        '(SELECT userid, MAX(id) AS max_id FROM ' . db_prefix() . 'lead_patient_journey WHERE userid IN (' . $userIdsStr . ') GROUP BY userid) latest_journey',
+        'latest_journey.max_id = j.id',
+        'inner'
+    );
     $CI->db->join(db_prefix() . 'leads_status s', 's.id = j.status', 'left');
-    $CI->db->where_in('j.userid', $userIds);
-    $CI->db->order_by('j.id', 'DESC');
     $statuses = $CI->db->get()->result_array();
     foreach ($statuses as $s) {
-        if (!isset($leadStatuses[$s['userid']])) {
-            $leadStatuses[$s['userid']] = $s;
-        }
+        $leadStatuses[$s['userid']] = $s;
     }
 }
 

@@ -2342,6 +2342,7 @@ class Client extends AdminController
 
 		if ($this->input->is_ajax_request()) {
 			$this->app->get_table_data(module_views_path('client', 'tables/get_patient_list'), $data);
+			return;
 		}
 
 		$data['doctors'] = $this->doctor_model->get_doctors();
@@ -3162,126 +3163,106 @@ class Client extends AdminController
 			'due_patients' => 0,
 		];
 
-		// Status arrays for bulk update
-		$registered_patient_ids = [];
-		$renewal_due_patient_ids = [];
-		$due_patient_ids = [];
-
-		// Step 1: Get client IDs
-		$this->db->select('c.userid');
-		$this->db->from(db_prefix() . 'clients AS c');
-		$this->db->join(db_prefix() . 'customer_groups group', 'group.customer_id = c.userid', 'left');
-		$this->db->join(db_prefix() . 'clients_new_fields new', 'c.userid = new.userid', 'left');
-
-		if ($selected_branch_id) {
-			$this->db->where_in('group.groupid', $selected_branch_id);
-		}
-		if ($from_date && $to_date) {
-			$this->db->where("DATE(new.registration_start_date) BETWEEN '$from_date' AND '$to_date'");
-		}
-		$client_ids_result = $this->db->get()->result_array();
-		$client_ids = array_column($client_ids_result, 'userid');
-		$client_ids = array_values(array_unique(array_column($client_ids_result, 'userid')));
-
-		if (empty($client_ids)) {
-			echo json_encode($summary);
-			return;
-		}
-
-		$this->db->distinct();
-		$this->db->select('new.userid, mr_no');
-		$this->db->from(db_prefix() . 'clients_new_fields as new');
-		$this->db->join(db_prefix() . 'clients c', 'c.userid = new.userid', 'left');
-		$this->db->join(db_prefix() . 'customer_groups group', 'group.customer_id = c.userid', 'left');
-
-		if ($selected_branch_id) {
-			$this->db->where_in('group.groupid', $selected_branch_id);
-		}
-		$this->db->where_in('new.userid', $client_ids);
-		$this->db->where('mr_no !=', ''); // registered only
-
-		$registered_fields = $this->db->get()->result_array();
-
-		$registered_ids = [];
-		foreach ($registered_fields as $rf) {
-			$summary['registered']++;
-			$summary['new_patients']++;
-			$registered_ids[] = $rf['userid'];
-			$registered_patient_ids[] = $rf['userid']; // store for bulk update
-		}
-
-		// --- Not registered patients (mr_no empty) ---
-		$this->db->distinct();
-		$this->db->select('new.userid, mr_no');
-		$this->db->from(db_prefix() . 'clients_new_fields as new');
-		$this->db->join(db_prefix() . 'clients c', 'c.userid = new.userid', 'left');
-		$this->db->join(db_prefix() . 'customer_groups group', 'group.customer_id = c.userid', 'left');
-
-		if ($selected_branch_id) {
-			$this->db->where_in('group.groupid', $selected_branch_id);
-		}
-		//$this->db->where_in('new.userid', $client_ids);
-		$this->db->group_start();
-		$this->db->where('mr_no', '');                       // empty
-		$this->db->or_where('mr_no IS NULL', null, false);   // null
-		$this->db->group_end();
-		// not registered only
-
-		$not_registered_fields = $this->db->get()->result_array();
-
-		foreach ($not_registered_fields as $nrf) {
-			$summary['not_registered']++;
-		}
-
-		// Step 2.5: Renewal patients
-		if (!empty($registered_ids)) {
-			$this->db->select('clientid, MAX(duedate) as latest_expiry');
-			$this->db->from(db_prefix() . 'invoices');
-			$this->db->where_in('clientid', $registered_ids);
-			$this->db->where('duedate IS NOT NULL');
-			$this->db->group_by('clientid');
-			$estimates = $this->db->get()->result_array();
-
-			foreach ($estimates as $est) {
-				if (
-					!empty($est['latest_expiry']) &&
-					$est['latest_expiry'] >= $from_date &&
-					$est['latest_expiry'] <= $to_date
-				) {
-					$summary['renewal_patients']++;
-					$renewal_due_patient_ids[] = $est['clientid'];
-				}
-			}
-		}
-
-		// Step 3: Invoice status for due calculation
-		if (!empty($registered_ids)) {
-			$this->db->select('clientid, status');
-			$this->db->from(db_prefix() . 'invoices');
-			$this->db->where_in('clientid', $registered_ids);
-			if ($from_date && $to_date) {
-				$this->db->where("DATE(date) BETWEEN '$from_date' AND '$to_date'");
+		$applyCommonFilters = function ($query) use ($selected_branch_id, $from_date, $to_date) {
+			if (!empty($selected_branch_id)) {
+				$ids = implode(',', array_map('intval', $selected_branch_id));
+				$query->where('EXISTS (
+					SELECT 1
+					FROM ' . db_prefix() . 'customer_groups cg
+					WHERE cg.customer_id = c.userid
+					AND cg.groupid IN (' . $ids . ')
+				)', null, false);
 			}
 
-			$invoices = $this->db->get()->result_array();
-			$invoice_map = [];
-
-			foreach ($invoices as $inv) {
-				$invoice_map[$inv['clientid']][] = $inv['status'];
+			if (!empty($from_date) && !empty($to_date)) {
+				$query->where('new.registration_start_date >=', $from_date . ' 00:00:00');
+				$query->where('new.registration_start_date <=', $to_date . ' 23:59:59');
 			}
+		};
 
-			foreach ($registered_ids as $cid) {
-				$statuses = $invoice_map[$cid] ?? [];
-				if (empty($statuses)) {
-					$summary['no_due_registered_patients']++;
-				} elseif (count(array_unique($statuses)) === 1 && $statuses[0] == 2) {
-					$summary['no_due_registered_patients']++;
-				} else {
-					$summary['due_patients']++;
-					$due_patient_ids[] = $cid;
-				}
-			}
+		$registeredQuery = $this->db;
+		$registeredQuery->reset_query();
+		$registeredQuery->select('COUNT(*) as total');
+		$registeredQuery->from(db_prefix() . 'clients c');
+		$registeredQuery->join(db_prefix() . 'clients_new_fields new', 'new.userid = c.userid', 'left');
+		$applyCommonFilters($registeredQuery);
+		$registeredQuery->where('new.mr_no IS NOT NULL', null, false);
+		$registeredQuery->where('new.mr_no !=', '');
+		$registered = (int) (($registeredQuery->get()->row()->total) ?? 0);
+
+		$notRegisteredQuery = $this->db;
+		$notRegisteredQuery->reset_query();
+		$notRegisteredQuery->select('COUNT(*) as total');
+		$notRegisteredQuery->from(db_prefix() . 'clients c');
+		$notRegisteredQuery->join(db_prefix() . 'clients_new_fields new', 'new.userid = c.userid', 'left');
+		$applyCommonFilters($notRegisteredQuery);
+		$notRegisteredQuery->group_start();
+		$notRegisteredQuery->where('new.mr_no', '');
+		$notRegisteredQuery->or_where('new.mr_no IS NULL', null, false);
+		$notRegisteredQuery->group_end();
+		$not_registered = (int) (($notRegisteredQuery->get()->row()->total) ?? 0);
+
+		$renewalQuery = $this->db;
+		$renewalQuery->reset_query();
+		$renewalQuery->select('COUNT(*) as total');
+		$renewalQuery->from(db_prefix() . 'clients c');
+		$renewalQuery->join(db_prefix() . 'clients_new_fields new', 'new.userid = c.userid', 'left');
+		$applyCommonFilters($renewalQuery);
+		$renewalQuery->where('new.mr_no IS NOT NULL', null, false);
+		$renewalQuery->where('new.mr_no !=', '');
+		if (!empty($from_date) && !empty($to_date)) {
+			$renewalQuery->where('EXISTS (
+				SELECT 1
+				FROM ' . db_prefix() . 'invoices i
+				WHERE i.clientid = c.userid
+				AND i.duedate IS NOT NULL
+				AND i.duedate = (
+					SELECT MAX(i2.duedate)
+					FROM ' . db_prefix() . 'invoices i2
+					WHERE i2.clientid = c.userid
+				)
+				AND i.duedate >= "' . $from_date . '"
+				AND i.duedate <= "' . $to_date . '"
+			)', null, false);
+		} else {
+			$today = date('Y-m-d');
+			$renewalQuery->where('EXISTS (
+				SELECT 1
+				FROM ' . db_prefix() . 'invoices i
+				WHERE i.clientid = c.userid
+				AND i.duedate IS NOT NULL
+				AND i.duedate = (
+					SELECT MAX(i2.duedate)
+					FROM ' . db_prefix() . 'invoices i2
+					WHERE i2.clientid = c.userid
+				)
+				AND i.duedate <= "' . $today . '"
+			)', null, false);
 		}
+		$renewal = (int) (($renewalQuery->get()->row()->total) ?? 0);
+
+		$dueQuery = $this->db;
+		$dueQuery->reset_query();
+		$dueQuery->select('COUNT(*) as total');
+		$dueQuery->from(db_prefix() . 'clients c');
+		$dueQuery->join(db_prefix() . 'clients_new_fields new', 'new.userid = c.userid', 'left');
+		$applyCommonFilters($dueQuery);
+		$dueQuery->where('new.mr_no IS NOT NULL', null, false);
+		$dueQuery->where('new.mr_no !=', '');
+		$dueQuery->where('EXISTS (
+			SELECT 1
+			FROM ' . db_prefix() . 'invoices i
+			WHERE i.clientid = c.userid
+			AND i.status != 2
+		)', null, false);
+		$due = (int) (($dueQuery->get()->row()->total) ?? 0);
+
+		$summary['registered'] = $registered;
+		$summary['new_patients'] = $registered;
+		$summary['not_registered'] = $not_registered;
+		$summary['renewal_patients'] = $renewal;
+		$summary['due_patients'] = $due;
+		$summary['no_due_registered_patients'] = max(0, $registered - $due);
 
 		echo json_encode($summary);
 	}
