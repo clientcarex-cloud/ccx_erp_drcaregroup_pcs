@@ -3568,6 +3568,7 @@ $(document).ready(function () {
       _l('due_amount'),
       _l('date'),
       _l('package'),
+      _l('remarks'),
       _l('due_date'),
       _l('status'),
       _l('action'),

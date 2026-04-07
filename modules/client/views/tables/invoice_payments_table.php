@@ -22,9 +22,10 @@ $order_dir          = $order[0]['dir'] ?? 'desc';
 $client_id = $client_id ?? 0;
 
 // Build query
-$CI->db->select('inv.id, inv.number, inv.total, inv.currency, inv.date, inv.duedate, inv.status, item.description, branch.name as branch_name, payment_category.appointment_type_name,');
+$CI->db->select('inv.id, inv.number, inv.total, inv.currency, inv.date, inv.duedate, inv.status, item.description, branch.name as branch_name, payment_category.appointment_type_name, est.adminnote as est_remarks');
 $CI->db->from(db_prefix() . 'invoices inv');
 $CI->db->join(db_prefix() . 'itemable item', 'item.rel_id = inv.id AND item.rel_type = "invoice"', 'left');
+$CI->db->join(db_prefix() . 'estimates est', 'est.invoiceid = inv.id', 'left');
 $CI->db->join(db_prefix() . 'customers_groups as branch', 'branch.id = inv.branch_id', 'left');
 
 $CI->db->join(db_prefix() . 'appointment_type as payment_category', 'payment_category.appointment_type_id = inv.appointment_type_id', 'left');
@@ -36,6 +37,7 @@ if (!empty($search)) {
     $CI->db->like('inv.number', $search);
     $CI->db->or_like('inv.date', $search);
     $CI->db->or_like('item.description', $search);
+    $CI->db->or_like('est.adminnote', $search);
     $CI->db->group_end();
 }
 
@@ -81,6 +83,7 @@ foreach ($results as $row) {
         app_format_money_custom($due, $row['currency']),
         _d($row['date']),
         e($row['description']),
+        e($row['est_remarks']),
         _d($row['duedate']),
         $status_label,
         $action_buttons,
