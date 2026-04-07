@@ -855,14 +855,117 @@ $(document).ready(function(){
        <?= render_input('name', 'lead_add_edit_name', $value, 'text', ['required' => false]); ?>
 
 
-        <?php $value = (isset($lead) ? $lead->lead_age : ''); ?>
-        <?= render_input('lead_age', 'lead_input_add_edit_age', $value, 'text', [
-    'maxlength' => '3',
-    'oninput' => "this.value = this.value.replace(/[^0-9]/g, '').slice(0, 3);",
-]); ?>
+        <?php
+        $leadAgeValue  = isset($lead) ? (string) $lead->lead_age : '';
+        $leadDobValue  = (isset($lead) && !empty($lead->lead_dob) && $lead->lead_dob !== '0000-00-00') ? substr((string) $lead->lead_dob, 0, 10) : '';
+        $ageDobMode    = $leadDobValue !== '' ? 'dob' : 'age';
+        $ageDobValue   = $ageDobMode === 'dob' ? $leadDobValue : $leadAgeValue;
+        ?>
+        <div class="form-group">
+            <label for="lead_age_dob_input"><?= _l('lead_input_add_edit_age'); ?></label>
+            <div class="row">
+                <div class="col-md-4">
+                    <select id="lead_age_dob_mode" class="form-control selectpicker" data-width="100%">
+                        <option value="age" <?= $ageDobMode === 'age' ? 'selected' : ''; ?>>Age</option>
+                        <option value="dob" <?= $ageDobMode === 'dob' ? 'selected' : ''; ?>>DOB</option>
+                    </select>
+                </div>
+                <div class="col-md-8">
+                    <input type="<?= $ageDobMode === 'dob' ? 'date' : 'text'; ?>"
+                           id="lead_age_dob_input"
+                           class="form-control"
+                           value="<?= e($ageDobValue); ?>"
+                           placeholder="<?= $ageDobMode === 'dob' ? '' : _l('enter_age'); ?>"
+                           autocomplete="off"
+                           <?= $ageDobMode === 'age' ? 'maxlength="3" inputmode="numeric"' : ''; ?>
+                    >
+                    <small id="lead_age_dob_calculated" class="text-muted" style="display:none;"></small>
+                </div>
+            </div>
+            <input type="hidden" name="lead_age" id="lead_age_hidden" value="<?= e($leadAgeValue); ?>">
+            <input type="hidden" name="lead_dob" id="lead_dob_hidden" value="<?= e($leadDobValue); ?>">
+        </div>
 
-        <?php $value = (isset($lead) ? $lead->lead_dob : ''); ?>
-        <?= render_date_input('lead_dob', 'DOB', $value); ?>
+        <script>
+        $(document).ready(function () {
+            const $mode = $('#lead_age_dob_mode');
+            const $input = $('#lead_age_dob_input');
+            const $ageHidden = $('#lead_age_hidden');
+            const $dobHidden = $('#lead_dob_hidden');
+            const $calculated = $('#lead_age_dob_calculated');
+
+            function calculateAge(dob) {
+                if (!dob) {
+                    return null;
+                }
+                const birth = new Date(dob + 'T00:00:00');
+                if (isNaN(birth.getTime())) {
+                    return null;
+                }
+                const today = new Date();
+                let age = today.getFullYear() - birth.getFullYear();
+                const monthDiff = today.getMonth() - birth.getMonth();
+                if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+                    age--;
+                }
+                return age >= 0 ? age : null;
+            }
+
+            function updateCalculatedAge() {
+                if ($mode.val() !== 'dob') {
+                    $calculated.hide().text('');
+                    return;
+                }
+                const age = calculateAge($input.val());
+                if (age === null) {
+                    $calculated.hide().text('');
+                    return;
+                }
+                $calculated.text('Calculated age: ' + age + ' years').show();
+            }
+
+            function syncHiddenValues() {
+                if ($mode.val() === 'dob') {
+                    $dobHidden.val($input.val());
+                    const age = calculateAge($input.val());
+                    $ageHidden.val(age === null ? '' : age);
+                } else {
+                    const ageOnly = ($input.val() || '').replace(/[^0-9]/g, '').slice(0, 3);
+                    $input.val(ageOnly);
+                    $ageHidden.val(ageOnly);
+                    $dobHidden.val('');
+                }
+                updateCalculatedAge();
+            }
+
+            function applyMode() {
+                if ($mode.val() === 'dob') {
+                    $input.attr('type', 'date');
+                    $input.removeAttr('maxlength inputmode pattern');
+                    $input.attr('placeholder', '');
+                    $input.val($dobHidden.val());
+                } else {
+                    $input.attr('type', 'text');
+                    $input.attr('maxlength', '3');
+                    $input.attr('inputmode', 'numeric');
+                    $input.attr('pattern', '\\d{1,3}');
+                    $input.attr('placeholder', '<?= _l('enter_age'); ?>');
+                    $input.val($ageHidden.val());
+                }
+                syncHiddenValues();
+            }
+
+            $mode.off('changed.bs.select.ageDob change.ageDob').on('changed.bs.select.ageDob change.ageDob', function () {
+                applyMode();
+            });
+
+            $input.off('input.ageDob change.ageDob').on('input.ageDob change.ageDob', function () {
+                syncHiddenValues();
+            });
+
+            applyMode();
+        });
+        </script>
 
 
         <?= render_select(
