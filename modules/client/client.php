@@ -533,6 +533,8 @@ hooks()->add_filter('staff_permissions', function ($permissions) {
             'view_feedback' => _l('permission_view_feedback'),
             'create_feedback' => _l('permission_create_feedback'),
             'edit_feedback' => _l('permission_edit_feedback'),
+            'view_dietician_therapist' => _l('permission_view_dietician_therapist'),
+            'create_dietician_therapist' => _l('permission_create_dietician_therapist'),
             'view_payments' => _l('permission_view_payments'),
             'view_call_log' => _l('permission_view_call_log'),
             'create_call_log' => _l('permission_create_call_log'),

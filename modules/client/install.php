@@ -284,6 +284,23 @@ function client_install()
 		');
 	}
 
+	if (!$CI->db->table_exists(db_prefix() . 'patient_dietician_therapist')) {
+		$CI->db->query('
+			CREATE TABLE `' . db_prefix() . 'patient_dietician_therapist` (
+				`id` INT(11) NOT NULL AUTO_INCREMENT,
+				`patientid` INT(11) NOT NULL,
+				`name` VARCHAR(191) NOT NULL,
+				`description` TEXT DEFAULT NULL,
+				`attachment` VARCHAR(255) DEFAULT NULL,
+				`remarks` TEXT DEFAULT NULL,
+				`created_by` INT(11) NOT NULL,
+				`created_at` DATETIME NOT NULL,
+				PRIMARY KEY (`id`),
+				KEY `patientid` (`patientid`)
+			) ENGINE=InnoDB DEFAULT CHARSET=' . $CI->db->char_set . ';
+		');
+	}
+
 	
 	if (!$CI->db->field_exists('lead_nature', db_prefix() . 'leads')) {
 		$CI->db->query('ALTER TABLE `' . db_prefix() . 'leads` 

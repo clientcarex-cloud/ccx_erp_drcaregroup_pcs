@@ -1543,6 +1543,77 @@ class Client extends AdminController
 		}
 	}
 
+	public function add_patient_dietician_therapist()
+	{
+		if (staff_cant('create_dietician_therapist', 'customers')) {
+			ajax_access_denied();
+		}
+
+		if (!$this->input->is_ajax_request()) {
+			echo json_encode(['success' => false, 'message' => 'Invalid request.']);
+			return;
+		}
+
+		$patientid = (int) $this->input->post('patientid');
+		$name = trim((string) $this->input->post('name'));
+		$description = $this->input->post('description', false);
+		$remarks = $this->input->post('remarks', false);
+
+		if (empty($patientid) || $name === '') {
+			echo json_encode(['success' => false, 'message' => 'Patient and Name are required.']);
+			return;
+		}
+
+		$attachment_path = null;
+		if (isset($_FILES['attachment']) && !empty($_FILES['attachment']['name'])) {
+			$this->load->library('upload');
+			$upload_path = FCPATH . 'uploads/dietician_therapist_attachments/';
+
+			if (!is_dir($upload_path)) {
+				mkdir($upload_path, 0755, true);
+			}
+
+			$_FILES['file']['name'] = $_FILES['attachment']['name'];
+			$_FILES['file']['type'] = $_FILES['attachment']['type'];
+			$_FILES['file']['tmp_name'] = $_FILES['attachment']['tmp_name'];
+			$_FILES['file']['error'] = $_FILES['attachment']['error'];
+			$_FILES['file']['size'] = $_FILES['attachment']['size'];
+
+			$config['upload_path'] = $upload_path;
+			$config['allowed_types'] = 'jpg|jpeg|png|pdf|doc|docx|xls|xlsx|txt';
+			$config['file_name'] = uniqid('dt_', true);
+
+			$this->upload->initialize($config);
+			if ($this->upload->do_upload('file')) {
+				$upload_data = $this->upload->data();
+				$attachment_path = 'uploads/dietician_therapist_attachments/' . $upload_data['file_name'];
+			}
+		}
+
+		$insert_data = [
+			'patientid' => $patientid,
+			'name' => $name,
+			'description' => $description,
+			'attachment' => $attachment_path,
+			'remarks' => $remarks,
+			'created_by' => get_staff_user_id(),
+			'created_at' => date('Y-m-d H:i:s'),
+		];
+
+		$this->db->insert(db_prefix() . 'patient_dietician_therapist', $insert_data);
+		$insert_id = $this->db->insert_id();
+
+		if ($insert_id) {
+			echo json_encode([
+				'success' => true,
+				'redirect' => admin_url('client/get_patient_list/' . $patientid . '/tab_dietician_therapist'),
+			]);
+			return;
+		}
+
+		echo json_encode(['success' => false, 'message' => 'Unable to save record.']);
+	}
+
 	public function save_prescription()
 	{
 		// Check if the request is an AJAX request
@@ -3659,9 +3730,25 @@ class Client extends AdminController
 
 	public function get_feedback_table_data($id)
 	{
+		if (staff_cant('view_feedback', 'customers')) {
+			ajax_access_denied();
+		}
+
 		if ($this->input->is_ajax_request()) {
 			$data['client_id'] = $id;
 			echo $this->app->get_table_data(module_views_path('client', 'tables/feedback_table'), $data);
+		}
+	}
+
+	public function get_dietician_therapist_table_data($id)
+	{
+		if (staff_cant('view_dietician_therapist', 'customers')) {
+			ajax_access_denied();
+		}
+
+		if ($this->input->is_ajax_request()) {
+			$data['client_id'] = $id;
+			echo $this->app->get_table_data(module_views_path('client', 'tables/dietician_therapist_table'), $data);
 		}
 	}
 

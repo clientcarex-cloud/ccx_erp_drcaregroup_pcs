@@ -747,6 +747,16 @@
                   </li>
                   <?php
                 }
+                if (staff_can('view_dietician_therapist', 'customers')) {
+                  ?>
+                  <li role="presentation">
+                    <a href="#tab_dietician_therapist" aria-controls="tab_dietician_therapist" role="tab" data-toggle="tab">
+                      <i class="fa-solid fa-user-nurse menu-icon"></i>
+                      <?= _l('dietician_therapist'); ?>
+                    </a>
+                  </li>
+                  <?php
+                }
                 if (staff_can('view_call_log', 'customers')) {
                   ?>
                   <li role="presentation">
@@ -3792,6 +3802,66 @@ if (staff_can('view_feedback', 'customers')) {
           </div>
 <?PHP
 }
+if (staff_can('view_dietician_therapist', 'customers')) {
+  ?>
+          <div role="tabpanel" class="tab-pane" id="tab_dietician_therapist" style="min-height: 300px;">
+            <?php if (staff_can('create_dietician_therapist', 'customers')) { ?>
+                <button class="btn btn-primary btn-sm" onclick="toggleDieticianTherapistForm()" style="float: right; margin-top: 6px; margin-right: 5px;">+ <?php echo _l('add_new'); ?></button>
+            <?php } ?>
+
+            <div class="patient-section-title mt-4"><?php echo _l('dietician_therapist'); ?></div>
+
+            <div id="dietician-therapist-form" class="card p-3 mb-4" style="display: none;">
+              <br>
+              <form id="dieticianTherapistEntryForm" method="post" enctype="multipart/form-data">
+                <input type="hidden" name="<?= $this->security->get_csrf_token_name(); ?>" value="<?= $this->security->get_csrf_hash(); ?>">
+                <input type="hidden" name="patientid" value="<?= $client->userid; ?>">
+
+                <div class="row">
+                  <div class="col-md-4">
+                    <label><strong><?php echo _l('name'); ?></strong></label>
+                    <input type="text" name="name" class="form-control" required>
+                  </div>
+                  <div class="col-md-4">
+                    <label><strong><?php echo _l('attachment'); ?></strong></label>
+                    <input type="file" name="attachment" class="form-control">
+                  </div>
+                  <div class="col-md-4">
+                    <label><strong><?php echo _l('created_by'); ?></strong></label>
+                    <input type="text" class="form-control" value="<?= e(get_staff_full_name(get_staff_user_id())); ?>" readonly>
+                  </div>
+                </div>
+
+                <div class="row mtop10">
+                  <div class="col-md-6">
+                    <label><strong><?php echo _l('description'); ?></strong></label>
+                    <textarea name="description" class="form-control" rows="3"></textarea>
+                  </div>
+                  <div class="col-md-6">
+                    <label><strong><?php echo _l('remarks'); ?></strong></label>
+                    <textarea name="remarks" class="form-control" rows="3"></textarea>
+                  </div>
+                </div>
+
+                <div class="row">
+                  <br>
+                  <div class="col-md-12 text-right">
+                    <button type="submit" id="dieticianTherapistButton" class="btn btn-success"><?= _l('submit'); ?></button>
+                  </div>
+                </div>
+              </form>
+            </div>
+
+            <?= render_datatable([
+              _l('name'),
+              _l('description'),
+              _l('attachment'),
+              _l('remarks'),
+              _l('created_by'),
+            ], 'dietician-therapist-table'); ?>
+          </div>
+<?php
+}
 if (staff_can('view_call_log', 'customers')) {
   ?>
           <div role="tabpanel" class="tab-pane" id="tab_calls">
@@ -4544,6 +4614,11 @@ $(document).ready(function () {
 
   function toggleFeedbackForm() {
     const form = document.getElementById('feedback-form');
+    form.style.display = form.style.display === 'none' ? 'block' : 'none';
+  }
+
+  function toggleDieticianTherapistForm() {
+    const form = document.getElementById('dietician-therapist-form');
     form.style.display = form.style.display === 'none' ? 'block' : 'none';
   }
 
@@ -5423,6 +5498,52 @@ $(document).ready(function () {
   });
 });
 
+$(document).ready(function () {
+  $('#dieticianTherapistEntryForm').on('submit', function (e) {
+    e.preventDefault();
+
+    var form = this;
+    var submitBtn = $('#dieticianTherapistButton');
+    var selectedClientId = <?= $client->userid; ?>;
+    var callback_url = "<?= isset($callback_url) ? $callback_url : ''; ?>";
+    var formData = new FormData(form);
+
+    submitBtn.prop('disabled', true).text('Saving...');
+
+    $.ajax({
+      type: 'POST',
+      url: '<?= admin_url('client/add_patient_dietician_therapist'); ?>',
+      data: formData,
+      processData: false,
+      contentType: false,
+      dataType: 'json',
+      success: function (response) {
+        submitBtn.prop('disabled', false).text('<?= _l('submit'); ?>');
+
+        if (response.success) {
+          alert_float('success', 'Saved successfully.');
+          $('#dietician-therapist-form').hide();
+          form.reset();
+
+          setTimeout(function () {
+            if (callback_url) {
+              window.location.href = admin_url + "client/" + callback_url + "/" + selectedClientId + "/tab_dietician_therapist";
+            } else {
+              window.location.href = admin_url + "client/get_patient_list/" + selectedClientId + "/tab_dietician_therapist";
+            }
+          }, 700);
+        } else {
+          alert_float('danger', response.message || 'Failed to save.');
+        }
+      },
+      error: function () {
+        submitBtn.prop('disabled', false).text('<?= _l('submit'); ?>');
+        alert_float('danger', 'Server error occurred.');
+      }
+    });
+  });
+});
+
 
 </script>
 
@@ -5879,6 +6000,36 @@ $(function () {
   $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
     if ($(e.target).attr('href') === '#tab_feedback' && !feedbackInitialized) {
       initFeedbackTable();
+    }
+  });
+});
+</script>
+
+<script>
+$(function () {
+  let dieticianTherapistInitialized = false;
+  let client_id = <?= $client->userid ?>;
+  let admin_url = "<?= admin_url(); ?>";
+
+  function initDieticianTherapistTable() {
+    if (!$.fn.DataTable.isDataTable('.table-dietician-therapist-table')) {
+      initDataTable(
+        '.table-dietician-therapist-table',
+        admin_url + 'client/get_dietician_therapist_table_data/' + client_id,
+        [0],
+        [0]
+      );
+    }
+    dieticianTherapistInitialized = true;
+  }
+
+  if ($('#tab_dietician_therapist').length && $('#tab_dietician_therapist').hasClass('active')) {
+    initDieticianTherapistTable();
+  }
+
+  $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
+    if ($(e.target).attr('href') === '#tab_dietician_therapist' && !dieticianTherapistInitialized) {
+      initDieticianTherapistTable();
     }
   });
 });
