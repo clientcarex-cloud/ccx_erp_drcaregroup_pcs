@@ -407,10 +407,20 @@
                            }
                          }
 
-                         if (!empty($customer_new_fields->age)) {
-                           echo " | " . $customer_new_fields->age;
-                         } else if (!empty($customer_new_fields->dob)) {
-                           $dob = new DateTime($customer_new_fields->dob);
+                         $header_age_value = $customer_new_fields->age ?? '';
+                         $header_dob_value = $customer_new_fields->dob ?? '';
+
+                         if ($header_age_value === '' && isset($client->lead_age) && $client->lead_age !== '') {
+                           $header_age_value = $client->lead_age;
+                         }
+                         if (($header_dob_value === '' || $header_dob_value === '0000-00-00') && isset($client->lead_dob) && !empty($client->lead_dob)) {
+                           $header_dob_value = $client->lead_dob;
+                         }
+
+                         if (!empty($header_age_value)) {
+                           echo " | " . $header_age_value;
+                         } else if (!empty($header_dob_value) && $header_dob_value !== '0000-00-00') {
+                           $dob = new DateTime($header_dob_value);
                            $today = new DateTime();
                            $diff = $dob->diff($today);
 
@@ -885,6 +895,48 @@
           $latest_treatment = $row['description'];
         }
       }
+
+      $display_age = $customer_new_fields->age ?? '';
+      if ($display_age === '' && isset($client->lead_age) && $client->lead_age !== '') {
+        $display_age = $client->lead_age;
+      }
+
+      $display_dob = $customer_new_fields->dob ?? '';
+      if (($display_dob === '' || $display_dob === '0000-00-00') && isset($client->lead_dob) && !empty($client->lead_dob)) {
+        $display_dob = $client->lead_dob;
+      }
+
+      $age_dob_display = '-';
+      if ($display_age !== '') {
+        $age_dob_display = e($display_age) . ' years';
+      } elseif ($display_dob !== '' && $display_dob !== '0000-00-00') {
+        try {
+          $dobObj = new DateTime($display_dob);
+          $todayObj = new DateTime();
+          $dobDiff = $dobObj->diff($todayObj);
+          $age_dob_display = e(_d($display_dob)) . ' (' . $dobDiff->y . ' years ' . $dobDiff->m . ' months ' . $dobDiff->d . ' days)';
+        } catch (Exception $e) {
+          $age_dob_display = e(_d($display_dob));
+        }
+      }
+
+      $mother_number = '';
+      if (isset($client->lead_mother_number) && $client->lead_mother_number !== '') {
+        $mother_number = $client->lead_mother_number;
+      } elseif (isset($client->alt_number1) && $client->alt_number1 !== '') {
+        $mother_number = $client->alt_number1;
+      } elseif (isset($customer_new_fields->alt_number1) && $customer_new_fields->alt_number1 !== '') {
+        $mother_number = $customer_new_fields->alt_number1;
+      }
+
+      $father_number = '';
+      if (isset($client->lead_father_number) && $client->lead_father_number !== '') {
+        $father_number = $client->lead_father_number;
+      } elseif (isset($client->alt_number2) && $client->alt_number2 !== '') {
+        $father_number = $client->alt_number2;
+      } elseif (isset($customer_new_fields->alt_number2) && $customer_new_fields->alt_number2 !== '') {
+        $father_number = $customer_new_fields->alt_number2;
+      }
       ?>
       <!-- Row 1: MR.No | Branch -->
       <tr>
@@ -903,9 +955,9 @@
             <?php echo $first_appointment->total; ?>
           </span></td>
       </tr>
-      <!-- Row 4: Age | Patient Status -->
+        <!-- Row 4: Age / DOB | Patient Status -->
       <tr>
-          <td><span class="patient-value"><strong><?= _l('age'); ?>:</strong> <?= $customer_new_fields->age; ?></span></td>
+          <td><span class="patient-value"><strong>Age / DOB:</strong> <?= $age_dob_display; ?></span></td>
           <td>
               <span class="patient-value"><strong><?= _l('patient_status'); ?>:</strong>
                   <?php
@@ -948,17 +1000,29 @@
               ?>
           </span></td>
       </tr>
-      <!-- Row 6: Alternate Number | Treatment -->
+      <!-- Row 6: Mother and Father Numbers | Treatment -->
       <tr>
-          <td><span class="patient-value"><strong><?= _l('alternate_number'); ?>:</strong>
+          <td><span class="patient-value"><strong>Mother's Number:</strong>
               <?php
-              $alt_number = $client->alt_number1 ?? $customer_new_fields->alt_number1 ?? '';
-              $masked_alt = mask_last_5_digits_1($alt_number);
+              $masked_mother = mask_last_5_digits_1($mother_number);
               ?>
-              <span class="masked-number" data-full="<?= e($alt_number) ?>" data-masked="<?= e($masked_alt) ?>">
-                <?= $should_mask ? e($masked_alt) : e($alt_number) ?>
+              <span class="masked-number" data-full="<?= e($mother_number) ?>" data-masked="<?= e($masked_mother) ?>">
+                <?= $should_mask ? e($masked_mother) : e($mother_number) ?>
               </span>
-              <?php if ($should_mask && !empty($alt_number)): ?>
+              <?php if ($should_mask && !empty($mother_number)): ?>
+              <a href="javascript:void(0);" class="toggle-mask-btn" style="margin-left:5px; cursor:pointer; color:#888;" title="Show/Hide Number">
+                <i class="fa fa-eye-slash"></i>
+              </a>
+              <?php endif; ?>
+              <br>
+              <strong>Father's Number:</strong>
+              <?php
+              $masked_father = mask_last_5_digits_1($father_number);
+              ?>
+              <span class="masked-number" data-full="<?= e($father_number) ?>" data-masked="<?= e($masked_father) ?>">
+                <?= $should_mask ? e($masked_father) : e($father_number) ?>
+              </span>
+              <?php if ($should_mask && !empty($father_number)): ?>
               <a href="javascript:void(0);" class="toggle-mask-btn" style="margin-left:5px; cursor:pointer; color:#888;" title="Show/Hide Number">
                 <i class="fa fa-eye-slash"></i>
               </a>

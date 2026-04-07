@@ -64,6 +64,17 @@ class Client_model extends App_Model
 	}
 	public function get($id = '', $where = [])
 	{
+		$lead_extra_select = 'lead.lead_alternate_number as lead_mother_number';
+		if ($this->db->field_exists('lead_father_number', db_prefix() . 'leads')) {
+			$lead_extra_select .= ', lead.lead_father_number as lead_father_number';
+		}
+		if ($this->db->field_exists('lead_age', db_prefix() . 'leads')) {
+			$lead_extra_select .= ', lead.lead_age as lead_age';
+		}
+		if ($this->db->field_exists('lead_dob', db_prefix() . 'leads')) {
+			$lead_extra_select .= ', lead.lead_dob as lead_dob';
+		}
+
 		$this->db->select('
         c.*, 
         co.*, 
@@ -78,7 +89,8 @@ class Client_model extends App_Model
         state.state_name as state_name,
         pincode.pincode_name as pincode_name,
         COALESCE(patient_src.name, lead_src.name) as source_name,
-        lead.source as lead_source_id
+		lead.source as lead_source_id,
+		' . $lead_extra_select . '
     '); // Select everything plus latest status and lead source details
 
 		$this->db->from(db_prefix() . 'clients c');
