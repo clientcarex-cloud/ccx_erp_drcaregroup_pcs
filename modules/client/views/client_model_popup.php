@@ -2590,6 +2590,24 @@ if (staff_can('view_casesheet', 'customers')) {
   </div>
 
     <br>
+
+<ul class="nav nav-pills mb-3" id="casesheet-role-filters" style="margin-bottom: 12px;">
+  <li role="presentation" class="active">
+    <a href="#" class="casesheet-role-tab" data-role-filter="doctor">
+      Doctor (<span id="casesheet-count-doctor">0</span>)
+    </a>
+  </li>
+  <li role="presentation">
+    <a href="#" class="casesheet-role-tab" data-role-filter="service_doctor">
+      Service Doctor (<span id="casesheet-count-service-doctor">0</span>)
+    </a>
+  </li>
+  <li role="presentation">
+    <a href="#" class="casesheet-role-tab" data-role-filter="emergency_doctor">
+      Emergency Doctor (<span id="casesheet-count-emergency-doctor">0</span>)
+    </a>
+  </li>
+</ul>
   
 <?= render_datatable([
       _l('s_no'),
@@ -5757,13 +5775,45 @@ $(function () {
   let casesheetInitialized = false;
   let client_id = <?= $client->userid ?>;
   let admin_url = "<?= admin_url(); ?>";
+  let activeCasesheetRoleFilter = 'doctor';
+
+  function getCasesheetUrl() {
+    return admin_url + 'client/get_casesheet_table_data/' + client_id + '?role_filter=' + encodeURIComponent(activeCasesheetRoleFilter);
+  }
+
+  function updateCasesheetRoleCounts(counts) {
+    if (!counts) {
+      return;
+    }
+    $('#casesheet-count-doctor').text(counts.doctor || 0);
+    $('#casesheet-count-service-doctor').text(counts.service_doctor || 0);
+    $('#casesheet-count-emergency-doctor').text(counts.emergency_doctor || 0);
+  }
+
+  $(document).on('xhr.dt', '.table-casesheet', function (e, settings, json) {
+    if (json && json.role_counts) {
+      updateCasesheetRoleCounts(json.role_counts);
+    }
+  });
+
+  $(document).on('click', '.casesheet-role-tab', function (e) {
+    e.preventDefault();
+
+    activeCasesheetRoleFilter = $(this).data('role-filter') || 'doctor';
+    $('#casesheet-role-filters li').removeClass('active');
+    $(this).closest('li').addClass('active');
+
+    if ($.fn.DataTable.isDataTable('.table-casesheet')) {
+      $('.table-casesheet').DataTable().ajax.url(getCasesheetUrl()).load();
+    }
+  });
 
   // Initialize if already active on load
   if ($('#tab_casesheet').length && $('#tab_casesheet').hasClass('active')) {
     if (!$.fn.DataTable.isDataTable('.table-casesheet')) {
       initDataTable(
         '.table-casesheet',
-        admin_url + 'client/get_casesheet_table_data/' + client_id,
+        getCasesheetUrl(),
         [1], // order by column index 1
         [1]  // disable ordering on column index 1
       );
@@ -5778,7 +5828,7 @@ $(function () {
       if (!$.fn.DataTable.isDataTable('.table-casesheet')) {
         initDataTable(
           '.table-casesheet',
-          admin_url + 'client/get_casesheet_table_data/' + client_id,
+          getCasesheetUrl(),
           [1], // order by column index 1
           [1]  // disable ordering on column index 1
         );

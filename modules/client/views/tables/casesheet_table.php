@@ -17,11 +17,28 @@ $order_column_name  = 'c.id';
 $order_dir          = 'desc';
 
 $client_id = $client_id ?? 0;
+$role_filter = strtolower(trim((string) $CI->input->get('role_filter', true)));
+
+$allowed_role_filters = [
+    'doctor' => 'Doctor',
+    'service_doctor' => 'Service Doctor',
+    'emergency_doctor' => 'Emergency Doctor',
+];
+
+$selected_role_name = $allowed_role_filters[$role_filter] ?? null;
+
+$apply_role_filter = function ($db, $selected_role_name) {
+    if (!empty($selected_role_name)) {
+        $db->where('role.name', $selected_role_name);
+    }
+};
 
 // ======================== COUNT TOTAL RECORDS (DISTINCT) ========================
 $CI->db->select('COUNT(DISTINCT c.id) as total_records', false);
 $CI->db->from(db_prefix() . 'casesheet c');
 $CI->db->join(db_prefix() . 'patient_treatment t', 't.casesheet_id = c.id', 'left');
+$CI->db->join(db_prefix() . 'staff st', 'st.staffid = c.staffid', 'left');
+$CI->db->join(db_prefix() . 'roles role', 'role.roleid = st.role', 'left');
 
 $CI->db->join(db_prefix() . 'items treatment', 'treatment.id = t.treatment_type_id', 'left');
 $CI->db->join(db_prefix() . 'suggested_diagnostics suggested_diagnostics', 'suggested_diagnostics.suggested_diagnostics_id = t.suggested_diagnostics_id', 'left');
@@ -42,6 +59,7 @@ $CI->db->join(
     'left'
 );
 $CI->db->where('c.userid', $client_id);
+$apply_role_filter($CI->db, $selected_role_name);
 
 if (!empty($search)) {
     $CI->db->group_start();
@@ -53,6 +71,31 @@ if (!empty($search)) {
 
 $total_records_row = $CI->db->get()->row();
 $total_records = $total_records_row->total_records ?? 0;
+
+// ======================== ROLE COUNTS FOR TAB LABELS ========================
+$role_counts = [
+    'doctor' => 0,
+    'service_doctor' => 0,
+    'emergency_doctor' => 0,
+];
+
+foreach ($allowed_role_filters as $role_key => $role_name) {
+    $CI->db->select('COUNT(DISTINCT c.id) as role_count', false);
+    $CI->db->from(db_prefix() . 'casesheet c');
+    $CI->db->join(db_prefix() . 'staff st', 'st.staffid = c.staffid', 'left');
+    $CI->db->join(db_prefix() . 'roles role', 'role.roleid = st.role', 'left');
+    $CI->db->where('c.userid', $client_id);
+    $CI->db->where('role.name', $role_name);
+
+    if (!empty($search)) {
+        $CI->db->group_start();
+        $CI->db->like('c.clinical_observation', $search);
+        $CI->db->group_end();
+    }
+
+    $role_count_row = $CI->db->get()->row();
+    $role_counts[$role_key] = isset($role_count_row->role_count) ? (int) $role_count_row->role_count : 0;
+}
 
 // ======================== FETCH ACTUAL PAGINATED DATA ========================
 $CI->db->select("
@@ -72,6 +115,8 @@ $CI->db->select("
 ");
 $CI->db->from(db_prefix() . 'casesheet c');
 $CI->db->join(db_prefix() . 'patient_treatment t', 't.casesheet_id = c.id', 'left');
+$CI->db->join(db_prefix() . 'staff st', 'st.staffid = c.staffid', 'left');
+$CI->db->join(db_prefix() . 'roles role', 'role.roleid = st.role', 'left');
 
 $CI->db->join(db_prefix() . 'items treatment', 'treatment.id = t.treatment_type_id', 'left');
 $CI->db->join(db_prefix() . 'suggested_diagnostics suggested_diagnostics', 'suggested_diagnostics.suggested_diagnostics_id = t.suggested_diagnostics_id', 'left');
@@ -92,6 +137,7 @@ $CI->db->join(
     'left'
 );
 $CI->db->where('c.userid', $client_id);
+$apply_role_filter($CI->db, $selected_role_name);
 
 if (!empty($search)) {
     $CI->db->group_start();
@@ -174,7 +220,8 @@ echo json_encode([
     'draw' => intval($draw),
     'iTotalRecords' => $total_records,
     'iTotalDisplayRecords' => $total_records,
-    'aaData' => $data
+    'aaData' => $data,
+    'role_counts' => $role_counts
 ]);
 
 exit();
