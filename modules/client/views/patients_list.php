@@ -202,6 +202,7 @@ if ($master_data) {
                                 <?= render_datatable([
                                     _l('S.No'),
                                     _l('patient_name'),
+                                    _l('date') . ' / ' . _l('time'),
                                     _l('mr_no'),
                                     _l('age'),
                                     _l('gender'),

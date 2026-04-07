@@ -32,6 +32,7 @@ $applyRegistrationDateFilter = static function ($query, $from, $to) {
 $columns = [
     'c.userid',
     'c.company',
+    'c.datecreated',
     'new.mr_no',
     'new.age',
     'new.gender',
@@ -469,6 +470,7 @@ foreach ($results as $row) {
     $dataRow = [];
 
     $company = e(format_name($row['company'])) ?: _l('no_company_view_profile');
+    $createdDateTime = !empty($row['datecreated']) ? e(_dt($row['datecreated'])) : '-';
 
     // Calculate "time ago" label
     $timeAgoLabel = '';
@@ -492,11 +494,9 @@ foreach ($results as $row) {
         }
     }
 
-    $company .= '<br><label style="font-weight: 300; font-size: 12px">' . e(_dt($row['datecreated']));
     if ($timeAgoLabel) {
-        $company .= ' <span style="display: inline-block; background: #4CAF50; color: #fff; font-size: 10px; padding: 1px 8px; border-radius: 50px; font-weight: 500;">' . $timeAgoLabel . '</span>';
+        $createdDateTime .= ' <span style="display: inline-block; background: #4CAF50; color: #fff; font-size: 10px; padding: 1px 8px; border-radius: 50px; font-weight: 500;">' . $timeAgoLabel . '</span>';
     }
-    $company .= '</label>';
     $url = admin_url('client/get_patient_list/' . $row['userid']);
     $company = '<a href="' . $url . '" class="tw-font-medium">' . $company . '</a>';
 
@@ -530,6 +530,7 @@ foreach ($results as $row) {
 
     $dataRow[] = $i++;
     $dataRow[] = $company;
+    $dataRow[] = $createdDateTime;
     $dataRow[] = !empty($row['mr_no']) ? e($row['mr_no']) : '-';
     $dataRow[] = $row['age'];
     $dataRow[] = $row['gender'];
