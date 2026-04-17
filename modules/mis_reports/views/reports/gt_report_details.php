@@ -44,7 +44,7 @@
 
 <script>
     $(function () {
-        var ajaxUrl = '<?= admin_url("mis_reports/reports/gt_report_details?branch_id=" . urlencode($branch_id) . "&from_date=" . urlencode($from_date) . "&to_date=" . urlencode($to_date) . "&cell_type=" . urlencode($cell_type)); ?>';
+        var ajaxUrl = '<?= admin_url("mis_reports/reports/gt_report_details/" . $branch_id . "/" . $from_date . "/" . $to_date . "/" . $cell_type); ?>';
         initDataTable('.table-gt-report-details', ajaxUrl, [], []);
     });
 </script>

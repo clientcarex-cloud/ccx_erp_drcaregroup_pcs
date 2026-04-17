@@ -638,7 +638,7 @@ foreach ($result as $row) {
   // ===================== Build Row =====================
   $make_link = function($bid, $type, $value) use ($from_date, $to_date) {
     if ((string)$value === '0' || (string)$value === '0%') return $value;
-    $url = admin_url("mis_reports/reports/gt_report_details?branch_id={$bid}&from_date={$from_date}&to_date={$to_date}&cell_type={$type}");
+    $url = admin_url("mis_reports/reports/gt_report_details/{$bid}/{$from_date}/{$to_date}/{$type}");
     return '<a href="'.$url.'" target="_blank" class="tw-font-medium" style="text-decoration:underline;">'.$value.'</a>';
   };
 

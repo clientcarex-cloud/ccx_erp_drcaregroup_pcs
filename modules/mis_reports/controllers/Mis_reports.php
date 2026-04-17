@@ -316,13 +316,8 @@ class Mis_reports extends AdminController
         }
     }
 
-    public function gt_report_details()
+    public function gt_report_details($branch_id = '', $from_date = '', $to_date = '', $cell_type = '')
     {
-        $branch_id = $this->input->get('branch_id');
-        $from_date = $this->input->get('from_date');
-        $to_date = $this->input->get('to_date');
-        $cell_type = $this->input->get('cell_type');
-
         if ($this->input->is_ajax_request()) {
             $data['branch_id'] = $branch_id;
             $data['from_date'] = $from_date;

@@ -4,11 +4,12 @@ defined('BASEPATH') or exit('No direct script access allowed');
 $CI = &get_instance();
 $CI->load->database();
 
-// Filters
-$branch_id = $CI->input->get_post('branch_id');
-$from_date = $CI->input->get_post('from_date');
-$to_date   = $CI->input->get_post('to_date');
-$cell_type = $CI->input->get_post('cell_type');
+// Filters passed from controller are unpacked natively via get_table_data() 
+// So $branch_id, $from_date, $to_date, $cell_type are already valid here.
+$branch_id = isset($branch_id) ? $branch_id : '';
+$from_date = isset($from_date) ? $from_date : '';
+$to_date   = isset($to_date)   ? $to_date   : '';
+$cell_type = isset($cell_type) ? $cell_type : '';
 
 $from_date_esc = $CI->db->escape_str($from_date);
 $to_date_esc   = $CI->db->escape_str($to_date);
@@ -21,7 +22,12 @@ $branch_id = (int)$branch_id;
 $draw   = intval($CI->input->post('draw') ?? 1);
 $start  = intval($CI->input->post('start') ?? 0);
 $length = intval($CI->input->post('length') ?? 10);
-$search = $CI->input->post('search')['value'] ?? '';
+
+$search = '';
+$search_post = $CI->input->post('search');
+if (is_array($search_post) && isset($search_post['value'])) {
+    $search = $search_post['value'];
+}
 
 // Common exists clauses 
 $first_appt_exists = "
