@@ -240,6 +240,11 @@ if ($search) {
 }
 
 $count_query = $CI->db->query("SELECT COUNT(*) as count FROM ($final_sql) count_tbl");
+if (!$count_query) {
+    $db_error = $CI->db->error();
+    echo json_encode(['error' => "Count SQL Error: " . $db_error['message']]);
+    exit;
+}
 $total = $count_query->row()->count;
 
 $final_sql .= " ORDER BY created_date DESC";
@@ -247,7 +252,13 @@ if ($length > 0) {
     $final_sql .= " LIMIT $start, $length";
 }
 
-$results = $CI->db->query($final_sql)->result_array();
+$query_exec = $CI->db->query($final_sql);
+if (!$query_exec) {
+    $db_error = $CI->db->error();
+    echo json_encode(['error' => "Main SQL Error: " . $db_error['message']]);
+    exit;
+}
+$results = $query_exec->result_array();
 
 $data = [];
 foreach ($results as $row) {
