@@ -316,6 +316,31 @@ class Mis_reports extends AdminController
         }
     }
 
+    public function gt_report_details()
+    {
+        $branch_id = $this->input->get('branch_id');
+        $from_date = $this->input->get('from_date');
+        $to_date = $this->input->get('to_date');
+        $cell_type = $this->input->get('cell_type');
+
+        if ($this->input->is_ajax_request()) {
+            $data['branch_id'] = $branch_id;
+            $data['from_date'] = $from_date;
+            $data['to_date'] = $to_date;
+            $data['cell_type'] = $cell_type;
+
+            return $this->app->get_table_data(module_views_path('mis_reports', 'tables/gt_report_details_table'), $data);
+        }
+
+        $data['branch_id'] = $branch_id;
+        $data['from_date'] = $from_date;
+        $data['to_date'] = $to_date;
+        $data['cell_type'] = $cell_type;
+        $data['title'] = 'GT Report Patient Details';
+
+        $this->load->view('mis_reports/reports/gt_report_details', $data);
+    }
+
     public function source_enquiry_detail_report($source_id, $from = null, $to = null, $subtype = null)
     {
         if ($this->input->is_ajax_request()) {

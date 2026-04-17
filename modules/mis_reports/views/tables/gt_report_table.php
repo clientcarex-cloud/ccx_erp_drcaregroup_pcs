@@ -636,45 +636,51 @@ foreach ($result as $row) {
   $total_refund += $refund;
 
   // ===================== Build Row =====================
+  $make_link = function($bid, $type, $value) use ($from_date, $to_date) {
+    if ((string)$value === '0' || (string)$value === '0%') return $value;
+    $url = admin_url("mis_reports/reports/gt_report_details?branch_id={$bid}&from_date={$from_date}&to_date={$to_date}&cell_type={$type}");
+    return '<a href="'.$url.'" target="_blank" class="tw-font-medium" style="text-decoration:underline;">'.$value.'</a>';
+  };
+
   $output['data'][] = [
     $row['branch_name'],         // Branch
     $gt_goal,                    // GT Goal
-    $gt_achieved,                // GT Achieved
+    $make_link($bid, 'gt_achieved', $gt_achieved),                // GT Achieved
     $gt_achieved_pct . '%',      // GT Achieved %
     $gt_projection,              // GT Projection
-    $np_visits,                  // NP Visits
-    $np_reg,                     // NP Registration
+    $make_link($bid, 'np_visits', $np_visits),                  // NP Visits
+    $make_link($bid, 'np_reg', $np_reg),                     // NP Registration
     $np_reg_pct,                 // NP Reg %
-    $np_paid,                    // NP Paid
+    $make_link($bid, 'np_paid', $np_paid),                    // NP Paid
     $np_ticket,                  // NP Ticket Value
-    $enq_confee,                 // Enquiry Consultation Fee
-    $enq_due,                    // Enquiry Due Collected
+    $make_link($bid, 'enq_confee', $enq_confee),                 // Enquiry Consultation Fee
+    $make_link($bid, 'enq_due', $enq_due),                    // Enquiry Due Collected
     $enquiry_goal,               // Enquiry Goal
-    $enq_gt,                     // Enquiry GT
+    $make_link($bid, 'enq_gt', $enq_gt),                     // Enquiry GT
     $enq_achieved_pct,           // Enquiry Achieved %
     $enq_projection,             // Enquiry Projection
-    $ren_visits,                 // Renewal Visits
-    $renewed,                    // Renewed
+    $make_link($bid, 'ren_visits', $ren_visits),                 // Renewal Visits
+    $make_link($bid, 'renewed', $renewed),                    // Renewed
     $renewed_pct,                // Renewed %
-    $ren_confee,                 // Follow-up Consultation Fee
-    $ren_paid,                   // Renewal Paid
-    $ren_due,                    // Renewal Due
+    $make_link($bid, 'ren_confee', $ren_confee),                 // Follow-up Consultation Fee
+    $make_link($bid, 'ren_paid', $ren_paid),                   // Renewal Paid
+    $make_link($bid, 'ren_due', $ren_due),                    // Renewal Due
     $renewal_goal,               // Renewal Goal
-    $ren_gt,                     // Renewal GT
+    $make_link($bid, 'ren_gt', $ren_gt),                     // Renewal GT
     $ren_achieved_pct,           // Renewal Achieved %
     $ren_projection,             // Renewal Projection
     $ren_ticket,                 // Renewal Ticket Value
-    $ref_visits,                 // Referral Visits
-    $ref_reg,                    // Referral Registrations
+    $make_link($bid, 'ref_visits', $ref_visits),                 // Referral Visits
+    $make_link($bid, 'ref_reg', $ref_reg),                    // Referral Registrations
     $ref_reg_pct,                // Referral %
-    $ref_paid,                   // Referral Paid
-    $ref_due,                    // Referral Due
+    $make_link($bid, 'ref_paid', $ref_paid),                   // Referral Paid
+    $make_link($bid, 'ref_due', $ref_due),                    // Referral Due
     $referral_goal,              // Referral Goal
-    $ref_gt,                     // Referral GT
+    $make_link($bid, 'ref_gt', $ref_gt),                     // Referral GT
     $ref_achieved_pct,           // Referral Achieved %
     $ref_projection,             // Referral Projection
     $ref_ticket,                 // Referral Ticket Value
-    $refund,                     // Refund Amount
+    $make_link($bid, 'refund', $refund),                     // Refund Amount
   ];
 }
 
