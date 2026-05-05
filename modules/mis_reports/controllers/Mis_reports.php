@@ -629,4 +629,239 @@ class Mis_reports extends AdminController
 
         $this->load->view('mis_reports/reports/patient_referral_reward_report', $data);
     }
+
+    /**
+     * ═══════════════════════════════════════════════════════════════
+     * MIS QUERY PROFILER — real-time MySQL diagnosis for MIS reports
+     * URL: /admin/mis_reports/query_profiler
+     * REMOVE THIS METHOD after debugging is complete.
+     * ═══════════════════════════════════════════════════════════════
+     */
+    public function query_profiler()
+    {
+        if (!is_admin()) {
+            access_denied('query_profiler');
+        }
+
+        $report     = $this->input->get('report') ?: 'payment_detail_report';
+        $from_date  = $this->input->get('from_date') ?: date('Y-m-01');
+        $to_date    = $this->input->get('to_date') ?: date('Y-m-d');
+        $branch_ids = $this->input->get('branch_ids') ?: '';
+        $page_size  = (int) ($this->input->get('page_size') ?: 25);
+        if ($page_size < 1) $page_size = 25;
+
+        $data = [
+            'title'           => 'MIS Query Profiler',
+            'prof_report'     => $report,
+            'prof_from_date'  => $from_date,
+            'prof_to_date'    => $to_date,
+            'prof_branch_ids' => $branch_ids,
+            'prof_page_size'  => $page_size,
+            'profiler_results'=> [],
+            'db_info'         => [],
+            'total_time_ms'   => 0,
+            'slowest_ms'      => 0,
+        ];
+
+        if ($this->input->get('report') !== null) {
+            $data = array_merge($data, $this->_run_mis_profiler($report, $from_date, $to_date, $branch_ids, $page_size));
+        }
+
+        $this->load->view('mis_query_profiler', $data);
+    }
+
+    private function _run_mis_profiler($report, $from_date, $to_date, $branch_ids_str, $page_size)
+    {
+        $results_out = [];
+        $total_time  = 0;
+        $slowest     = 0;
+        $prefix      = db_prefix();
+
+        $profileQuery = function ($label, $sql) use (&$results_out, &$total_time, &$slowest) {
+            $entry = ['label' => $label, 'sql' => $sql, 'time_ms' => 0, 'row_count' => 0, 'error' => '', 'explain' => []];
+
+            $t1 = microtime(true);
+            $result = $this->db->query($sql);
+            $t2 = microtime(true);
+            $entry['time_ms'] = ($t2 - $t1) * 1000;
+            $total_time += $entry['time_ms'];
+            if ($entry['time_ms'] > $slowest) $slowest = $entry['time_ms'];
+
+            $dbError = $this->db->error();
+            if (!empty($dbError['code']) && $dbError['code'] != 0) {
+                $entry['error'] = $dbError['code'] . ': ' . $dbError['message'];
+            }
+
+            if ($result && is_object($result)) {
+                $entry['row_count'] = $result->num_rows();
+                $result->free_result();
+            }
+
+            $explainResult = $this->db->query('EXPLAIN ' . $sql);
+            if ($explainResult && is_object($explainResult)) {
+                $entry['explain'] = $explainResult->result_array();
+                $explainResult->free_result();
+            }
+
+            $results_out[] = $entry;
+        };
+
+        // Parse branch IDs
+        $branchWhere = '';
+        if (!empty($branch_ids_str)) {
+            $cleanIds = array_filter(array_map('intval', explode(',', $branch_ids_str)), function($v){ return $v > 0; });
+            if (!empty($cleanIds)) {
+                $branchWhere = ' AND EXISTS (
+                    SELECT 1 FROM ' . $prefix . 'customer_groups cg_filter
+                    WHERE cg_filter.customer_id = inv.clientid
+                    AND cg_filter.groupid IN (' . implode(',', $cleanIds) . ')
+                )';
+            }
+        }
+
+        // ═══ Payment Detail Report queries ═══
+        if ($report === 'payment_detail_report') {
+            $dateWhere = " AND payment.date >= '" . $this->db->escape_str($from_date) . "' AND payment.date <= '" . $this->db->escape_str($to_date) . "'";
+
+            // Q1: Count
+            $countSql = 'SELECT COUNT(DISTINCT payment.id) as total_filtered
+                FROM ' . $prefix . 'invoicepaymentrecords payment
+                LEFT JOIN ' . $prefix . 'invoices inv ON inv.id = payment.invoiceid
+                LEFT JOIN ' . $prefix . 'clients c ON c.userid = inv.clientid
+                LEFT JOIN ' . $prefix . 'clients_new_fields new ON new.userid = c.userid
+                WHERE 1=1' . $dateWhere . $branchWhere;
+            $profileQuery('Count Query', $countSql);
+
+            // Q2: Main data
+            $mainSql = 'SELECT payment.id, payment.date, payment.amount as paid, payment.received_by,
+                payment.transactionid, payment.invoiceid, payment.utr_no,
+                c.company, c.userid, item.description as package, new.mr_no,
+                mode.name as payment_mode, staff.firstname, staff.lastname,
+                sources.name as patient_source, inv.addedfrom, inv.datecreated,
+                inv.total as total, branch.name as branch_name,
+                payment_category.appointment_type_name
+                FROM ' . $prefix . 'invoicepaymentrecords payment
+                LEFT JOIN ' . $prefix . 'invoices inv ON inv.id = payment.invoiceid
+                LEFT JOIN ' . $prefix . 'itemable item ON item.rel_id = inv.id AND item.rel_type = "invoice"
+                LEFT JOIN ' . $prefix . 'payment_modes mode ON mode.id = payment.paymentmode
+                LEFT JOIN ' . $prefix . 'staff staff ON staff.staffid = payment.received_by
+                LEFT JOIN ' . $prefix . 'clients c ON c.userid = inv.clientid
+                LEFT JOIN ' . $prefix . 'clients_new_fields new ON new.userid = c.userid
+                LEFT JOIN ' . $prefix . 'customer_groups cc ON cc.customer_id = c.userid
+                LEFT JOIN ' . $prefix . 'customers_groups branch ON branch.id = cc.groupid
+                LEFT JOIN ' . $prefix . 'leads_sources sources ON sources.id = new.patient_source_id
+                LEFT JOIN ' . $prefix . 'appointment_type as payment_category ON payment_category.appointment_type_id = inv.appointment_type_id
+                WHERE 1=1' . $dateWhere . $branchWhere . '
+                GROUP BY payment.id
+                ORDER BY payment.date DESC
+                LIMIT ' . $page_size;
+            $profileQuery('Main Data Query', $mainSql);
+
+            // Grab payment/user IDs from main query
+            $tempResult = $this->db->query($mainSql);
+            $paymentIds = [];
+            $userIds = [];
+            if ($tempResult && is_object($tempResult)) {
+                foreach ($tempResult->result_array() as $r) {
+                    $paymentIds[] = (int) $r['id'];
+                    $userIds[] = (int) $r['userid'];
+                }
+                $tempResult->free_result();
+            }
+            $userIds = array_unique($userIds);
+
+            if (!empty($paymentIds)) {
+                $pidsStr = implode(',', $paymentIds);
+                $uidsStr = implode(',', $userIds);
+
+                // Q3: Cumulative paid batch
+                $cumSql = 'SELECT p1.id as payment_id, p1.invoiceid,
+                    (SELECT COALESCE(SUM(p2.amount), 0)
+                     FROM ' . $prefix . 'invoicepaymentrecords p2
+                     WHERE p2.invoiceid = p1.invoiceid
+                     AND (p2.date < p1.date OR (p2.date = p1.date AND p2.id <= p1.id))
+                    ) as cumulative_paid
+                    FROM ' . $prefix . 'invoicepaymentrecords p1
+                    WHERE p1.id IN (' . $pidsStr . ')';
+                $profileQuery('Cumulative Paid Batch', $cumSql);
+
+                // Q4: Package count batch
+                $pkgSql = 'SELECT clientid as userid, COUNT(*) as pkg_count
+                    FROM ' . $prefix . 'invoices
+                    WHERE clientid IN (' . $uidsStr . ')
+                    GROUP BY clientid';
+                $profileQuery('Package Count Batch', $pkgSql);
+
+                // Q5: Appointment lookup (simulated)
+                $apptSql = 'SELECT a.userid, DATE(a.appointment_date) as appt_date,
+                    t.description as treatment_name, type.appointment_type_name
+                    FROM ' . $prefix . 'appointment a
+                    LEFT JOIN ' . $prefix . 'items t ON t.id = a.treatment_id
+                    LEFT JOIN ' . $prefix . 'appointment_type type ON type.appointment_type_id = a.appointment_type_id
+                    WHERE a.userid IN (' . $uidsStr . ')
+                    AND a.appointment_date >= "' . $this->db->escape_str($from_date) . '"
+                    AND a.appointment_date <= "' . $this->db->escape_str($to_date) . ' 23:59:59"
+                    ORDER BY a.appointment_date DESC';
+                $profileQuery('Appointment Lookup Batch', $apptSql);
+            }
+        } else {
+            // Generic: just run a count on the base tables to show timing
+            $profileQuery('Generic: clients count', 'SELECT COUNT(*) as cnt FROM ' . $prefix . 'clients');
+            $profileQuery('Generic: invoicepaymentrecords count', 'SELECT COUNT(*) as cnt FROM ' . $prefix . 'invoicepaymentrecords');
+            $profileQuery('Generic: appointment count', 'SELECT COUNT(*) as cnt FROM ' . $prefix . 'appointment');
+        }
+
+        // ── DB info ──
+        $dbInfo = [];
+        $vr = $this->db->query('SELECT VERSION() as ver');
+        $dbInfo['MySQL Version'] = $vr ? $vr->row()->ver : 'unknown';
+        $dbInfo['Database'] = $this->db->database;
+        $dbInfo['PHP Version'] = phpversion();
+        $dbInfo['Memory Limit'] = ini_get('memory_limit');
+        $dbInfo['Max Execution Time'] = ini_get('max_execution_time') . 's';
+
+        $countTables = [
+            'tblinvoicepaymentrecords' => 'SELECT COUNT(*) as cnt FROM ' . $prefix . 'invoicepaymentrecords',
+            'tblinvoices'              => 'SELECT COUNT(*) as cnt FROM ' . $prefix . 'invoices',
+            'tblappointment'           => 'SELECT COUNT(*) as cnt FROM ' . $prefix . 'appointment',
+            'tblitemable'              => 'SELECT COUNT(*) as cnt FROM ' . $prefix . 'itemable',
+            'tblclients'               => 'SELECT COUNT(*) as cnt FROM ' . $prefix . 'clients',
+        ];
+        foreach ($countTables as $label => $sql) {
+            $r = $this->db->query($sql);
+            $dbInfo[$label . ' rows'] = $r ? number_format($r->row()->cnt) : 'error';
+        }
+
+        // Index check on key tables
+        $indexTables = [$prefix . 'invoicepaymentrecords', $prefix . 'invoices', $prefix . 'itemable'];
+        $idxInfo = [];
+        foreach ($indexTables as $tbl) {
+            $ir = $this->db->query('SHOW INDEX FROM ' . $tbl);
+            if ($ir && is_object($ir)) {
+                $grouped = [];
+                foreach ($ir->result_array() as $idx) {
+                    $key = $idx['Key_name'];
+                    if (!isset($grouped[$key])) {
+                        $grouped[$key] = $tbl . ' | ' . $key . ' | ' . $idx['Column_name'];
+                    } else {
+                        $grouped[$key] .= ', ' . $idx['Column_name'];
+                    }
+                }
+                $idxInfo = array_merge($idxInfo, array_values($grouped));
+                $ir->free_result();
+            }
+        }
+        $dbInfo['--- Indexes ---'] = '';
+        foreach ($idxInfo as $i => $line) {
+            $dbInfo['Index ' . ($i + 1)] = $line;
+        }
+
+        return [
+            'profiler_results' => $results_out,
+            'db_info'          => $dbInfo,
+            'total_time_ms'    => $total_time,
+            'slowest_ms'       => $slowest,
+        ];
+    }
 }
+
