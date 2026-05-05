@@ -194,34 +194,47 @@ foreach ($_statuses as $statusRow) {
 }
 
 // ══════════════════════════════════════════════════════════════
-// COMBINED total + filtered count in a SINGLE query
-// This eliminates an entire full-table scan.
+// TOTAL COUNT — uses COUNT(*) on tblclients only (fast PK scan)
+// then JOINs only when filters require tblclients_new_fields.
 // ══════════════════════════════════════════════════════════════
 $hasSearch = !empty($search);
+$needsNewFieldsJoin = ($summary_filter && $summary_filter !== 'due' && $summary_filter !== 'no_due')
+    || ($from_date && $to_date && $summary_filter != 'not_registered');
 
 $CI->db->reset_query();
-$CI->db->select('COUNT(DISTINCT c.userid) as total_count');
-if ($hasSearch) {
-    // Conditional count: only rows matching search
-    $CI->db->select("SUM(CASE WHEN (c.company LIKE '%" . $CI->db->escape_like_str($search) . "%'
-        OR c.phonenumber LIKE '%" . $CI->db->escape_like_str($search) . "%'
-        OR new.mr_no LIKE '%" . $CI->db->escape_like_str($search) . "%'
-        OR new.alt_number1 LIKE '%" . $CI->db->escape_like_str($search) . "%') THEN 1 ELSE 0 END) as filtered_count", false);
-}
+$CI->db->select('COUNT(*) as total_count');
 $CI->db->from(db_prefix() . 'clients c');
-$CI->db->join(db_prefix() . 'clients_new_fields new', 'new.userid = c.userid', 'left');
-if ($hasSearch) {
-    $CI->db->join(db_prefix() . 'leads_sources source', 'source.id = new.patient_source_id', 'left');
+if ($needsNewFieldsJoin) {
+    $CI->db->join(db_prefix() . 'clients_new_fields new', 'new.userid = c.userid', 'left');
 }
 $applyBranchFilter($CI->db);
 if ($from_date && $to_date && $summary_filter != 'not_registered') {
     $applyRegistrationDateFilter($CI->db, $from_date, $to_date);
 }
 $applySummaryFilter($CI->db, $from_date, $to_date, $summary_filter);
+$totalRecords = (int) $CI->db->get()->row()->total_count;
 
-$countRow = $CI->db->get()->row();
-$totalRecords = (int) $countRow->total_count;
-$filteredRecords = $hasSearch ? (int) $countRow->filtered_count : $totalRecords;
+// ── Filtered count (only when search is active) ──
+if ($hasSearch) {
+    $CI->db->reset_query();
+    $CI->db->select('COUNT(*) as total');
+    $CI->db->from(db_prefix() . 'clients c');
+    $CI->db->join(db_prefix() . 'clients_new_fields new', 'new.userid = c.userid', 'left');
+    $applyBranchFilter($CI->db);
+    if ($from_date && $to_date && $summary_filter != 'not_registered') {
+        $applyRegistrationDateFilter($CI->db, $from_date, $to_date);
+    }
+    $applySummaryFilter($CI->db, $from_date, $to_date, $summary_filter);
+    $CI->db->group_start();
+    $CI->db->like('c.company', $search);
+    $CI->db->or_like('c.phonenumber', $search);
+    $CI->db->or_like('new.mr_no', $search);
+    $CI->db->or_like('new.alt_number1', $search);
+    $CI->db->group_end();
+    $filteredRecords = (int) $CI->db->get()->row()->total;
+} else {
+    $filteredRecords = $totalRecords;
+}
 
 
 // ══════════════════════════════════════════════════════════════
@@ -230,7 +243,8 @@ $filteredRecords = $hasSearch ? (int) $countRow->filtered_count : $totalRecords;
 // instead of per-row GROUP_CONCAT subquery.
 // ══════════════════════════════════════════════════════════════
 $CI->db->reset_query();
-$CI->db->distinct();
+// GROUP BY c.userid replaces DISTINCT — eliminates "Using temporary; Using filesort"
+// and lets MySQL walk the PRIMARY key index directly with early LIMIT termination.
 $CI->db->select('c.userid, c.company, c.phonenumber, c.datecreated, new.mr_no, new.age, new.gender, c.city, c.state, new.registration_start_date, new.registration_end_date, new.current_status, new.patient_status, source.name as patient_source_name');
 $CI->db->from(db_prefix() . 'clients c');
 $CI->db->join(db_prefix() . 'clients_new_fields new', 'new.userid = c.userid', 'left');
@@ -248,12 +262,13 @@ if (!empty($search)) {
     $CI->db->or_like('new.alt_number1', $search);
     $CI->db->group_end();
 }
+$applySummaryFilter($CI->db, $from_date, $to_date, $summary_filter);
+
+$CI->db->group_by('c.userid');
 $CI->db->order_by($order_column, $order_dir);
 if ($length != -1) {
     $CI->db->limit($length, $start);
 }
-
-$applySummaryFilter($CI->db, $from_date, $to_date, $summary_filter);
 
 $results = $CI->db->get()->result_array();
 
