@@ -2,6 +2,8 @@
 defined('BASEPATH') or exit('No direct script access allowed');
 // OPTIMIZED VERSION v2 - 2026-05-05
 $_profiler_start = microtime(true);
+ob_start(); // Capture any PHP warnings/notices before JSON
+try {
 
 $CI =& get_instance();
 $CI->load->model('client_model');
@@ -286,6 +288,7 @@ $data[] = [
     ''
 ];
 
+$_php_output = ob_get_clean();
 echo json_encode([
     'draw' => intval($CI->input->post('draw')),
     'recordsTotal' => $total_filtered,
@@ -293,5 +296,20 @@ echo json_encode([
     'aaData' => $data,
     '_version' => 'OPTIMIZED_v2',
     '_total_time_ms' => round((microtime(true) - $_profiler_start) * 1000, 1),
+    '_php_errors' => !empty($_php_output) ? $_php_output : null,
 ]);
 exit;
+
+} catch (Throwable $e) {
+    ob_end_clean();
+    echo json_encode([
+        'draw' => intval($CI->input->post('draw')),
+        'recordsTotal' => 0,
+        'recordsFiltered' => 0,
+        'aaData' => [],
+        '_error' => $e->getMessage(),
+        '_file' => $e->getFile() . ':' . $e->getLine(),
+        '_trace' => $e->getTraceAsString(),
+    ]);
+    exit;
+}
