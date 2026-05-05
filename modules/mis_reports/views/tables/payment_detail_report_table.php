@@ -1,5 +1,7 @@
 <?php
 defined('BASEPATH') or exit('No direct script access allowed');
+// OPTIMIZED VERSION v2 - 2026-05-05
+$_profiler_start = microtime(true);
 
 $CI =& get_instance();
 $CI->load->model('client_model');
@@ -289,5 +291,7 @@ echo json_encode([
     'recordsTotal' => $total_filtered,
     'recordsFiltered' => $total_filtered,
     'aaData' => $data,
+    '_version' => 'OPTIMIZED_v2',
+    '_total_time_ms' => round((microtime(true) - $_profiler_start) * 1000, 1),
 ]);
 exit;
