@@ -81,7 +81,7 @@ class Mis_reports extends AdminController
         $data['consulted_from_date'] = $consulted_date;
         $data['consulted_to_date'] = $consulted_to_date;
         $data['appointment_type_id'] = $appointment_type;
-        $selected_branch_id = urldecode($selected_branch_id); // decode %2C to ,
+        $selected_branch_id = urldecode($selected_branch_id ?? ''); // decode %2C to ,
         $selected_branch_id = explode(',', $selected_branch_id); // split by comma
 
         // Clean the array to ensure numeric values only
@@ -94,7 +94,7 @@ class Mis_reports extends AdminController
 
         $data['lead_sourceId'] = $lead_sourceId;
 
-        $doctor_id = urldecode($doctor_id); // decode %2C to ,
+        $doctor_id = urldecode($doctor_id ?? ''); // decode %2C to ,
         $doctor_id = explode(',', $doctor_id); // split by comma
 
         // Clean the array to ensure numeric values only
@@ -105,7 +105,7 @@ class Mis_reports extends AdminController
 
         $data['doctor_id'] = $doctor_id;
 
-        $staff_id = urldecode($staff_id);
+        $staff_id = urldecode($staff_id ?? '');
         $staff_id = explode(',', $staff_id);
         $staff_id = array_filter($staff_id, fn($id) => is_numeric($id));
         $staff_id = array_map('intval', $staff_id);
