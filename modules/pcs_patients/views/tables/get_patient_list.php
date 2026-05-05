@@ -20,27 +20,6 @@ $order_dir = $incoming_order_dir === 'asc' ? 'asc' : 'desc';
 
 $summary_filter = $CI->input->get('summary_filter');
 
-// ── Get patient IDs for selected branches ──
-$branch_patient_ids = [];
-if (!empty($branch_ids)) {
-    $CI->db->select('customer_id AS userid');
-    $CI->db->from(db_prefix() . 'customer_groups');
-    $CI->db->where_in('groupid', $branch_ids);
-    $branch_patients = $CI->db->get()->result_array();
-    $branch_patient_ids = array_column($branch_patients, 'userid');
-
-    // If branch selected but no patients found, return empty result
-    if (empty($branch_patient_ids)) {
-        echo json_encode([
-            'draw' => $draw,
-            'recordsTotal' => 0,
-            'recordsFiltered' => 0,
-            'data' => [],
-        ]);
-        exit;
-    }
-}
-
 // Map DataTable columns to actual SQL columns/aliases (null means fallback to default)
 $columns = [
     'c.userid',
@@ -67,7 +46,27 @@ if (empty($order_column)) {
     $order_column = 'c.userid';
 }
 
-// ── Helper: apply summary filter to a query builder ──
+// ── Branch filter via EXISTS (avoids fetching all IDs into PHP) ──
+$applyBranchFilter = static function ($query) use ($branch_ids) {
+    if (empty($branch_ids)) return;
+    $cleanIds = array_filter(array_map('intval', $branch_ids), function ($v) { return $v > 0; });
+    if (empty($cleanIds)) return;
+    $query->where('EXISTS (
+        SELECT 1
+        FROM ' . db_prefix() . 'customer_groups cg_filter
+        WHERE cg_filter.customer_id = c.userid
+        AND cg_filter.groupid IN (' . implode(',', $cleanIds) . ')
+    )', null, false);
+};
+
+// ── Index-friendly date filter (avoids DATE() wrapper) ──
+$applyDateFilter = static function ($query, $from, $to) {
+    if (empty($from) || empty($to)) return;
+    $query->where('new.registration_start_date >=', $from . ' 00:00:00');
+    $query->where('new.registration_start_date <=', $to . ' 23:59:59');
+};
+
+// ── Reusable summary filter (eliminates triple code duplication) ──
 $applySummaryFilter = static function ($query, $from_date, $to_date, $summary_filter) {
     if ($summary_filter === 'due') {
         $query->where('EXISTS (
@@ -80,111 +79,120 @@ $applySummaryFilter = static function ($query, $from_date, $to_date, $summary_fi
             WHERE i.clientid = c.userid AND i.status != 2
         )', null, false);
     } elseif ($summary_filter === 'registered') {
-        $query->where('new.mr_no IS NOT NULL');
+        $query->where('new.mr_no IS NOT NULL', null, false);
     } elseif ($summary_filter === 'not_registered') {
         $query->group_start();
         $query->where('new.mr_no IS NULL', null, false);
         $query->or_where('new.mr_no', '');
         $query->group_end();
     } elseif ($summary_filter === 'renewal') {
-        $query->where('new.mr_no IS NOT NULL');
+        $query->where('new.mr_no IS NOT NULL', null, false);
         $today = date('Y-m-d');
+
+        // Optimised: use a derived table for MAX(duedate) instead of correlated subquery per row
         $subquery = '
             SELECT 1 FROM ' . db_prefix() . 'invoices e
+            INNER JOIN (
+                SELECT clientid, MAX(duedate) AS max_duedate
+                FROM ' . db_prefix() . 'invoices
+                WHERE duedate IS NOT NULL
+                GROUP BY clientid
+            ) emax ON emax.clientid = e.clientid AND emax.max_duedate = e.duedate
             WHERE e.clientid = c.userid
             AND e.duedate IS NOT NULL
-            AND e.duedate = (
-                SELECT MAX(e2.duedate)
-                FROM ' . db_prefix() . 'invoices e2
-                WHERE e2.clientid = c.userid
-            )
         ';
         if ($from_date && $to_date) {
-            $subquery .= ' AND DATE(e.duedate) BETWEEN "' . $from_date . '" AND "' . $to_date . '"';
+            $subquery .= ' AND e.duedate >= "' . $from_date . '" AND e.duedate <= "' . $to_date . '"';
         } else {
             $subquery .= ' AND e.duedate <= "' . $today . '"';
         }
         $query->where('EXISTS (' . $subquery . ')', null, false);
     } elseif ($summary_filter === 'new_patients') {
-        $query->where('new.mr_no IS NOT NULL');
+        $query->where('new.mr_no IS NOT NULL', null, false);
     }
 };
 
-// ── Total count ──
-$totalQuery = $CI->db;
-$totalQuery->reset_query();
-$totalQuery->select('COUNT(DISTINCT c.userid) as total');
-$totalQuery->from(db_prefix() . 'clients c');
-$totalQuery->join(db_prefix() . 'clients_new_fields new', 'new.userid = c.userid', 'left');
-$totalQuery->join(db_prefix() . 'customer_groups cc', 'cc.customer_id = c.userid', 'left');
-$totalQuery->join(db_prefix() . 'customers_groups branch', 'branch.id = cc.groupid', 'left');
+// ── Search filter closure ──
+$applySearchFilter = static function ($query, $search) {
+    if (empty($search)) return;
+    $query->group_start();
+    $query->like('c.company', $search);
+    $query->or_like('c.phonenumber', $search);
+    $query->or_like('new.mr_no', $search);
+    $query->or_like('new.alt_number1', $search);
+    $query->group_end();
+};
 
-if (!empty($branch_patient_ids)) {
-    $totalQuery->where_in('c.userid', $branch_patient_ids);
+// ── Pre-fetch leads_status colour map ONCE ──
+$statusColorMap = [];
+$CI->db->select('name, color, id');
+$_statuses = $CI->db->get(db_prefix() . 'leads_status')->result_array();
+foreach ($_statuses as $statusRow) {
+    $statusColorMap[$statusRow['name']] = [
+        'id' => $statusRow['id'],
+        'color' => $statusRow['color']
+    ];
 }
+
+
+// ══════════════════════════════════════════════════════════════
+// COMBINED total + filtered count in a SINGLE query
+// Eliminates an entire full-table scan.
+// ══════════════════════════════════════════════════════════════
+$hasSearch = !empty($search);
+
+$CI->db->reset_query();
+$CI->db->select('COUNT(DISTINCT c.userid) as total_count');
+if ($hasSearch) {
+    $CI->db->select("SUM(CASE WHEN (c.company LIKE '%" . $CI->db->escape_like_str($search) . "%'
+        OR c.phonenumber LIKE '%" . $CI->db->escape_like_str($search) . "%'
+        OR new.mr_no LIKE '%" . $CI->db->escape_like_str($search) . "%'
+        OR new.alt_number1 LIKE '%" . $CI->db->escape_like_str($search) . "%') THEN 1 ELSE 0 END) as filtered_count", false);
+}
+$CI->db->from(db_prefix() . 'clients c');
+$CI->db->join(db_prefix() . 'clients_new_fields new', 'new.userid = c.userid', 'left');
+
+$applyBranchFilter($CI->db);
 if ($from_date && $to_date && $summary_filter != 'not_registered') {
-    $totalQuery->where("DATE(new.registration_start_date) BETWEEN '$from_date' AND '$to_date'");
+    $applyDateFilter($CI->db, $from_date, $to_date);
 }
-$applySummaryFilter($totalQuery, $from_date, $to_date, $summary_filter);
+$applySummaryFilter($CI->db, $from_date, $to_date, $summary_filter);
 
-$totalRecords = $totalQuery->get()->row()->total;
+$countRow = $CI->db->get()->row();
+$totalRecords = (int) $countRow->total_count;
+$filteredRecords = $hasSearch ? (int) $countRow->filtered_count : $totalRecords;
 
-// ── Filtered count ──
-$filterQuery = $CI->db;
-$filterQuery->reset_query();
-$filterQuery->select('COUNT(DISTINCT c.userid) as total');
-$filterQuery->from(db_prefix() . 'clients c');
-$filterQuery->join(db_prefix() . 'clients_new_fields new', 'new.userid = c.userid', 'left');
-$filterQuery->join(db_prefix() . 'leads_sources source', 'source.id = new.patient_source_id', 'left');
-$filterQuery->join(db_prefix() . 'customer_groups cc', 'cc.customer_id = c.userid', 'left');
-$filterQuery->join(db_prefix() . 'customers_groups branch', 'branch.id = cc.groupid', 'left');
-
-if (!empty($branch_patient_ids)) {
-    $filterQuery->where_in('c.userid', $branch_patient_ids);
-}
-if ($from_date && $to_date && $summary_filter != 'not_registered') {
-    $filterQuery->where("DATE(new.registration_start_date) BETWEEN '$from_date' AND '$to_date'");
-}
-$applySummaryFilter($filterQuery, $from_date, $to_date, $summary_filter);
-
-if (!empty($search)) {
-    $filterQuery->group_start();
-    $filterQuery->like('c.company', $search);
-    $filterQuery->or_like('c.phonenumber', $search);
-    $filterQuery->or_like('new.mr_no', $search);
-    $filterQuery->or_like('new.alt_number1', $search);
-    $filterQuery->or_like('branch.name', $search);
-    $filterQuery->group_end();
+// Quick exit if no records at all
+if ($totalRecords === 0) {
+    echo json_encode([
+        'draw' => $draw,
+        'recordsTotal' => 0,
+        'recordsFiltered' => 0,
+        'data' => [],
+    ]);
+    exit;
 }
 
-$filteredRecords = $filterQuery->get()->row()->total;
 
-// ── Main data query ──
+// ══════════════════════════════════════════════════════════════
+// MAIN DATA QUERY
+// Removed extra JOINs for customer_groups/customers_groups from
+// the main query — branch names are now batch-fetched separately.
+// ══════════════════════════════════════════════════════════════
 $CI->db->reset_query();
 $CI->db->distinct();
-$CI->db->select('c.userid, c.company, c.phonenumber, c.datecreated, new.mr_no, new.age, new.gender, c.city, c.state, new.registration_start_date, new.registration_end_date, new.current_status, new.patient_status, source.name as patient_source_name, branch.name as branch_name');
+$CI->db->select('c.userid, c.company, c.phonenumber, c.datecreated, new.mr_no, new.age, new.gender, c.city, c.state, new.registration_start_date, new.registration_end_date, new.current_status, new.patient_status, source.name as patient_source_name');
 $CI->db->from(db_prefix() . 'clients c');
 $CI->db->join(db_prefix() . 'clients_new_fields new', 'new.userid = c.userid', 'left');
 $CI->db->join(db_prefix() . 'leads_sources source', 'source.id = new.patient_source_id', 'left');
-$CI->db->join(db_prefix() . 'customer_groups cc', 'cc.customer_id = c.userid', 'left');
-$CI->db->join(db_prefix() . 'customers_groups branch', 'branch.id = cc.groupid', 'left');
 
-if (!empty($branch_patient_ids)) {
-    $CI->db->where_in('c.userid', $branch_patient_ids);
-}
+$applyBranchFilter($CI->db);
 if ($from_date && $to_date && $summary_filter != 'not_registered') {
-    $CI->db->where("DATE(new.registration_start_date) BETWEEN '$from_date' AND '$to_date'");
+    $applyDateFilter($CI->db, $from_date, $to_date);
 }
 
-if (!empty($search)) {
-    $CI->db->group_start();
-    $CI->db->like('c.company', $search);
-    $CI->db->or_like('c.phonenumber', $search);
-    $CI->db->or_like('new.mr_no', $search);
-    $CI->db->or_like('new.alt_number1', $search);
-    $CI->db->or_like('branch.name', $search);
-    $CI->db->group_end();
-}
+$applySearchFilter($CI->db, $search);
+
 $CI->db->order_by($order_column, $order_dir);
 if ($length != -1) {
     $CI->db->limit($length, $start);
@@ -194,16 +202,28 @@ $applySummaryFilter($CI->db, $from_date, $to_date, $summary_filter);
 
 $results = $CI->db->get()->result_array();
 
-// Process user IDs
+// ── Batch-fetch branch names for the result set ──
 $userIds = array_column($results, 'userid');
+$branchNameMap = [];
+if (!empty($userIds)) {
+    $CI->db->select('cg_rel.customer_id, GROUP_CONCAT(DISTINCT cg_names.name ORDER BY cg_names.name SEPARATOR ", ") AS branch_names');
+    $CI->db->from(db_prefix() . 'customer_groups cg_rel');
+    $CI->db->join(db_prefix() . 'customers_groups cg_names', 'cg_names.id = cg_rel.groupid', 'left');
+    $CI->db->where_in('cg_rel.customer_id', $userIds);
+    $CI->db->group_by('cg_rel.customer_id');
+    $branchRows = $CI->db->get()->result_array();
+    foreach ($branchRows as $br) {
+        $branchNameMap[$br['customer_id']] = $br['branch_names'];
+    }
+}
+
+// ── Batch-fetch related data ──
 $treatmentMap = $doctorMap = $callLogMap = $leadStatuses = [];
 
 if (!empty($userIds)) {
     $userIdsStr = implode(',', $userIds);
 
-    $treatmentMap = [];
-    $doctorMap = [];
-
+    // Latest appointment per patient
     $CI->db->select('
         a.userid,
         a.enquiry_doctor_id,
@@ -218,8 +238,7 @@ if (!empty($userIds)) {
     );
     $CI->db->join(db_prefix() . 'items i', 'i.id = a.treatment_id', 'LEFT');
     $CI->db->join(db_prefix() . 'staff s', 's.staffid = a.enquiry_doctor_id', 'LEFT');
-    $CI->db->where_in('a.userid', $userIds);
-
+    // Removed redundant where_in — the INNER JOIN already constrains rows
     $appointments = $CI->db->get()->result_array();
 
     foreach ($appointments as $app) {
@@ -230,31 +249,38 @@ if (!empty($userIds)) {
         ];
     }
 
-    // Latest call logs
+    // Latest call log per patient
     $CI->db->select('c.patientid, c.created_date as last_calling_date, c.next_calling_date');
     $CI->db->from(db_prefix() . 'patient_call_logs c');
-    $CI->db->join("(SELECT MAX(id) as max_id, patientid FROM " . db_prefix() . "patient_call_logs WHERE patientid IN (" . $userIdsStr . ") GROUP BY patientid) as latest", 'c.id = latest.max_id', 'inner');
-    $CI->db->where_in('c.patientid', $userIds);
+    $CI->db->join(
+        "(SELECT MAX(id) as max_id, patientid FROM " . db_prefix() . "patient_call_logs WHERE patientid IN (" . $userIdsStr . ") GROUP BY patientid) as latest",
+        'c.id = latest.max_id',
+        'inner'
+    );
+    // Removed redundant where_in
     $callLogs = $CI->db->get()->result_array();
     foreach ($callLogs as $log) {
         $callLogMap[$log['patientid']] = $log;
     }
 
-    // Latest journey status
+    // Latest journey status per patient (derived-table MAX join instead of ORDER BY + PHP filter)
     $CI->db->select('j.userid, j.status, s.name as status_name, s.color as status_color');
     $CI->db->from(db_prefix() . 'lead_patient_journey j');
+    $CI->db->join(
+        '(SELECT userid, MAX(id) AS max_id FROM ' . db_prefix() . 'lead_patient_journey WHERE userid IN (' . $userIdsStr . ') GROUP BY userid) latest_journey',
+        'latest_journey.max_id = j.id',
+        'inner'
+    );
     $CI->db->join(db_prefix() . 'leads_status s', 's.id = j.status', 'left');
-    $CI->db->where_in('j.userid', $userIds);
-    $CI->db->order_by('j.id', 'DESC');
     $statuses = $CI->db->get()->result_array();
     foreach ($statuses as $s) {
-        if (!isset($leadStatuses[$s['userid']])) {
-            $leadStatuses[$s['userid']] = $s;
-        }
+        $leadStatuses[$s['userid']] = $s;
     }
 }
 
+// ══════════════════════════════════════════════════════════════
 // Prepare output
+// ══════════════════════════════════════════════════════════════
 $output = [
     "draw" => $draw,
     "recordsTotal" => $totalRecords,
@@ -264,16 +290,6 @@ $output = [
 
 $hasPermissionDelete = has_permission('clients', '', 'delete');
 $i = $start + 1;
-
-$statusColorMap = [];
-$CI->db->select('name, color, id');
-$statuses = $CI->db->get(db_prefix() . 'leads_status')->result_array();
-foreach ($statuses as $statusRow) {
-    $statusColorMap[$statusRow['name']] = [
-        'id' => $statusRow['id'],
-        'color' => $statusRow['color']
-    ];
-}
 
 foreach ($results as $row) {
     $dataRow = [];
@@ -339,7 +355,7 @@ foreach ($results as $row) {
     // 17 columns — with branch column
     $dataRow[] = $i++;
     $dataRow[] = $company;
-    $dataRow[] = !empty($row['branch_name']) ? e($row['branch_name']) : '-';
+    $dataRow[] = !empty($branchNameMap[$row['userid']]) ? e($branchNameMap[$row['userid']]) : '-';
     $dataRow[] = !empty($row['mr_no']) ? e($row['mr_no']) : '-';
     $dataRow[] = $row['age'];
     $dataRow[] = $row['gender'];
