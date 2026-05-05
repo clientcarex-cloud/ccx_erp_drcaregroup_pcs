@@ -4714,4 +4714,339 @@ class Client extends AdminController
 		], true);
 	}
 
+	/**
+	 * ═══════════════════════════════════════════════════════════════
+	 * QUERY PROFILER — real-time MySQL diagnosis for patient list
+	 * URL: /admin/client/query_profiler
+	 * REMOVE THIS METHOD after debugging is complete.
+	 * ═══════════════════════════════════════════════════════════════
+	 */
+	public function query_profiler()
+	{
+		if (!is_admin()) {
+			access_denied('query_profiler');
+		}
+
+		$target        = $this->input->get('target') ?: 'client';
+		$branch_ids    = $this->input->get('branch_ids') ?: '';
+		$search        = $this->input->get('search') ?: '';
+		$summary_filter = $this->input->get('summary_filter') ?: '';
+		$page_size     = (int) ($this->input->get('page_size') ?: 25);
+		if ($page_size < 1) $page_size = 25;
+
+		$data = [
+			'title'              => 'Query Profiler',
+			'target'             => $target,
+			'prof_branch_ids'    => $branch_ids,
+			'prof_search'        => $search,
+			'prof_summary_filter'=> $summary_filter,
+			'prof_page_size'     => $page_size,
+			'profiler_results'   => [],
+			'db_info'            => [],
+			'total_time_ms'      => 0,
+			'slowest_ms'         => 0,
+			'total_rows'         => 0,
+			'index_report'       => [],
+		];
+
+		// Only run when form is submitted (has target param)
+		if ($this->input->get('target') !== null) {
+			$data = array_merge($data, $this->_run_profiler($target, $branch_ids, $search, $summary_filter, $page_size));
+		}
+
+		$this->load->view('query_profiler', $data);
+	}
+
+	/**
+	 * Internal: runs every patient-list query with timing and EXPLAIN
+	 */
+	private function _run_profiler($target, $branch_ids_str, $search, $summary_filter, $page_size)
+	{
+		$results_out = [];
+		$total_time  = 0;
+		$slowest     = 0;
+		$total_rows  = 0;
+		$prefix      = db_prefix();
+
+		// ── Helper: profile a single raw SQL query ──
+		$profileQuery = function ($label, $sql) use (&$results_out, &$total_time, &$slowest) {
+			$entry = [
+				'label'      => $label,
+				'sql'        => $sql,
+				'time_ms'    => 0,
+				'row_count'  => 0,
+				'error'      => '',
+				'explain'    => [],
+				'warnings'   => [],
+				'sample_data'=> [],
+			];
+
+			// Time the query
+			$t1 = microtime(true);
+			$result = $this->db->query($sql);
+			$t2 = microtime(true);
+			$entry['time_ms'] = ($t2 - $t1) * 1000;
+			$total_time += $entry['time_ms'];
+			if ($entry['time_ms'] > $slowest) $slowest = $entry['time_ms'];
+
+			// Check for errors
+			$dbError = $this->db->error();
+			if (!empty($dbError['code']) && $dbError['code'] != 0) {
+				$entry['error'] = $dbError['code'] . ': ' . $dbError['message'];
+			}
+
+			if ($result && is_object($result)) {
+				$entry['row_count'] = $result->num_rows();
+				// Sample first 3 rows
+				$rows = $result->result_array();
+				$entry['sample_data'] = array_slice($rows, 0, 3);
+				$result->free_result();
+			}
+
+			// Run EXPLAIN
+			$explainSql = 'EXPLAIN ' . $sql;
+			$explainResult = $this->db->query($explainSql);
+			if ($explainResult && is_object($explainResult)) {
+				$entry['explain'] = $explainResult->result_array();
+				$explainResult->free_result();
+			}
+
+			// Check MySQL warnings
+			$warnResult = $this->db->query('SHOW WARNINGS');
+			if ($warnResult && is_object($warnResult) && $warnResult->num_rows() > 0) {
+				foreach ($warnResult->result_array() as $w) {
+					$entry['warnings'][] = $w['Level'] . ' ' . $w['Code'] . ': ' . $w['Message'];
+				}
+				$warnResult->free_result();
+			}
+
+			$results_out[] = $entry;
+		};
+
+		// ── Parse branch IDs ──
+		$branchFilterIds = [];
+		if (!empty($branch_ids_str)) {
+			$branchFilterIds = array_filter(array_map('intval', explode(',', $branch_ids_str)), function($v){ return $v > 0; });
+		}
+
+		// ── Build branch WHERE clause ──
+		$branchWhere = '';
+		if (!empty($branchFilterIds)) {
+			$branchWhere = ' AND EXISTS (
+				SELECT 1 FROM ' . $prefix . 'customer_groups cg_filter
+				WHERE cg_filter.customer_id = c.userid
+				AND cg_filter.groupid IN (' . implode(',', $branchFilterIds) . ')
+			)';
+		}
+
+		// ── Build summary filter clause ──
+		$summaryWhere = '';
+		$today = date('Y-m-d');
+		if ($summary_filter === 'due') {
+			$summaryWhere = ' AND EXISTS (SELECT 1 FROM ' . $prefix . 'invoices i WHERE i.clientid = c.userid AND i.status != 2)';
+		} elseif ($summary_filter === 'no_due') {
+			$summaryWhere = ' AND NOT EXISTS (SELECT 1 FROM ' . $prefix . 'invoices i WHERE i.clientid = c.userid AND i.status != 2)';
+		} elseif ($summary_filter === 'registered') {
+			$summaryWhere = ' AND new.mr_no IS NOT NULL';
+		} elseif ($summary_filter === 'not_registered') {
+			$summaryWhere = ' AND (new.mr_no IS NULL OR new.mr_no = "")';
+		} elseif ($summary_filter === 'renewal') {
+			$summaryWhere = ' AND new.mr_no IS NOT NULL AND EXISTS (
+				SELECT 1 FROM ' . $prefix . 'invoices e
+				INNER JOIN (
+					SELECT clientid, MAX(duedate) AS max_duedate
+					FROM ' . $prefix . 'invoices WHERE duedate IS NOT NULL GROUP BY clientid
+				) emax ON emax.clientid = e.clientid AND emax.max_duedate = e.duedate
+				WHERE e.clientid = c.userid AND e.duedate IS NOT NULL
+				AND e.duedate <= "' . $today . '"
+			)';
+		} elseif ($summary_filter === 'new_patients') {
+			$summaryWhere = ' AND new.mr_no IS NOT NULL';
+		}
+
+		// ── Build search clause ──
+		$searchWhere = '';
+		if (!empty($search)) {
+			$escaped = $this->db->escape_like_str($search);
+			$searchWhere = ' AND (c.company LIKE "%' . $escaped . '%"
+				OR c.phonenumber LIKE "%' . $escaped . '%"
+				OR new.mr_no LIKE "%' . $escaped . '%"
+				OR new.alt_number1 LIKE "%' . $escaped . '%")';
+		}
+
+		$baseWhere = ' WHERE 1=1' . $branchWhere . $summaryWhere;
+
+		// ═══ QUERY 1: Combined count ═══
+		$countSql = 'SELECT COUNT(DISTINCT c.userid) as total_count';
+		if (!empty($search)) {
+			$escaped = $this->db->escape_like_str($search);
+			$countSql .= ", SUM(CASE WHEN (c.company LIKE '%" . $escaped . "%'
+				OR c.phonenumber LIKE '%" . $escaped . "%'
+				OR new.mr_no LIKE '%" . $escaped . "%'
+				OR new.alt_number1 LIKE '%" . $escaped . "%') THEN 1 ELSE 0 END) as filtered_count";
+		}
+		$countSql .= ' FROM ' . $prefix . 'clients c
+			LEFT JOIN ' . $prefix . 'clients_new_fields new ON new.userid = c.userid' . $baseWhere;
+		$profileQuery('Combined Count (total + filtered)', $countSql);
+
+		// Grab total for later
+		if (!empty($results_out[0]['sample_data'])) {
+			$total_rows = (int) ($results_out[0]['sample_data'][0]['total_count'] ?? 0);
+		}
+
+		// ═══ QUERY 2: Main data query ═══
+		$mainSql = 'SELECT DISTINCT c.userid, c.company, c.phonenumber, c.datecreated,
+			new.mr_no, new.age, new.gender, c.city, c.state,
+			new.registration_start_date, new.registration_end_date,
+			new.current_status, new.patient_status,
+			source.name as patient_source_name
+			FROM ' . $prefix . 'clients c
+			LEFT JOIN ' . $prefix . 'clients_new_fields new ON new.userid = c.userid
+			LEFT JOIN ' . $prefix . 'leads_sources source ON source.id = new.patient_source_id'
+			. $baseWhere . $searchWhere
+			. ' ORDER BY c.userid DESC LIMIT ' . $page_size;
+		$profileQuery('Main Data Query (page 1, ' . $page_size . ' rows)', $mainSql);
+
+		// Grab user IDs from main query for batch queries
+		$userIds = [];
+		if (!empty($results_out[1]['sample_data'])) {
+			// We need ALL returned rows, not just sample — re-query
+			$tempResult = $this->db->query($mainSql);
+			if ($tempResult && is_object($tempResult)) {
+				foreach ($tempResult->result_array() as $r) {
+					$userIds[] = (int) $r['userid'];
+				}
+				$tempResult->free_result();
+			}
+		}
+
+		if (!empty($userIds)) {
+			$userIdsStr = implode(',', $userIds);
+
+			// ═══ QUERY 3: Branch names batch ═══
+			$branchSql = 'SELECT cg_rel.customer_id,
+				GROUP_CONCAT(DISTINCT cg_names.name ORDER BY cg_names.name SEPARATOR ", ") AS branch_names
+				FROM ' . $prefix . 'customer_groups cg_rel
+				LEFT JOIN ' . $prefix . 'customers_groups cg_names ON cg_names.id = cg_rel.groupid
+				WHERE cg_rel.customer_id IN (' . $userIdsStr . ')
+				GROUP BY cg_rel.customer_id';
+			$profileQuery('Branch Names Batch Lookup', $branchSql);
+
+			// ═══ QUERY 4: Latest appointment per patient ═══
+			$apptSql = 'SELECT a.userid, a.enquiry_doctor_id,
+				i.description AS treatment_name,
+				CONCAT_WS(" ", s.firstname, s.lastname) AS doctor_name
+				FROM ' . $prefix . 'appointment a
+				INNER JOIN (
+					SELECT MAX(appointment_id) AS max_id, userid
+					FROM ' . $prefix . 'appointment
+					WHERE userid IN (' . $userIdsStr . ')
+					GROUP BY userid
+				) AS latest ON a.appointment_id = latest.max_id
+				LEFT JOIN ' . $prefix . 'items i ON i.id = a.treatment_id
+				LEFT JOIN ' . $prefix . 'staff s ON s.staffid = a.enquiry_doctor_id';
+			$profileQuery('Latest Appointment per Patient', $apptSql);
+
+			// ═══ QUERY 5: Latest call log per patient ═══
+			$callSql = 'SELECT c.patientid, c.created_date as last_calling_date, c.next_calling_date
+				FROM ' . $prefix . 'patient_call_logs c
+				INNER JOIN (
+					SELECT MAX(id) as max_id, patientid
+					FROM ' . $prefix . 'patient_call_logs
+					WHERE patientid IN (' . $userIdsStr . ')
+					GROUP BY patientid
+				) as latest ON c.id = latest.max_id';
+			$profileQuery('Latest Call Log per Patient', $callSql);
+
+			// ═══ QUERY 6: Latest journey status per patient ═══
+			$journeySql = 'SELECT j.userid, j.status, s.name as status_name, s.color as status_color
+				FROM ' . $prefix . 'lead_patient_journey j
+				INNER JOIN (
+					SELECT userid, MAX(id) AS max_id
+					FROM ' . $prefix . 'lead_patient_journey
+					WHERE userid IN (' . $userIdsStr . ')
+					GROUP BY userid
+				) latest_journey ON latest_journey.max_id = j.id
+				LEFT JOIN ' . $prefix . 'leads_status s ON s.id = j.status';
+			$profileQuery('Latest Journey Status per Patient', $journeySql);
+		}
+
+		// ═══ QUERY 7: Leads status lookup ═══
+		$statusSql = 'SELECT name, color, id FROM ' . $prefix . 'leads_status';
+		$profileQuery('Leads Status Lookup', $statusSql);
+
+		// ── Collect DB info ──
+		$dbInfo = [];
+		$versionResult = $this->db->query('SELECT VERSION() as ver');
+		$dbInfo['MySQL Version'] = $versionResult ? $versionResult->row()->ver : 'unknown';
+
+		$dbInfo['Database'] = $this->db->database;
+		$dbInfo['DB Prefix'] = db_prefix();
+		$dbInfo['PHP Version'] = phpversion();
+		$dbInfo['Server'] = $_SERVER['SERVER_NAME'] ?? 'unknown';
+		$dbInfo['Memory Limit'] = ini_get('memory_limit');
+		$dbInfo['Max Execution Time'] = ini_get('max_execution_time') . 's';
+
+		// Count tables
+		$tblCounts = [];
+		$countTables = [
+			'Total Patients (tblclients)' => 'SELECT COUNT(*) as cnt FROM ' . $prefix . 'clients',
+			'tblclients_new_fields rows' => 'SELECT COUNT(*) as cnt FROM ' . $prefix . 'clients_new_fields',
+			'tblappointment rows' => 'SELECT COUNT(*) as cnt FROM ' . $prefix . 'appointment',
+			'tblpatient_call_logs rows' => 'SELECT COUNT(*) as cnt FROM ' . $prefix . 'patient_call_logs',
+			'tbllead_patient_journey rows' => 'SELECT COUNT(*) as cnt FROM ' . $prefix . 'lead_patient_journey',
+			'tblinvoices rows' => 'SELECT COUNT(*) as cnt FROM ' . $prefix . 'invoices',
+			'tblcustomer_groups rows' => 'SELECT COUNT(*) as cnt FROM ' . $prefix . 'customer_groups',
+		];
+		foreach ($countTables as $label => $sql) {
+			$r = $this->db->query($sql);
+			$dbInfo[$label] = $r ? number_format($r->row()->cnt) : 'error';
+		}
+
+		// ── Index health report ──
+		$indexReport = [];
+		$checkTables = [
+			$prefix . 'clients',
+			$prefix . 'clients_new_fields',
+			$prefix . 'customer_groups',
+			$prefix . 'customers_groups',
+			$prefix . 'appointment',
+			$prefix . 'patient_call_logs',
+			$prefix . 'lead_patient_journey',
+			$prefix . 'invoices',
+			$prefix . 'leads_sources',
+			$prefix . 'leads_status',
+		];
+		foreach ($checkTables as $tbl) {
+			$idxResult = $this->db->query('SHOW INDEX FROM ' . $tbl);
+			if ($idxResult && is_object($idxResult)) {
+				$grouped = [];
+				foreach ($idxResult->result_array() as $idx) {
+					$key = $idx['Key_name'];
+					if (!isset($grouped[$key])) {
+						$grouped[$key] = [
+							'table' => $tbl,
+							'index_name' => $key,
+							'columns' => $idx['Column_name'],
+							'non_unique' => $idx['Non_unique'],
+						];
+					} else {
+						$grouped[$key]['columns'] .= ', ' . $idx['Column_name'];
+					}
+				}
+				$indexReport = array_merge($indexReport, array_values($grouped));
+				$idxResult->free_result();
+			}
+		}
+
+		return [
+			'profiler_results' => $results_out,
+			'db_info'          => $dbInfo,
+			'total_time_ms'    => $total_time,
+			'slowest_ms'       => $slowest,
+			'total_rows'       => $total_rows,
+			'index_report'     => $indexReport,
+		];
+	}
+
 }
