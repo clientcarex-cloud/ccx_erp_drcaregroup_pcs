@@ -240,10 +240,10 @@
                         </div>
 
                         <div class="export-actions">
-                            <button type="submit" class="btn-export btn-export-excel" id="exportExcelBtn" onclick="setFormat('excel')">
+                            <button type="button" class="btn-export btn-export-excel" id="exportExcelBtn">
                                 <i class="fa fa-file-excel-o"></i> Export Excel (CSV)
                             </button>
-                            <button type="submit" class="btn-export btn-export-json" id="exportJsonBtn" onclick="setFormat('json')">
+                            <button type="button" class="btn-export btn-export-json" id="exportJsonBtn">
                                 <i class="fa fa-code"></i> Export JSON
                             </button>
                             <a href="<?= admin_url('pcs_patients'); ?>" class="btn-back">
@@ -262,12 +262,13 @@
 
 <?php init_tail(); ?>
 <script>
-function setFormat(fmt) {
-    document.getElementById('export_format').value = fmt;
-}
-
 $(function () {
-    $('#export-form').on('submit', function () {
+    /**
+     * Validate form and prepare hidden fields before submission.
+     * Returns true if valid, false otherwise.
+     */
+    function validateAndPrepare() {
+        // Sync branch selection into the hidden field
         var branchSelect = $('select[name="branch_export[]"]');
         var selected = branchSelect.val();
         var branchIds = (selected && selected.length > 0) ? selected.join(',') : '';
@@ -283,18 +284,41 @@ $(function () {
             alert('From Date cannot be after To Date.');
             return false;
         }
+        return true;
+    }
 
-        // Show loading on the clicked button
-        var fmt = $('#export_format').val();
-        var $btn = (fmt === 'json') ? $('#exportJsonBtn') : $('#exportExcelBtn');
+    /**
+     * Handle export button click — set format FIRST, then validate & submit.
+     */
+    function handleExport(format, $btn) {
+        // Set format before anything else
+        $('#export_format').val(format);
+
+        if (!validateAndPrepare()) {
+            return;
+        }
+
+        // Show loading state on the clicked button
         var originalHtml = $btn.html();
         $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Generating...');
+        $('#exportExcelBtn, #exportJsonBtn').not($btn).prop('disabled', true);
 
+        // Submit the form
+        $('#export-form')[0].submit();
+
+        // Re-enable buttons after a delay (file download is streamed, page doesn't navigate)
         setTimeout(function () {
             $btn.prop('disabled', false).html(originalHtml);
+            $('#exportExcelBtn, #exportJsonBtn').prop('disabled', false);
         }, 8000);
+    }
 
-        return true;
+    $('#exportExcelBtn').on('click', function () {
+        handleExport('excel', $(this));
+    });
+
+    $('#exportJsonBtn').on('click', function () {
+        handleExport('json', $(this));
     });
 });
 </script>

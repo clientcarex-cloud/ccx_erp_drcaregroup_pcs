@@ -34,6 +34,7 @@ class Pcs_patients extends AdminController
 
     /**
      * Render the Export page with date range + branch filter form.
+     * Alias kept for backward-compatible URLs.
      */
     public function export_page()
     {
@@ -43,8 +44,8 @@ class Pcs_patients extends AdminController
     }
 
     /**
-     * Export ALL patient data as XLSX or JSON.
-     * Accessed via POST from the export_page form.
+     * Export patients — handles BOTH GET (render page) and POST (download file).
+     * URL: admin/pcs_patients/export_patients
      */
     public function export_patients()
     {
@@ -52,6 +53,15 @@ class Pcs_patients extends AdminController
             access_denied('PCS Patients Export');
         }
 
+        // ── GET request → show the export form page ──
+        if ($this->input->server('REQUEST_METHOD') !== 'POST') {
+            $data['title']  = 'Export Patients Data';
+            $data['branch'] = $this->client_model->get_branch();
+            $this->load->view('export_patients', $data);
+            return;
+        }
+
+        // ── POST request → generate and download the file ──
         $from_date     = $this->input->post('from_date');
         $to_date       = $this->input->post('to_date');
         $branch_ids    = $this->input->post('branch_ids');
@@ -62,12 +72,19 @@ class Pcs_patients extends AdminController
             $export_format = 'excel';
         }
 
-        // ── Fetch all data ──
-        $export = $this->_build_export_data($from_date, $to_date, $branch_ids);
+        // ── Fetch all data with error handling ──
+        try {
+            $export = $this->_build_export_data($from_date, $to_date, $branch_ids);
+        } catch (Exception $e) {
+            log_message('error', 'PCS Export error: ' . $e->getMessage());
+            set_alert('danger', 'An error occurred while generating the export. Please try again.');
+            redirect(admin_url('pcs_patients/export_patients'));
+            return;
+        }
 
         if ($export === false) {
             set_alert('warning', 'No patients found for the selected date range.');
-            redirect(admin_url('pcs_patients/export_page'));
+            redirect(admin_url('pcs_patients/export_patients'));
             return;
         }
 
@@ -106,7 +123,7 @@ class Pcs_patients extends AdminController
             new.registration_start_date, new.registration_end_date,
             new.patient_source_id, new.reg_by, new.pro_ownership, new.is_refunded,
             source.name as patient_source_name,
-            CONCAT_WS(" ", reg_staff.firstname, reg_staff.lastname) as registered_by_name
+            CONCAT_WS(' ', reg_staff.firstname, reg_staff.lastname) as registered_by_name
         ');
         $this->db->from(db_prefix() . 'clients c');
         $this->db->join(db_prefix() . 'clients_new_fields new', 'new.userid = c.userid', 'left');
@@ -128,7 +145,7 @@ class Pcs_patients extends AdminController
             return false;
         }
 
-        $userIds    = array_column($results, 'userid');
+        $userIds    = array_map('intval', array_column($results, 'userid'));
         $userIdsStr = implode(',', $userIds);
 
         // ── Batch: Branch names ──
@@ -145,7 +162,7 @@ class Pcs_patients extends AdminController
         // ── Batch: Latest appointment ──
         $treatmentMap = array();
         $doctorMap = array();
-        $this->db->select('a.userid, i.description AS treatment_name, CONCAT_WS(" ", s.firstname, s.lastname) AS doctor_name');
+        $this->db->select("a.userid, i.description AS treatment_name, CONCAT_WS(' ', s.firstname, s.lastname) AS doctor_name");
         $this->db->from(db_prefix() . 'appointment a');
         $this->db->join(
             '(SELECT MAX(appointment_id) AS max_id, userid FROM ' . db_prefix() . 'appointment WHERE userid IN (' . $userIdsStr . ') GROUP BY userid) AS latest',
