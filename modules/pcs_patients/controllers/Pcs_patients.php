@@ -33,8 +33,18 @@ class Pcs_patients extends AdminController
     }
 
     /**
+     * Render the Export page with date range + branch filter form.
+     */
+    public function export_page()
+    {
+        $data['title']  = 'Export Patients Data';
+        $data['branch'] = $this->client_model->get_branch();
+        $this->load->view('export_patients', $data);
+    }
+
+    /**
      * Export ALL patient data as XLSX for the given date range / branch filters.
-     * Accessed via GET: admin/pcs_patients/export_patients?from_date=...&to_date=...&branch_ids=...
+     * Accessed via POST from the export_page form.
      */
     public function export_patients()
     {
@@ -44,9 +54,9 @@ class Pcs_patients extends AdminController
 
         $this->load->helper('client/custom');
 
-        $from_date  = $this->input->get('from_date');
-        $to_date    = $this->input->get('to_date');
-        $branch_ids = $this->input->get('branch_ids');
+        $from_date  = $this->input->post('from_date');
+        $to_date    = $this->input->post('to_date');
+        $branch_ids = $this->input->post('branch_ids');
         $branch_ids = !empty($branch_ids) ? array_filter(explode(',', $branch_ids), 'is_numeric') : [];
 
         // ── Build branch filter ──
@@ -91,8 +101,8 @@ class Pcs_patients extends AdminController
         $results = $this->db->get()->result_array();
 
         if (empty($results)) {
-            set_alert('warning', 'No patients found for the selected filters.');
-            redirect(admin_url('pcs_patients'));
+            set_alert('warning', 'No patients found for the selected date range.');
+            redirect(admin_url('pcs_patients/export_page'));
             return;
         }
 
