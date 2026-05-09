@@ -96,8 +96,14 @@ class Pcs_patients extends AdminController
             // Collect all patient user IDs for detail sheet queries
             $allUserIds = array_map('intval', array_column($export['rows'], 1)); // col index 1 = Patient ID
 
+            // Build detail sheets once — shared by Excel and JSON
+            $detailSheets = array();
+            if ($export_format === 'excel' || $export_format === 'json') {
+                $detailSheets = $this->_build_detail_sheets($allUserIds);
+            }
+
             if ($export_format === 'json') {
-                $this->_stream_json($export['headers'], $export['rows']);
+                $this->_stream_json($export['headers'], $export['rows'], $detailSheets);
             } elseif ($export_format === 'print') {
                 echo "<html><head><title>Live Data Print / Console</title></head><body style='font-family:sans-serif;'>";
                 echo "<h2>Live Data Print / Console Debug</h2>";
@@ -121,7 +127,6 @@ class Pcs_patients extends AdminController
                 $this->_stream_csv($export['headers'], $export['rows']);
             } else {
                 // Default: Multi-sheet XLSX with detail tabs
-                $detailSheets = $this->_build_detail_sheets($allUserIds);
                 $this->_stream_xlsx($export['headers'], $export['rows'], $detailSheets);
             }
         } catch (\Throwable $th) {
@@ -839,11 +844,11 @@ class Pcs_patients extends AdminController
     // JSON Export
     // ════════════════════════════════════════════════════════════════
 
-    private function _stream_json($headers, $rows)
+    private function _stream_json($headers, $rows, $detailSheets = array())
     {
         $filename = 'pcs_patients_export_' . date('Ymd_His') . '.json';
 
-        // Build associative array using headers as keys
+        // Build associative array using headers as keys — Patient Details
         $jsonData = array();
         foreach ($rows as $row) {
             $record = array();
@@ -853,11 +858,45 @@ class Pcs_patients extends AdminController
             $jsonData[] = $record;
         }
 
-        $jsonString = json_encode(array(
-            'exported_at' => date('Y-m-d H:i:s'),
+        // Build detail sheet sections — same data as Excel tabs
+        $detailSections = array();
+        // Map sheet names to JSON-friendly keys
+        $sheetKeyMap = array(
+            'Case Sheets'   => 'case_sheets',
+            'Prescriptions' => 'prescriptions',
+            'Packages'      => 'packages',
+            'Visits'        => 'visits',
+            'Payments'      => 'payments',
+            'Call Logs'     => 'call_logs',
+        );
+        foreach ($detailSheets as $sheetName => $sheetData) {
+            $key = isset($sheetKeyMap[$sheetName]) ? $sheetKeyMap[$sheetName] : strtolower(str_replace(' ', '_', $sheetName));
+            $sheetRecords = array();
+            foreach ($sheetData['rows'] as $sRow) {
+                $rec = array();
+                foreach ($sheetData['headers'] as $hIdx => $hName) {
+                    $rec[$hName] = isset($sRow[$hIdx]) ? $sRow[$hIdx] : '';
+                }
+                $sheetRecords[] = $rec;
+            }
+            $detailSections[$key] = array(
+                'total_records' => count($sheetRecords),
+                'records'       => $sheetRecords,
+            );
+        }
+
+        $output = array(
+            'exported_at'   => date('Y-m-d H:i:s'),
             'total_records' => count($jsonData),
-            'patients' => $jsonData,
-        ), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+            'patients'      => $jsonData,
+        );
+
+        // Merge detail sections into the root
+        foreach ($detailSections as $sectionKey => $sectionData) {
+            $output[$sectionKey] = $sectionData;
+        }
+
+        $jsonString = json_encode($output, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 
         while (ob_get_level() > 0) {
             ob_end_clean();
