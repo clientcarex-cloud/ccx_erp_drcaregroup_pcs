@@ -514,11 +514,10 @@ class Pcs_patients extends AdminController
         $chunks = array_chunk($userIds, 500);
 
         // ── Sheet: Case Sheets ──
-        $csHeaders = array('Patient ID', 'Patient Name', 'Casesheet ID', 'Date', 'Diagnosis', 'Chief Complaints', 'Follow-up Date', 'Medicine Days', 'Doctor', 'Treatment', 'Duration Value');
+        $csHeaders = array('Patient ID', 'Patient Name', 'Casesheet ID', 'Date', 'Presenting Complaints', 'Complaint', 'Clinical Observation', 'Progress', 'Follow-up Date', 'Medicine Days', 'Doctor', 'Treatment', 'Duration Value', 'Patient Status');
         $csRows = array();
         foreach ($chunks as $chunk) {
-            $idsStr = implode(',', $chunk);
-            $this->db->select("c.userid, c.id as casesheet_id, c.date, c.diagnosis, c.chief_complaints, c.followup_date, c.medicine_days, CONCAT_WS(' ', s.firstname, s.lastname) as doctor_name, i.description as treatment_name, c.duration_value", false);
+            $this->db->select("c.userid, c.id as casesheet_id, c.date, c.presenting_complaints, c.complaint, c.clinical_observation, c.progress, c.followup_date, c.medicine_days, CONCAT_WS(' ', s.firstname, s.lastname) as doctor_name, i.description as treatment_name, pt.duration_value, c.patient_status", false);
             $this->db->from(db_prefix() . 'casesheet c');
             $this->db->join(db_prefix() . 'staff s', 's.staffid = c.staffid', 'left');
             $this->db->join(db_prefix() . 'patient_treatment pt', 'pt.casesheet_id = c.id', 'left');
@@ -534,13 +533,16 @@ class Pcs_patients extends AdminController
                         isset($nameMap[$r['userid']]) ? $nameMap[$r['userid']] : '',
                         $r['casesheet_id'],
                         $r['date'],
-                        $r['diagnosis'],
-                        $r['chief_complaints'],
+                        strip_tags($r['presenting_complaints'] ?? ''),
+                        strip_tags($r['complaint'] ?? ''),
+                        strip_tags($r['clinical_observation'] ?? ''),
+                        $r['progress'],
                         $r['followup_date'],
                         $r['medicine_days'],
                         $r['doctor_name'],
                         $r['treatment_name'],
                         $r['duration_value'],
+                        $r['patient_status'],
                     );
                 }
             }
@@ -618,14 +620,15 @@ class Pcs_patients extends AdminController
         $sheets['Packages'] = array('headers' => $pkHeaders, 'rows' => $pkRows);
 
         // ── Sheet: Visits ──
-        $viHeaders = array('Patient ID', 'Patient Name', 'Visit ID', 'Appointment Date', 'Treatment', 'Visit Status', 'Visited Date', 'Medicine Days', 'Appointment Type', 'Doctor');
+        $viHeaders = array('Patient ID', 'Patient Name', 'Visit ID', 'Appointment Date', 'Treatment', 'Visit Status', 'Consulted Date', 'Medicine Days', 'Appointment Type', 'Doctor');
         $viRows = array();
         foreach ($chunks as $chunk) {
-            $this->db->select("a.userid, a.visit_id, a.appointment_date, i.description as treatment_name, a.visit_status, a.visited_date, a.medicine_given_days, at.appointment_type_name, CONCAT_WS(' ', s.firstname, s.lastname) as doctor_name", false);
+            $this->db->select("a.userid, a.visit_id, a.appointment_date, i.description as treatment_name, a.visit_status, a.consulted_date, cs.medicine_days, atype.appointment_type_name, CONCAT_WS(' ', s.firstname, s.lastname) as doctor_name", false);
             $this->db->from(db_prefix() . 'appointment a');
             $this->db->join(db_prefix() . 'items i', 'i.id = a.treatment_id', 'left');
-            $this->db->join(db_prefix() . 'appointment_type at', 'at.appointment_type_id = a.appointment_type_id', 'left');
+            $this->db->join(db_prefix() . 'appointment_type atype', 'atype.appointment_type_id = a.appointment_type_id', 'left');
             $this->db->join(db_prefix() . 'staff s', 's.staffid = a.enquiry_doctor_id', 'left');
+            $this->db->join(db_prefix() . 'casesheet cs', 'cs.date = DATE(a.appointment_date) AND cs.userid = a.userid AND a.visit_status = 1', 'left');
             $this->db->where_in('a.userid', $chunk);
             $this->db->order_by('a.userid', 'ASC');
             $this->db->order_by('a.appointment_date', 'DESC');
@@ -640,8 +643,8 @@ class Pcs_patients extends AdminController
                         $r['appointment_date'],
                         $r['treatment_name'],
                         $visitStatusText,
-                        $r['visited_date'],
-                        $r['medicine_given_days'],
+                        $r['consulted_date'],
+                        $r['medicine_days'],
                         $r['appointment_type_name'],
                         $r['doctor_name'],
                     );
