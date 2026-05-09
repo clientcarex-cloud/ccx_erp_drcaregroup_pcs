@@ -728,10 +728,24 @@ class Pcs_patients extends AdminController
 
     private function _stream_xlsx($headers, $rows, $detailSheets = array())
     {
-        // Load XLSXWriter from accounting module
-        $writerPath = APPPATH . '../modules/accounting/assets/plugins/XLSXWriter/xlsxwriter.class.php';
+        // Load XLSXWriter — prefer local copy, fallback to other modules
         if (!class_exists('XLSXWriter')) {
-            require_once($writerPath);
+            $candidatePaths = array(
+                APPPATH . '../modules/pcs_patients/assets/plugins/XLSXWriter/xlsxwriter.class.php',
+                APPPATH . '../modules/accounting/assets/plugins/XLSXWriter/xlsxwriter.class.php',
+                APPPATH . '../modules/hr_profile/assets/plugins/XLSXWriter/xlsxwriter.class.php',
+            );
+            $loaded = false;
+            foreach ($candidatePaths as $path) {
+                if (file_exists($path)) {
+                    require_once($path);
+                    $loaded = true;
+                    break;
+                }
+            }
+            if (!$loaded) {
+                throw new \Exception('XLSXWriter library not found. Please ensure the plugin exists in modules/pcs_patients/assets/plugins/XLSXWriter/');
+            }
         }
 
         $writer = new \XLSXWriter();
