@@ -61,7 +61,7 @@ class Pcs_patients extends AdminController
             return;
         }
 
-        // ── POST request → generate and download the file ──
+        // -- POST request: generate and download the file --
         $from_date     = $this->input->post('from_date');
         $to_date       = $this->input->post('to_date');
         $branch_ids    = $this->input->post('branch_ids');
@@ -72,18 +72,18 @@ class Pcs_patients extends AdminController
             $export_format = 'excel';
         }
 
-        // ── Fetch all data with error handling ──
-        try {
-            $export = $this->_build_export_data($from_date, $to_date, $branch_ids);
-        } catch (Exception $e) {
-            log_message('error', 'PCS Export error: ' . $e->getMessage());
-            set_alert('danger', 'An error occurred while generating the export. Please try again.');
+        // -- Fetch all data --
+        $export = $this->_build_export_data($from_date, $to_date, $branch_ids);
+
+        if ($export === false) {
+            set_alert('warning', 'No patients found for the selected date range.');
             redirect(admin_url('pcs_patients/export_patients'));
             return;
         }
 
-        if ($export === false) {
-            set_alert('warning', 'No patients found for the selected date range.');
+        if (is_string($export)) {
+            // _build_export_data returned an error message
+            set_alert('danger', $export);
             redirect(admin_url('pcs_patients/export_patients'));
             return;
         }
@@ -124,7 +124,7 @@ class Pcs_patients extends AdminController
             new.patient_source_id, new.reg_by, new.pro_ownership, new.is_refunded,
             source.name as patient_source_name,
             CONCAT_WS(' ', reg_staff.firstname, reg_staff.lastname) as registered_by_name
-        ");
+        ", false);
         $this->db->from(db_prefix() . 'clients c');
         $this->db->join(db_prefix() . 'clients_new_fields new', 'new.userid = c.userid', 'left');
         $this->db->join(db_prefix() . 'leads_sources source', 'source.id = new.patient_source_id', 'left');
@@ -150,7 +150,7 @@ class Pcs_patients extends AdminController
 
         // ── Batch: Branch names ──
         $branchNameMap = array();
-        $this->db->select('cg_rel.customer_id, GROUP_CONCAT(DISTINCT cg_names.name ORDER BY cg_names.name SEPARATOR ", ") AS branch_names');
+        $this->db->select("cg_rel.customer_id, GROUP_CONCAT(DISTINCT cg_names.name ORDER BY cg_names.name SEPARATOR ', ') AS branch_names", false);
         $this->db->from(db_prefix() . 'customer_groups cg_rel');
         $this->db->join(db_prefix() . 'customers_groups cg_names', 'cg_names.id = cg_rel.groupid', 'left');
         $this->db->where_in('cg_rel.customer_id', $userIds);
@@ -162,7 +162,7 @@ class Pcs_patients extends AdminController
         // ── Batch: Latest appointment ──
         $treatmentMap = array();
         $doctorMap = array();
-        $this->db->select("a.userid, i.description AS treatment_name, CONCAT_WS(' ', s.firstname, s.lastname) AS doctor_name");
+        $this->db->select("a.userid, i.description AS treatment_name, CONCAT_WS(' ', s.firstname, s.lastname) AS doctor_name", false);
         $this->db->from(db_prefix() . 'appointment a');
         $this->db->join(
             '(SELECT MAX(appointment_id) AS max_id, userid FROM ' . db_prefix() . 'appointment WHERE userid IN (' . $userIdsStr . ') GROUP BY userid) AS latest',
@@ -202,7 +202,7 @@ class Pcs_patients extends AdminController
 
         // ── Batch: Invoice totals ──
         $invoiceMap = array();
-        $this->db->select('clientid, COUNT(*) as invoice_count, SUM(subtotal) as total_amount, SUM(total) as net_total, MIN(date) as first_invoice_date, MAX(date) as last_invoice_date');
+        $this->db->select('clientid, COUNT(*) as invoice_count, SUM(subtotal) as total_amount, SUM(total) as net_total, MIN(date) as first_invoice_date, MAX(date) as last_invoice_date', false);
         $this->db->from(db_prefix() . 'invoices');
         $this->db->where_in('clientid', $userIds);
         $this->db->group_by('clientid');
@@ -212,7 +212,7 @@ class Pcs_patients extends AdminController
 
         // ── Batch: Payment totals ──
         $paymentMap = array();
-        $this->db->select('inv2.clientid, SUM(pay2.amount) as total_paid, COUNT(pay2.id) as payment_count, MAX(pay2.date) as last_payment_date');
+        $this->db->select('inv2.clientid, SUM(pay2.amount) as total_paid, COUNT(pay2.id) as payment_count, MAX(pay2.date) as last_payment_date', false);
         $this->db->from(db_prefix() . 'invoicepaymentrecords pay2');
         $this->db->join(db_prefix() . 'invoices inv2', 'inv2.id = pay2.invoiceid', 'inner');
         $this->db->where_in('inv2.clientid', $userIds);
