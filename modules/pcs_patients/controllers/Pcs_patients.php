@@ -693,7 +693,7 @@ class Pcs_patients extends AdminController
         foreach ($chunks as $chunk) {
             $this->db->select("cl.patientid as userid, cl.id as call_log_id, CONCAT_WS(' ', s.firstname, s.lastname) as called_by, cr.criteria_name as call_type, cl.next_calling_date, cl.better_patient, cl.pharmacy_medicine_days, cl.patient_took_medicine_days, cl.created_date, cl.comments", false);
             $this->db->from(db_prefix() . 'patient_call_logs cl');
-            $this->db->join(db_prefix() . 'staff s', 's.staffid = cl.staffid', 'left');
+            $this->db->join(db_prefix() . 'staff s', 's.staffid = cl.called_by', 'left');
             $this->db->join(db_prefix() . 'criteria cr', 'cr.criteria_id = cl.criteria_id', 'left');
             $this->db->where_in('cl.patientid', $chunk);
             $this->db->order_by('cl.patientid', 'ASC');
