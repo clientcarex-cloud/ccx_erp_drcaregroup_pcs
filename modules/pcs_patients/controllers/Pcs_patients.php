@@ -302,7 +302,7 @@ class Pcs_patients extends AdminController
             // ── Batch: Prescription Count ──
             $prescriptionCountMap = array();
             $this->db->select("userid, COUNT(id) as prescription_count");
-            $this->db->from(db_prefix() . 'prescription');
+            $this->db->from(db_prefix() . 'patient_prescription');
             $this->db->where_in('userid', $userIds);
             $this->db->group_by('userid');
             $pres_query = $this->db->get();
