@@ -199,7 +199,7 @@ class Pcs_patients extends AdminController
             'Language Known', 'Source', 'Consultation Fee', 'Treatment', 'Assigned Doctor', 'Registered By', 'PRO Ownership',
             'Registration Start', 'Registration End', 'Renewal Start Date', 'Renewal End Date', 'Medicine End Date', 'Date Created',
             'Current Status', 'Patient Status', 'Journey Status',
-            'Last Calling Date', 'Next Calling Date', 'Call Comments', 'Better Patient',
+            'Call Logs Count', 'Last Calling Date', 'Next Calling Date', 'Call Comments', 'Better Patient',
             'Case Sheet Count', 'Prescription Count', 'Package Count', 'Visits Count',
             'Invoice Count', 'Total Amount (Gross)', 'Net Total', 'Total Paid',
             'Due Amount', 'Payment Count', 'First Invoice Date', 'Last Invoice Date', 'Last Payment Date',
@@ -324,6 +324,18 @@ class Pcs_patients extends AdminController
                 $visitsCountMap[$vis['userid']] = $vis['visits_count'];
             }
 
+            // ── Batch: Call log count ──
+            $callLogCountMap = array();
+            $this->db->select('patientid, COUNT(id) as call_log_count');
+            $this->db->from(db_prefix() . 'patient_call_logs');
+            $this->db->where_in('patientid', $userIds);
+            $this->db->group_by('patientid');
+            $clc_query = $this->db->get();
+            if (!$clc_query) throw new \Exception("Call Log Count Query Error: " . ($this->db->error()['message'] ?? ''));
+            foreach ($clc_query->result_array() as $clc) {
+                $callLogCountMap[$clc['patientid']] = $clc['call_log_count'];
+            }
+
             // ── Batch: Latest call log ──
             $callLogMap = array();
             $this->db->select('cl.patientid, cl.created_date as last_calling_date, cl.next_calling_date, cl.comments as call_comments, cl.better_patient');
@@ -442,6 +454,7 @@ class Pcs_patients extends AdminController
                     isset($row['current_status']) ? $row['current_status'] : '',
                     isset($row['patient_status']) ? $row['patient_status'] : '',
                     isset($leadStatuses[$uid]) ? $leadStatuses[$uid] : '',
+                    isset($callLogCountMap[$uid]) ? $callLogCountMap[$uid] : 0,
                     isset($callLog['last_calling_date']) ? $callLog['last_calling_date'] : '',
                     isset($callLog['next_calling_date']) ? $callLog['next_calling_date'] : '',
                     isset($callLog['call_comments']) ? $callLog['call_comments'] : '',
