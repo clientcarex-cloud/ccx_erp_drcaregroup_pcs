@@ -148,7 +148,7 @@ class Pcs_patients extends AdminController
         // ── Main query ──
         $this->db->reset_query();
         $this->db->select("
-            c.userid, c.company, c.phonenumber, contact.email, c.city, c.state, c.address, c.zip, c.datecreated,
+            c.userid, c.company, c.phonenumber, contact.email, c.city, c.state, c.address, c.zip, c.datecreated, c.default_language,
             new.mr_no, new.salutation, new.age, new.gender, new.dob, new.email_id,
             new.marital_status, new.area, new.pincode,
             new.whatsapp_number, new.alt_number1, new.alt_number2,
@@ -156,13 +156,17 @@ class Pcs_patients extends AdminController
             new.registration_start_date, new.registration_end_date,
             new.patient_source_id, new.reg_by, new.pro_ownership, new.is_refunded,
             source.name as patient_source_name,
-            CONCAT_WS(' ', reg_staff.firstname, reg_staff.lastname) as registered_by_name
+            CONCAT_WS(' ', reg_staff.firstname, reg_staff.lastname) as registered_by_name,
+            country.short_name as country_name,
+            CONCAT_WS(' ', pro_staff.firstname, pro_staff.lastname) as pro_ownership_name
         ", false);
         $this->db->from(db_prefix() . 'clients c');
         $this->db->join(db_prefix() . 'contacts contact', 'contact.userid = c.userid AND contact.is_primary = 1', 'left');
         $this->db->join(db_prefix() . 'clients_new_fields new', 'new.userid = c.userid', 'left');
         $this->db->join(db_prefix() . 'leads_sources source', 'source.id = new.patient_source_id', 'left');
         $this->db->join(db_prefix() . 'staff reg_staff', 'reg_staff.staffid = new.reg_by', 'left');
+        $this->db->join(db_prefix() . 'countries country', 'country.country_id = c.country', 'left');
+        $this->db->join(db_prefix() . 'staff pro_staff', 'pro_staff.staffid = new.pro_ownership', 'left');
 
         $applyBranchFilter($this->db);
 
@@ -191,11 +195,12 @@ class Pcs_patients extends AdminController
             'S.No', 'Patient ID', 'Patient Name', 'Salutation', 'MR No', 'Branch',
             'Age', 'Gender', 'DOB', 'Marital Status',
             'Phone', 'WhatsApp', 'Alt Number 1', 'Alt Number 2',
-            'Email', 'Address', 'City', 'State', 'Pincode', 'Area',
-            'Source', 'Treatment', 'Assigned Doctor', 'Registered By',
-            'Registration Start', 'Registration End', 'Date Created',
+            'Email', 'Address', 'City', 'State', 'Country', 'Pincode', 'Area',
+            'Language Known', 'Source', 'Consultation Fee', 'Treatment', 'Assigned Doctor', 'Registered By', 'PRO Ownership',
+            'Registration Start', 'Registration End', 'Renewal Start Date', 'Renewal End Date', 'Medicine End Date', 'Date Created',
             'Current Status', 'Patient Status', 'Journey Status',
             'Last Calling Date', 'Next Calling Date', 'Call Comments', 'Better Patient',
+            'Case Sheet Count', 'Prescription Count', 'Package Count', 'Visits Count',
             'Invoice Count', 'Total Amount (Gross)', 'Net Total', 'Total Paid',
             'Due Amount', 'Payment Count', 'First Invoice Date', 'Last Invoice Date', 'Last Payment Date',
             'Is Refunded', 'Profile Link'
@@ -228,7 +233,8 @@ class Pcs_patients extends AdminController
             // ── Batch: Latest appointment ──
             $treatmentMap = array();
             $doctorMap = array();
-            $this->db->select("a.userid, i.description AS treatment_name, CONCAT_WS(' ', s.firstname, s.lastname) AS doctor_name", false);
+            $consultationFeeMap = array();
+            $this->db->select("a.userid, i.description AS treatment_name, CONCAT_WS(' ', s.firstname, s.lastname) AS doctor_name, inv.total AS consultation_fee", false);
             $this->db->from(db_prefix() . 'appointment a');
             $this->db->join(
                 '(SELECT MAX(appointment_id) AS max_id, userid FROM ' . db_prefix() . 'appointment WHERE userid IN (' . $userIdsStr . ') GROUP BY userid) AS latest',
@@ -236,11 +242,86 @@ class Pcs_patients extends AdminController
             );
             $this->db->join(db_prefix() . 'items i', 'i.id = a.treatment_id', 'LEFT');
             $this->db->join(db_prefix() . 'staff s', 's.staffid = a.enquiry_doctor_id', 'LEFT');
+            $this->db->join(db_prefix() . 'invoices inv', 'a.invoice_id = inv.id', 'LEFT');
             $app_query = $this->db->get();
             if (!$app_query) throw new \Exception("Appointment Query Error: " . ($this->db->error()['message'] ?? ''));
             foreach ($app_query->result_array() as $app) {
                 $treatmentMap[$app['userid']] = isset($app['treatment_name']) ? $app['treatment_name'] : '';
                 $doctorMap[$app['userid']]    = isset($app['doctor_name']) ? $app['doctor_name'] : '';
+                $consultationFeeMap[$app['userid']] = isset($app['consultation_fee']) ? $app['consultation_fee'] : 0;
+            }
+
+            // ── Batch: Medicine End Date & Case Sheet Count ──
+            $medicineEndMap = array();
+            $casesheetCountMap = array();
+            $this->db->select("userid, MAX(followup_date) as medicine_end_date, COUNT(id) as casesheet_count");
+            $this->db->from(db_prefix() . 'casesheet');
+            $this->db->where_in('userid', $userIds);
+            $this->db->group_by('userid');
+            $cs_query = $this->db->get();
+            if (!$cs_query) throw new \Exception("Casesheet Query Error: " . ($this->db->error()['message'] ?? ''));
+            foreach ($cs_query->result_array() as $cs) {
+                $medicineEndMap[$cs['userid']] = $cs['medicine_end_date'];
+                $casesheetCountMap[$cs['userid']] = $cs['casesheet_count'];
+            }
+
+            // ── Batch: Renewal Dates & Package Count ──
+            $renewalMap = array();
+            $packageCountMap = array();
+            $this->db->select("clientid, date, expirydate");
+            $this->db->from(db_prefix() . 'estimates');
+            $this->db->where_in('clientid', $userIds);
+            $est_query = $this->db->get();
+            if (!$est_query) throw new \Exception("Estimates Query Error: " . ($this->db->error()['message'] ?? ''));
+            $client_estimates = [];
+            foreach ($est_query->result_array() as $est) {
+                $cid = $est['clientid'];
+                if (!isset($client_estimates[$cid])) {
+                    $client_estimates[$cid] = [];
+                }
+                $client_estimates[$cid][] = $est;
+            }
+            foreach ($client_estimates as $cid => $estimates) {
+                $packageCountMap[$cid] = count($estimates);
+                $latest_est = null;
+                foreach ($estimates as $e) {
+                    if ($latest_est === null) {
+                        $latest_est = $e;
+                    } else {
+                        if (strtotime($e['expirydate']) > strtotime($latest_est['expirydate'])) {
+                            $latest_est = $e;
+                        }
+                    }
+                }
+                $renewalMap[$cid] = [
+                    'start_date' => $latest_est['date'],
+                    'end_date'   => $latest_est['expirydate']
+                ];
+            }
+
+            // ── Batch: Prescription Count ──
+            $prescriptionCountMap = array();
+            $this->db->select("userid, COUNT(id) as prescription_count");
+            $this->db->from(db_prefix() . 'prescription');
+            $this->db->where_in('userid', $userIds);
+            $this->db->group_by('userid');
+            $pres_query = $this->db->get();
+            if (!$pres_query) throw new \Exception("Prescription Query Error: " . ($this->db->error()['message'] ?? ''));
+            foreach ($pres_query->result_array() as $pres) {
+                $prescriptionCountMap[$pres['userid']] = $pres['prescription_count'];
+            }
+
+            // ── Batch: Visits Count ──
+            $visitsCountMap = array();
+            $this->db->select("userid, COUNT(appointment_id) as visits_count");
+            $this->db->from(db_prefix() . 'appointment');
+            $this->db->where_in('userid', $userIds);
+            $this->db->where('visit_status', 1);
+            $this->db->group_by('userid');
+            $vis_query = $this->db->get();
+            if (!$vis_query) throw new \Exception("Visits Query Error: " . ($this->db->error()['message'] ?? ''));
+            foreach ($vis_query->result_array() as $vis) {
+                $visitsCountMap[$vis['userid']] = $vis['visits_count'];
             }
 
             // ── Batch: Latest call log ──
@@ -311,6 +392,18 @@ class Pcs_patients extends AdminController
                     $regEnd = $row['registration_end_date'];
                 }
 
+                $renStart = '';
+                $renEnd = '';
+                if (isset($renewalMap[$uid])) {
+                    $renStart = $renewalMap[$uid]['start_date'];
+                    $renEnd = $renewalMap[$uid]['end_date'];
+                }
+                
+                $medEnd = '';
+                if (isset($medicineEndMap[$uid]) && $medicineEndMap[$uid] != '0000-00-00') {
+                    $medEnd = $medicineEndMap[$uid];
+                }
+
                 $rows[] = array(
                     $i++,
                     $uid,
@@ -330,14 +423,21 @@ class Pcs_patients extends AdminController
                     isset($row['address']) ? $row['address'] : '',
                     isset($row['city']) ? $row['city'] : '',
                     isset($row['state']) ? $row['state'] : '',
+                    isset($row['country_name']) ? $row['country_name'] : '',
                     isset($row['pincode']) ? $row['pincode'] : (isset($row['zip']) ? $row['zip'] : ''),
                     isset($row['area']) ? $row['area'] : '',
+                    isset($row['default_language']) ? $row['default_language'] : '',
                     isset($row['patient_source_name']) ? $row['patient_source_name'] : '',
+                    isset($consultationFeeMap[$uid]) ? $consultationFeeMap[$uid] : 0,
                     isset($treatmentMap[$uid]) ? $treatmentMap[$uid] : '',
                     isset($doctorMap[$uid]) ? $doctorMap[$uid] : '',
                     isset($row['registered_by_name']) ? $row['registered_by_name'] : '',
+                    isset($row['pro_ownership_name']) ? $row['pro_ownership_name'] : '',
                     isset($row['registration_start_date']) ? $row['registration_start_date'] : '',
                     $regEnd,
+                    $renStart,
+                    $renEnd,
+                    $medEnd,
                     isset($row['datecreated']) ? $row['datecreated'] : '',
                     isset($row['current_status']) ? $row['current_status'] : '',
                     isset($row['patient_status']) ? $row['patient_status'] : '',
@@ -346,6 +446,10 @@ class Pcs_patients extends AdminController
                     isset($callLog['next_calling_date']) ? $callLog['next_calling_date'] : '',
                     isset($callLog['call_comments']) ? $callLog['call_comments'] : '',
                     isset($callLog['better_patient']) ? $callLog['better_patient'] : '',
+                    isset($casesheetCountMap[$uid]) ? $casesheetCountMap[$uid] : 0,
+                    isset($prescriptionCountMap[$uid]) ? $prescriptionCountMap[$uid] : 0,
+                    isset($packageCountMap[$uid]) ? $packageCountMap[$uid] : 0,
+                    isset($visitsCountMap[$uid]) ? $visitsCountMap[$uid] : 0,
                     isset($inv['invoice_count']) ? $inv['invoice_count'] : 0,
                     isset($inv['total_amount']) ? $inv['total_amount'] : 0,
                     isset($inv['net_total']) ? $inv['net_total'] : 0,
