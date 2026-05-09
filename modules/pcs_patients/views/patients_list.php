@@ -19,9 +19,6 @@
                                     </h4>
                                 </div>
                                 <div class="col-md-6 text-right d-flex justify-content-end gap-2">
-                                    <a href="<?= admin_url('pcs_patients/export_page'); ?>" class="btn btn-success">
-                                        <i class="fa fa-file-excel-o tw-mr-1"></i> Export Patients
-                                    </a>
                                     <?php if (staff_can('create', 'customers')) { ?>
                                         <a href="<?= admin_url('client/client/add_client'); ?>" class="btn btn-primary">
                                             <i class="fa-regular fa-plus tw-mr-1"></i>
