@@ -114,7 +114,7 @@ class Pcs_patients extends AdminController
 
         // ── Main query ──
         $this->db->reset_query();
-        $this->db->select('
+        $this->db->select("
             c.userid, c.company, c.phonenumber, c.email, c.city, c.state, c.address, c.zip, c.datecreated,
             new.mr_no, new.salutation, new.age, new.gender, new.dob, new.email_id,
             new.marital_status, new.area, new.pincode,
@@ -124,7 +124,7 @@ class Pcs_patients extends AdminController
             new.patient_source_id, new.reg_by, new.pro_ownership, new.is_refunded,
             source.name as patient_source_name,
             CONCAT_WS(' ', reg_staff.firstname, reg_staff.lastname) as registered_by_name
-        ');
+        ");
         $this->db->from(db_prefix() . 'clients c');
         $this->db->join(db_prefix() . 'clients_new_fields new', 'new.userid = c.userid', 'left');
         $this->db->join(db_prefix() . 'leads_sources source', 'source.id = new.patient_source_id', 'left');
