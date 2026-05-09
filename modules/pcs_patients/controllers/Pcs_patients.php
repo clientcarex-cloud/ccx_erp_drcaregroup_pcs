@@ -93,6 +93,9 @@ class Pcs_patients extends AdminController
                 return;
             }
 
+            // Collect all patient user IDs for detail sheet queries
+            $allUserIds = array_map('intval', array_column($export['rows'], 1)); // col index 1 = Patient ID
+
             if ($export_format === 'json') {
                 $this->_stream_json($export['headers'], $export['rows']);
             } elseif ($export_format === 'print') {
@@ -114,8 +117,12 @@ class Pcs_patients extends AdminController
                 }
                 echo "</tbody></table></body></html>";
                 exit;
-            } else {
+            } elseif ($export_format === 'csv') {
                 $this->_stream_csv($export['headers'], $export['rows']);
+            } else {
+                // Default: Multi-sheet XLSX with detail tabs
+                $detailSheets = $this->_build_detail_sheets($allUserIds);
+                $this->_stream_xlsx($export['headers'], $export['rows'], $detailSheets);
             }
         } catch (\Throwable $th) {
             echo "<div style='font-family:monospace; background:#1e1e1e; color:#00ff00; padding:20px;'>";
@@ -482,7 +489,297 @@ class Pcs_patients extends AdminController
     }
 
     // ════════════════════════════════════════════════════════════════
-    // CSV/Excel Export (universal compatibility, no ZipArchive needed)
+    // Build Detail Sheets — fetches full records for each tab
+    // ════════════════════════════════════════════════════════════════
+
+    private function _build_detail_sheets($userIds)
+    {
+        if (empty($userIds)) return array();
+
+        $sheets = array();
+
+        // Build a Patient ID => Name lookup for display in detail rows
+        $nameMap = array();
+        $this->db->select('userid, company');
+        $this->db->from(db_prefix() . 'clients');
+        $this->db->where_in('userid', $userIds);
+        $nameQ = $this->db->get();
+        if ($nameQ) {
+            foreach ($nameQ->result_array() as $n) {
+                $nameMap[$n['userid']] = $n['company'];
+            }
+        }
+
+        // Process in chunks to avoid max_allowed_packet issues
+        $chunks = array_chunk($userIds, 500);
+
+        // ── Sheet: Case Sheets ──
+        $csHeaders = array('Patient ID', 'Patient Name', 'Casesheet ID', 'Date', 'Diagnosis', 'Chief Complaints', 'Follow-up Date', 'Medicine Days', 'Doctor', 'Treatment', 'Duration Value');
+        $csRows = array();
+        foreach ($chunks as $chunk) {
+            $idsStr = implode(',', $chunk);
+            $this->db->select("c.userid, c.id as casesheet_id, c.date, c.diagnosis, c.chief_complaints, c.followup_date, c.medicine_days, CONCAT_WS(' ', s.firstname, s.lastname) as doctor_name, i.description as treatment_name, c.duration_value", false);
+            $this->db->from(db_prefix() . 'casesheet c');
+            $this->db->join(db_prefix() . 'staff s', 's.staffid = c.staffid', 'left');
+            $this->db->join(db_prefix() . 'patient_treatment pt', 'pt.casesheet_id = c.id', 'left');
+            $this->db->join(db_prefix() . 'items i', 'i.id = pt.treatment_type_id', 'left');
+            $this->db->where_in('c.userid', $chunk);
+            $this->db->order_by('c.userid', 'ASC');
+            $this->db->order_by('c.date', 'DESC');
+            $q = $this->db->get();
+            if ($q) {
+                foreach ($q->result_array() as $r) {
+                    $csRows[] = array(
+                        $r['userid'],
+                        isset($nameMap[$r['userid']]) ? $nameMap[$r['userid']] : '',
+                        $r['casesheet_id'],
+                        $r['date'],
+                        $r['diagnosis'],
+                        $r['chief_complaints'],
+                        $r['followup_date'],
+                        $r['medicine_days'],
+                        $r['doctor_name'],
+                        $r['treatment_name'],
+                        $r['duration_value'],
+                    );
+                }
+            }
+        }
+        $sheets['Case Sheets'] = array('headers' => $csHeaders, 'rows' => $csRows);
+
+        // ── Sheet: Prescriptions ──
+        $prHeaders = array('Patient ID', 'Patient Name', 'Prescription ID', 'Casesheet ID', 'Prescription Data', 'Created Date', 'Given By', 'Given Date', 'Status');
+        $prRows = array();
+        foreach ($chunks as $chunk) {
+            $this->db->select("pp.userid, pp.patient_prescription_id, pp.casesheet_id, pp.prescription_data, pp.created_date, CONCAT_WS(' ', sg.firstname, sg.lastname) as given_by, pp.medicine_given_date, pp.patient_prescription_status", false);
+            $this->db->from(db_prefix() . 'patient_prescription pp');
+            $this->db->join(db_prefix() . 'staff sg', 'sg.staffid = pp.medicine_given_by', 'left');
+            $this->db->where_in('pp.userid', $chunk);
+            $this->db->order_by('pp.userid', 'ASC');
+            $this->db->order_by('pp.created_date', 'DESC');
+            $q = $this->db->get();
+            if ($q) {
+                foreach ($q->result_array() as $r) {
+                    $prRows[] = array(
+                        $r['userid'],
+                        isset($nameMap[$r['userid']]) ? $nameMap[$r['userid']] : '',
+                        $r['patient_prescription_id'],
+                        $r['casesheet_id'],
+                        $r['prescription_data'],
+                        $r['created_date'],
+                        $r['given_by'],
+                        $r['medicine_given_date'],
+                        $r['patient_prescription_status'],
+                    );
+                }
+            }
+        }
+        $sheets['Prescriptions'] = array('headers' => $prHeaders, 'rows' => $prRows);
+
+        // ── Sheet: Packages ──
+        $pkHeaders = array('Patient ID', 'Patient Name', 'Package ID', 'Treatment', 'Start Date', 'Expiry Date', 'Total Amount', 'Invoice ID', 'Status', 'Created Date');
+        $pkRows = array();
+        foreach ($chunks as $chunk) {
+            $this->db->select("e.clientid as userid, e.id as estimate_id, it.description as treatment_name, e.date, e.expirydate, e.total, e.invoiceid, e.status, e.datecreated", false);
+            $this->db->from(db_prefix() . 'estimates e');
+            $this->db->join(db_prefix() . 'itemable ita', "ita.rel_id = e.id AND ita.rel_type = 'estimate'", 'left');
+            $this->db->join(db_prefix() . 'items it', 'it.id = ita.description', 'left');
+            $this->db->where_in('e.clientid', $chunk);
+            $this->db->order_by('e.clientid', 'ASC');
+            $this->db->order_by('e.date', 'DESC');
+            $q = $this->db->get();
+            if ($q) {
+                foreach ($q->result_array() as $r) {
+                    // Estimate status mapping
+                    $statusText = '';
+                    switch ($r['status']) {
+                        case 1: $statusText = 'Draft'; break;
+                        case 2: $statusText = 'Sent'; break;
+                        case 3: $statusText = 'Declined'; break;
+                        case 4: $statusText = 'Accepted'; break;
+                        case 5: $statusText = 'Expired'; break;
+                        default: $statusText = $r['status'];
+                    }
+                    $pkRows[] = array(
+                        $r['userid'],
+                        isset($nameMap[$r['userid']]) ? $nameMap[$r['userid']] : '',
+                        $r['estimate_id'],
+                        $r['treatment_name'],
+                        $r['date'],
+                        $r['expirydate'],
+                        $r['total'],
+                        $r['invoiceid'],
+                        $statusText,
+                        $r['datecreated'],
+                    );
+                }
+            }
+        }
+        $sheets['Packages'] = array('headers' => $pkHeaders, 'rows' => $pkRows);
+
+        // ── Sheet: Visits ──
+        $viHeaders = array('Patient ID', 'Patient Name', 'Visit ID', 'Appointment Date', 'Treatment', 'Visit Status', 'Visited Date', 'Medicine Days', 'Appointment Type', 'Doctor');
+        $viRows = array();
+        foreach ($chunks as $chunk) {
+            $this->db->select("a.userid, a.visit_id, a.appointment_date, i.description as treatment_name, a.visit_status, a.visited_date, a.medicine_given_days, at.appointment_type_name, CONCAT_WS(' ', s.firstname, s.lastname) as doctor_name", false);
+            $this->db->from(db_prefix() . 'appointment a');
+            $this->db->join(db_prefix() . 'items i', 'i.id = a.treatment_id', 'left');
+            $this->db->join(db_prefix() . 'appointment_type at', 'at.appointment_type_id = a.appointment_type_id', 'left');
+            $this->db->join(db_prefix() . 'staff s', 's.staffid = a.enquiry_doctor_id', 'left');
+            $this->db->where_in('a.userid', $chunk);
+            $this->db->order_by('a.userid', 'ASC');
+            $this->db->order_by('a.appointment_date', 'DESC');
+            $q = $this->db->get();
+            if ($q) {
+                foreach ($q->result_array() as $r) {
+                    $visitStatusText = ($r['visit_status'] == 1) ? 'Visited' : 'Not Visited';
+                    $viRows[] = array(
+                        $r['userid'],
+                        isset($nameMap[$r['userid']]) ? $nameMap[$r['userid']] : '',
+                        $r['visit_id'],
+                        $r['appointment_date'],
+                        $r['treatment_name'],
+                        $visitStatusText,
+                        $r['visited_date'],
+                        $r['medicine_given_days'],
+                        $r['appointment_type_name'],
+                        $r['doctor_name'],
+                    );
+                }
+            }
+        }
+        $sheets['Visits'] = array('headers' => $viHeaders, 'rows' => $viRows);
+
+        // ── Sheet: Payments ──
+        $payHeaders = array('Patient ID', 'Patient Name', 'Invoice No', 'Invoice Date', 'Invoice Total', 'Payment ID', 'Payment Amount', 'Payment Date', 'Payment Mode', 'UTR No', 'Note');
+        $payRows = array();
+        foreach ($chunks as $chunk) {
+            $this->db->select("inv.clientid as userid, inv.number as invoice_no, inv.date as invoice_date, inv.total as invoice_total, pay.id as payment_id, pay.amount, pay.date as payment_date, pm.name as payment_mode, pay.transactionid as utr_no, pay.note", false);
+            $this->db->from(db_prefix() . 'invoicepaymentrecords pay');
+            $this->db->join(db_prefix() . 'invoices inv', 'inv.id = pay.invoiceid', 'inner');
+            $this->db->join(db_prefix() . 'payment_modes pm', 'pm.id = pay.paymentmode', 'left');
+            $this->db->where_in('inv.clientid', $chunk);
+            $this->db->order_by('inv.clientid', 'ASC');
+            $this->db->order_by('pay.date', 'DESC');
+            $q = $this->db->get();
+            if ($q) {
+                foreach ($q->result_array() as $r) {
+                    $payRows[] = array(
+                        $r['userid'],
+                        isset($nameMap[$r['userid']]) ? $nameMap[$r['userid']] : '',
+                        $r['invoice_no'],
+                        $r['invoice_date'],
+                        $r['invoice_total'],
+                        $r['payment_id'],
+                        $r['amount'],
+                        $r['payment_date'],
+                        $r['payment_mode'],
+                        $r['utr_no'],
+                        $r['note'],
+                    );
+                }
+            }
+        }
+        $sheets['Payments'] = array('headers' => $payHeaders, 'rows' => $payRows);
+
+        // ── Sheet: Call Logs ──
+        $clHeaders = array('Patient ID', 'Patient Name', 'Call Log ID', 'Called By', 'Call Type', 'Next Calling Date', 'Better Patient', 'Pharmacy Medicine Days', 'Patient Took Medicine Days', 'Created Date', 'Comments');
+        $clRows = array();
+        foreach ($chunks as $chunk) {
+            $this->db->select("cl.patientid as userid, cl.id as call_log_id, CONCAT_WS(' ', s.firstname, s.lastname) as called_by, cr.criteria_name as call_type, cl.next_calling_date, cl.better_patient, cl.pharmacy_medicine_days, cl.patient_took_medicine_days, cl.created_date, cl.comments", false);
+            $this->db->from(db_prefix() . 'patient_call_logs cl');
+            $this->db->join(db_prefix() . 'staff s', 's.staffid = cl.staffid', 'left');
+            $this->db->join(db_prefix() . 'criteria cr', 'cr.criteria_id = cl.criteria_id', 'left');
+            $this->db->where_in('cl.patientid', $chunk);
+            $this->db->order_by('cl.patientid', 'ASC');
+            $this->db->order_by('cl.created_date', 'DESC');
+            $q = $this->db->get();
+            if ($q) {
+                foreach ($q->result_array() as $r) {
+                    $clRows[] = array(
+                        $r['userid'],
+                        isset($nameMap[$r['userid']]) ? $nameMap[$r['userid']] : '',
+                        $r['call_log_id'],
+                        $r['called_by'],
+                        $r['call_type'],
+                        $r['next_calling_date'],
+                        $r['better_patient'],
+                        $r['pharmacy_medicine_days'],
+                        $r['patient_took_medicine_days'],
+                        $r['created_date'],
+                        $r['comments'],
+                    );
+                }
+            }
+        }
+        $sheets['Call Logs'] = array('headers' => $clHeaders, 'rows' => $clRows);
+
+        return $sheets;
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    // Multi-Sheet XLSX Export using XLSXWriter
+    // ════════════════════════════════════════════════════════════════
+
+    private function _stream_xlsx($headers, $rows, $detailSheets = array())
+    {
+        // Load XLSXWriter from accounting module
+        $writerPath = APPPATH . '../modules/accounting/assets/plugins/XLSXWriter/xlsxwriter.class.php';
+        if (!class_exists('XLSXWriter')) {
+            require_once($writerPath);
+        }
+
+        $writer = new \XLSXWriter();
+        $writer->setTitle('PCS Patients Export');
+        $writer->setAuthor('PCS System');
+
+        // Sheet 1: Patient Details
+        $headerTypes = array();
+        foreach ($headers as $h) {
+            $headerTypes[$h] = 'string';
+        }
+        $writer->writeSheetHeader('Patient Details', $headerTypes, array('freeze_rows' => 1, 'auto_filter' => true));
+        foreach ($rows as $row) {
+            $cleanRow = array();
+            foreach ($row as $cell) {
+                $cleanRow[] = (string)$cell;
+            }
+            $writer->writeSheetRow('Patient Details', $cleanRow);
+        }
+
+        // Detail Sheets (Case Sheets, Prescriptions, Packages, Visits, Payments, Call Logs)
+        foreach ($detailSheets as $sheetName => $sheetData) {
+            $sheetHeaderTypes = array();
+            foreach ($sheetData['headers'] as $h) {
+                $sheetHeaderTypes[$h] = 'string';
+            }
+            $writer->writeSheetHeader($sheetName, $sheetHeaderTypes, array('freeze_rows' => 1, 'auto_filter' => true));
+            foreach ($sheetData['rows'] as $row) {
+                $cleanRow = array();
+                foreach ($row as $cell) {
+                    $cleanRow[] = (string)($cell ?? '');
+                }
+                $writer->writeSheetRow($sheetName, $cleanRow);
+            }
+        }
+
+        $filename = 'pcs_patients_export_' . date('Ymd_His') . '.xlsx';
+
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+        header('Pragma: public');
+
+        $writer->writeToStdOut();
+        exit;
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    // CSV Export (fallback format)
     // ════════════════════════════════════════════════════════════════
 
     private function _stream_csv($headers, $rows)
