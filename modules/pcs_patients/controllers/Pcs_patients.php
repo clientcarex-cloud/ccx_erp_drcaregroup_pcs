@@ -550,15 +550,16 @@ class Pcs_patients extends AdminController
         $sheets['Case Sheets'] = array('headers' => $csHeaders, 'rows' => $csRows);
 
         // ── Sheet: Prescriptions ──
-        $prHeaders = array('Patient ID', 'Patient Name', 'Prescription ID', 'Casesheet ID', 'Prescription Data', 'Created Date', 'Given By', 'Given Date', 'Status');
+        $prHeaders = array('Patient ID', 'Patient Name', 'Prescription ID', 'Casesheet ID', 'Prescription Data', 'Created By', 'Created Date', 'Medicine Given By', 'Medicine Given Date', 'Status');
         $prRows = array();
         foreach ($chunks as $chunk) {
-            $this->db->select("pp.userid, pp.patient_prescription_id, pp.casesheet_id, pp.prescription_data, pp.created_date, CONCAT_WS(' ', sg.firstname, sg.lastname) as given_by, pp.medicine_given_date, pp.patient_prescription_status", false);
+            $this->db->select("pp.userid, pp.patient_prescription_id, pp.casesheet_id, pp.prescription_data, CONCAT_WS(' ', sc.firstname, sc.lastname) as created_by_name, pp.created_datetime, CONCAT_WS(' ', sg.firstname, sg.lastname) as given_by, pp.medicine_given_date, pp.patient_prescription_status", false);
             $this->db->from(db_prefix() . 'patient_prescription pp');
+            $this->db->join(db_prefix() . 'staff sc', 'sc.staffid = pp.created_by', 'left');
             $this->db->join(db_prefix() . 'staff sg', 'sg.staffid = pp.medicine_given_by', 'left');
             $this->db->where_in('pp.userid', $chunk);
             $this->db->order_by('pp.userid', 'ASC');
-            $this->db->order_by('pp.created_date', 'DESC');
+            $this->db->order_by('pp.created_datetime', 'DESC');
             $q = $this->db->get();
             if ($q) {
                 foreach ($q->result_array() as $r) {
@@ -568,7 +569,8 @@ class Pcs_patients extends AdminController
                         $r['patient_prescription_id'],
                         $r['casesheet_id'],
                         $r['prescription_data'],
-                        $r['created_date'],
+                        $r['created_by_name'],
+                        $r['created_datetime'],
                         $r['given_by'],
                         $r['medicine_given_date'],
                         $r['patient_prescription_status'],
