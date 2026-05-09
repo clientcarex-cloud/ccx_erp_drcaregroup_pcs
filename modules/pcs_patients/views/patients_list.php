@@ -19,6 +19,9 @@
                                     </h4>
                                 </div>
                                 <div class="col-md-6 text-right d-flex justify-content-end gap-2">
+                                    <button type="button" id="exportPatientsBtn" class="btn btn-success">
+                                        <i class="fa fa-file-excel-o tw-mr-1"></i> Export Excel
+                                    </button>
                                     <?php if (staff_can('create', 'customers')) { ?>
                                         <a href="<?= admin_url('client/client/add_client'); ?>" class="btn btn-primary">
                                             <i class="fa-regular fa-plus tw-mr-1"></i>
@@ -159,6 +162,24 @@
                 $span.text($span.attr('data-masked'));
                 $icon.removeClass('fa-eye').addClass('fa-eye-slash');
             }
+        });
+
+        // Export patients as Excel
+        $('#exportPatientsBtn').on('click', function () {
+            var branchSelect = $('select[name="branch_filter[]"]');
+            var branchIds = branchSelect.val() && branchSelect.val().length > 0 ? branchSelect.val().join(',') : '';
+            var fromDate = $('#from_date_filter').val() || '';
+            var toDate = $('#to_date_filter').val() || '';
+
+            var params = [];
+            if (fromDate) params.push('from_date=' + encodeURIComponent(fromDate));
+            if (toDate) params.push('to_date=' + encodeURIComponent(toDate));
+            if (branchIds) params.push('branch_ids=' + encodeURIComponent(branchIds));
+
+            var url = '<?= admin_url('pcs_patients/export_patients'); ?>';
+            if (params.length > 0) url += '?' + params.join('&');
+
+            window.location.href = url;
         });
     });
 </script>
