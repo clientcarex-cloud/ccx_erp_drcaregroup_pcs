@@ -61,13 +61,13 @@
         margin-top: 28px;
         padding-top: 20px;
         border-top: 1px solid #eee;
+        flex-wrap: wrap;
     }
     .btn-export {
-        background: linear-gradient(135deg, #1B8B5A 0%, #27ae60 100%);
         color: #fff;
         border: none;
-        padding: 12px 32px;
-        font-size: 15px;
+        padding: 12px 28px;
+        font-size: 14px;
         font-weight: 600;
         border-radius: 8px;
         cursor: pointer;
@@ -77,16 +77,25 @@
         gap: 8px;
     }
     .btn-export:hover {
-        background: linear-gradient(135deg, #157a4a 0%, #219a52 100%);
         color: #fff;
         transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(27, 139, 90, 0.3);
     }
     .btn-export:active {
         transform: translateY(0);
     }
-    .btn-export i {
-        font-size: 16px;
+    .btn-export-excel {
+        background: linear-gradient(135deg, #1B8B5A 0%, #27ae60 100%);
+    }
+    .btn-export-excel:hover {
+        background: linear-gradient(135deg, #157a4a 0%, #219a52 100%);
+        box-shadow: 0 4px 12px rgba(27, 139, 90, 0.3);
+    }
+    .btn-export-json {
+        background: linear-gradient(135deg, #2980b9 0%, #3498db 100%);
+    }
+    .btn-export-json:hover {
+        background: linear-gradient(135deg, #1f6fa0 0%, #2a80b9 100%);
+        box-shadow: 0 4px 12px rgba(41, 128, 185, 0.3);
     }
     .btn-back {
         color: #666;
@@ -152,8 +161,8 @@
 
             <div class="export-card">
                 <div class="export-card-header">
-                    <h3><i class="fa fa-file-excel-o" style="margin-right: 8px;"></i> Export Patients Data</h3>
-                    <p>Download complete patient records as an Excel file — zero missing data</p>
+                    <h3><i class="fa fa-download" style="margin-right: 8px;"></i> Export Patients Data</h3>
+                    <p>Download complete patient records — zero missing data</p>
                 </div>
 
                 <div class="export-card-body">
@@ -201,14 +210,15 @@
                             ?>
                         </div>
 
-                        <!-- Hidden field to send branch_ids as comma-separated -->
+                        <!-- Hidden fields -->
                         <input type="hidden" name="branch_ids" id="branch_ids_hidden" value="">
+                        <input type="hidden" name="export_format" id="export_format" value="excel">
 
                         <div class="export-columns-preview">
                             <h5><i class="fa fa-columns" style="margin-right: 4px;"></i> Columns in Export</h5>
                             <div class="columns-grid">
                                 <?php
-                                $cols = [
+                                $cols = array(
                                     'Patient ID', 'Name', 'Salutation', 'MR No', 'Branch',
                                     'Age', 'Gender', 'DOB', 'Marital Status',
                                     'Phone', 'WhatsApp', 'Alt Number 1', 'Alt Number 2',
@@ -221,7 +231,7 @@
                                     'Total Paid', 'Due Amount', 'Payment Count',
                                     'First Invoice', 'Last Invoice', 'Last Payment',
                                     'Is Refunded', 'Profile Link'
-                                ];
+                                );
                                 foreach ($cols as $c) {
                                     echo '<span class="col-tag">' . $c . '</span>';
                                 }
@@ -230,11 +240,14 @@
                         </div>
 
                         <div class="export-actions">
-                            <button type="submit" class="btn-export" id="exportBtn">
-                                <i class="fa fa-download"></i> Export to Excel
+                            <button type="submit" class="btn-export btn-export-excel" id="exportExcelBtn" onclick="setFormat('excel')">
+                                <i class="fa fa-file-excel-o"></i> Export Excel (CSV)
+                            </button>
+                            <button type="submit" class="btn-export btn-export-json" id="exportJsonBtn" onclick="setFormat('json')">
+                                <i class="fa fa-code"></i> Export JSON
                             </button>
                             <a href="<?= admin_url('pcs_patients'); ?>" class="btn-back">
-                                <i class="fa fa-arrow-left" style="margin-right: 4px;"></i> Back to Patients
+                                <i class="fa fa-arrow-left" style="margin-right: 4px;"></i> Back
                             </a>
                         </div>
 
@@ -249,15 +262,17 @@
 
 <?php init_tail(); ?>
 <script>
+function setFormat(fmt) {
+    document.getElementById('export_format').value = fmt;
+}
+
 $(function () {
-    // Sync branch multi-select into hidden field before submit
     $('#export-form').on('submit', function () {
         var branchSelect = $('select[name="branch_export[]"]');
         var selected = branchSelect.val();
         var branchIds = (selected && selected.length > 0) ? selected.join(',') : '';
         $('#branch_ids_hidden').val(branchIds);
 
-        // Validate dates
         var from = $('#from_date').val();
         var to = $('#to_date').val();
         if (!from || !to) {
@@ -269,16 +284,15 @@ $(function () {
             return false;
         }
 
-        // Show loading state
-        var $btn = $('#exportBtn');
-        $btn.prop('disabled', true);
-        $btn.html('<i class="fa fa-spinner fa-spin"></i> Generating...');
+        // Show loading on the clicked button
+        var fmt = $('#export_format').val();
+        var $btn = (fmt === 'json') ? $('#exportJsonBtn') : $('#exportExcelBtn');
+        var originalHtml = $btn.html();
+        $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Generating...');
 
-        // Re-enable after 10 seconds (download should have started)
         setTimeout(function () {
-            $btn.prop('disabled', false);
-            $btn.html('<i class="fa fa-download"></i> Export to Excel');
-        }, 10000);
+            $btn.prop('disabled', false).html(originalHtml);
+        }, 8000);
 
         return true;
     });
