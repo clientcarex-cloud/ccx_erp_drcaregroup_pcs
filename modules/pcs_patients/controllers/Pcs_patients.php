@@ -103,7 +103,7 @@ class Pcs_patients extends AdminController
             }
 
             if ($export_format === 'json') {
-                $this->_stream_json($export['headers'], $export['rows'], $detailSheets);
+                $this->_stream_json($export['headers'], $export['rows'], $detailSheets, $from_date, $to_date);
             } elseif ($export_format === 'print') {
                 echo "<html><head><title>Live Data Print / Console</title></head><body style='font-family:sans-serif;'>";
                 echo "<h2>Live Data Print / Console Debug</h2>";
@@ -124,10 +124,10 @@ class Pcs_patients extends AdminController
                 echo "</tbody></table></body></html>";
                 exit;
             } elseif ($export_format === 'csv') {
-                $this->_stream_csv($export['headers'], $export['rows']);
+                $this->_stream_csv($export['headers'], $export['rows'], $from_date, $to_date);
             } else {
                 // Default: Multi-sheet XLSX with detail tabs
-                $this->_stream_xlsx($export['headers'], $export['rows'], $detailSheets);
+                $this->_stream_xlsx($export['headers'], $export['rows'], $detailSheets, $from_date, $to_date);
             }
         } catch (\Throwable $th) {
             echo "<div style='font-family:monospace; background:#1e1e1e; color:#00ff00; padding:20px;'>";
@@ -731,7 +731,7 @@ class Pcs_patients extends AdminController
     // Multi-Sheet XLSX Export using XLSXWriter
     // ════════════════════════════════════════════════════════════════
 
-    private function _stream_xlsx($headers, $rows, $detailSheets = array())
+    private function _stream_xlsx($headers, $rows, $detailSheets = array(), $from_date = '', $to_date = '')
     {
         // Load XLSXWriter — prefer local copy, fallback to other modules
         if (!class_exists('XLSXWriter')) {
@@ -787,7 +787,7 @@ class Pcs_patients extends AdminController
             }
         }
 
-        $filename = 'pcs_patients_export_' . date('Ymd_His') . '.xlsx';
+        $filename = 'pcs_patients_export_' . $this->_build_date_suffix($from_date, $to_date) . '.xlsx';
 
         while (ob_get_level() > 0) {
             ob_end_clean();
@@ -806,9 +806,9 @@ class Pcs_patients extends AdminController
     // CSV Export (fallback format)
     // ════════════════════════════════════════════════════════════════
 
-    private function _stream_csv($headers, $rows)
+    private function _stream_csv($headers, $rows, $from_date = '', $to_date = '')
     {
-        $filename = 'pcs_patients_export_' . date('Ymd_His') . '.csv';
+        $filename = 'pcs_patients_export_' . $this->_build_date_suffix($from_date, $to_date) . '.csv';
 
         while (ob_get_level() > 0) {
             ob_end_clean();
@@ -844,9 +844,9 @@ class Pcs_patients extends AdminController
     // JSON Export
     // ════════════════════════════════════════════════════════════════
 
-    private function _stream_json($headers, $rows, $detailSheets = array())
+    private function _stream_json($headers, $rows, $detailSheets = array(), $from_date = '', $to_date = '')
     {
-        $filename = 'pcs_patients_export_' . date('Ymd_His') . '.json';
+        $filename = 'pcs_patients_export_' . $this->_build_date_suffix($from_date, $to_date) . '.json';
 
         // Build associative array using headers as keys — Patient Details
         $jsonData = array();
@@ -909,5 +909,22 @@ class Pcs_patients extends AdminController
 
         echo $jsonString;
         exit;
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    // Build filename date suffix from user-selected date range
+    // ════════════════════════════════════════════════════════════════
+
+    private function _build_date_suffix($from_date = '', $to_date = '')
+    {
+        if (!empty($from_date) && !empty($to_date)) {
+            // Sanitize: keep only date part (YYYY-MM-DD), strip any time component
+            $from = date('Y-m-d', strtotime($from_date));
+            $to   = date('Y-m-d', strtotime($to_date));
+            return $from . '_to_' . $to;
+        }
+
+        // Fallback: use today's date if no range was selected
+        return date('Ymd_His');
     }
 }
