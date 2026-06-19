@@ -1533,6 +1533,38 @@ class Leads extends AdminController
 			$countryMap[$c['country_id']] = $c['short_name'];
 		}
 
+		$itemMap = [];
+		foreach ($this->db->select('id, description')->get(db_prefix() . 'items')->result_array() as $it) {
+			$itemMap[$it['id']] = $it['description'];
+		}
+
+		// Column => lookup map. Any ID column listed here is REPLACED inline by its name.
+		$resolvers = [
+			'status'                   => $statusMap,
+			'source'                   => $sourceMap,
+			'patient_response_id'      => $statusMap,
+			'assigned'                 => $staffMap,
+			'addedfrom'                => $staffMap,
+			'reg_by'                   => $staffMap,
+			'pro_ownership'            => $staffMap,
+			'staffid'                  => $staffMap,
+			'doctor_id'                => $staffMap,
+			'country'                  => $countryMap,
+			'branch_id'                => $branchMap,
+			'treatment_id'             => $itemMap,
+			'suggested_diagnostics_id' => $itemMap,
+			'last_lead_status'         => $statusMap,
+		];
+
+		// Yes/No boolean-style columns for readability
+		$boolCols = ['lost', 'junk', 'is_public', 'is_imported_from_email_integration', 'is_refunded', 'migrated'];
+
+		// Internal / hash / ordering columns to omit entirely from the export
+		$excludeCols = [
+			'hash', 'leadorder', 'complaint_migrate', 'from_form_id',
+			'email_integration_uid',
+		];
+
 		// ── Fetch all leads (dynamic SELECT * — captures every column) ──
 		if (!empty($from_date)) {
 			$this->db->where('dateadded >=', $from_date . ' 00:00:00');
@@ -1543,13 +1575,17 @@ class Leads extends AdminController
 		$this->db->order_by('id', 'desc');
 		$leads = $this->db->get(db_prefix() . 'leads')->result_array();
 
-		// ── Build headers: humanized native columns + resolved name columns ──
-		$nativeCols = !empty($leads) ? array_keys($leads[0]) : [];
-		$headers    = [];
-		foreach ($nativeCols as $col) {
-			$headers[] = ucwords(str_replace('_', ' ', $col));
+		// ── Determine which columns to keep, and build human-readable headers ──
+		$allCols = !empty($leads) ? array_keys($leads[0]) : [];
+		$cols    = array_values(array_diff($allCols, $excludeCols));
+
+		$headers = [];
+		foreach ($cols as $col) {
+			$label = ucwords(str_replace('_', ' ', $col));
+			// Drop trailing " Id" so resolved columns read cleanly (e.g. "Branch Id" -> "Branch")
+			$label = preg_replace('/\s+Id$/', '', $label);
+			$headers[] = $label;
 		}
-		$headers = array_merge($headers, ['Status Name', 'Source Name', 'Assigned To', 'Branch', 'Country Name']);
 
 		// ── Stream CSV ──
 		$filename = 'leads_export_' . (!empty($from_date) && !empty($to_date)
@@ -1573,17 +1609,21 @@ class Leads extends AdminController
 
 		foreach ($leads as $row) {
 			$line = [];
-			foreach ($nativeCols as $col) {
+			foreach ($cols as $col) {
 				$val = isset($row[$col]) ? $row[$col] : '';
-				// Strip HTML/newlines from free-text fields for clean cells
-				$line[] = trim(preg_replace('/\s+/', ' ', strip_tags((string) $val)));
+
+				if (isset($resolvers[$col])) {
+					// Replace the ID with its readable name (blank for empty/0 references)
+					$val = (!empty($val) && isset($resolvers[$col][$val])) ? $resolvers[$col][$val] : '';
+				} elseif (in_array($col, $boolCols, true)) {
+					$val = ((string) $val === '1') ? 'Yes' : 'No';
+				} else {
+					// Strip HTML/newlines from free-text fields for clean cells
+					$val = trim(preg_replace('/\s+/', ' ', strip_tags((string) $val)));
+				}
+
+				$line[] = $val;
 			}
-			// Appended resolved name columns
-			$line[] = isset($row['status']) && isset($statusMap[$row['status']]) ? $statusMap[$row['status']] : '';
-			$line[] = isset($row['source']) && isset($sourceMap[$row['source']]) ? $sourceMap[$row['source']] : '';
-			$line[] = isset($row['assigned']) && isset($staffMap[$row['assigned']]) ? $staffMap[$row['assigned']] : '';
-			$line[] = isset($row['branch_id']) && isset($branchMap[$row['branch_id']]) ? $branchMap[$row['branch_id']] : '';
-			$line[] = isset($row['country']) && isset($countryMap[$row['country']]) ? $countryMap[$row['country']] : '';
 
 			fputcsv($output, $line);
 		}
