@@ -1484,4 +1484,112 @@ class Leads extends AdminController
 		}
 	}
 
+	/**
+	 * Export ALL leads to an Excel-compatible CSV file (direct download).
+	 *
+	 * Direct link (no menu/button anywhere):
+	 *   admin/leads/export_leads
+	 *
+	 * Optional GET filters on the "dateadded" column:
+	 *   ?from_date=YYYY-MM-DD&to_date=YYYY-MM-DD
+	 */
+	public function export_leads()
+	{
+		if (staff_cant('view', 'leads') && staff_cant('view_own', 'leads')) {
+			access_denied('Leads Export');
+		}
+
+		// Prevent timeouts/memory crashes on large datasets
+		@ini_set('memory_limit', '-1');
+		@ini_set('max_execution_time', 0);
+
+		// ── Optional date range filter on dateadded ──
+		$from_date = $this->input->get('from_date');
+		$to_date   = $this->input->get('to_date');
+
+		// ── Lookup maps to resolve IDs into readable names ──
+		$statusMap = [];
+		foreach ($this->leads_model->get_status() as $s) {
+			$statusMap[$s['id']] = $s['name'];
+		}
+
+		$sourceMap = [];
+		foreach ($this->leads_model->get_source() as $s) {
+			$sourceMap[$s['id']] = $s['name'];
+		}
+
+		$staffMap = [];
+		foreach ($this->staff_model->get() as $st) {
+			$staffMap[$st['staffid']] = trim($st['firstname'] . ' ' . $st['lastname']);
+		}
+
+		$branchMap = [];
+		foreach ($this->db->get(db_prefix() . 'customers_groups')->result_array() as $b) {
+			$branchMap[$b['id']] = $b['name'];
+		}
+
+		$countryMap = [];
+		foreach (get_all_countries() as $c) {
+			$countryMap[$c['country_id']] = $c['short_name'];
+		}
+
+		// ── Fetch all leads (dynamic SELECT * — captures every column) ──
+		if (!empty($from_date)) {
+			$this->db->where('dateadded >=', $from_date . ' 00:00:00');
+		}
+		if (!empty($to_date)) {
+			$this->db->where('dateadded <=', $to_date . ' 23:59:59');
+		}
+		$this->db->order_by('id', 'desc');
+		$leads = $this->db->get(db_prefix() . 'leads')->result_array();
+
+		// ── Build headers: humanized native columns + resolved name columns ──
+		$nativeCols = !empty($leads) ? array_keys($leads[0]) : [];
+		$headers    = [];
+		foreach ($nativeCols as $col) {
+			$headers[] = ucwords(str_replace('_', ' ', $col));
+		}
+		$headers = array_merge($headers, ['Status Name', 'Source Name', 'Assigned To', 'Branch', 'Country Name']);
+
+		// ── Stream CSV ──
+		$filename = 'leads_export_' . (!empty($from_date) && !empty($to_date)
+			? date('Y-m-d', strtotime($from_date)) . '_to_' . date('Y-m-d', strtotime($to_date))
+			: date('Ymd_His')) . '.csv';
+
+		while (ob_get_level() > 0) {
+			ob_end_clean();
+		}
+
+		header('Content-Type: text/csv; charset=UTF-8');
+		header('Content-Disposition: attachment; filename="' . $filename . '"');
+		header('Cache-Control: max-age=0');
+		header('Pragma: public');
+
+		// BOM so Excel recognises UTF-8
+		echo "\xEF\xBB\xBF";
+
+		$output = fopen('php://output', 'w');
+		fputcsv($output, $headers);
+
+		foreach ($leads as $row) {
+			$line = [];
+			foreach ($nativeCols as $col) {
+				$val = isset($row[$col]) ? $row[$col] : '';
+				// Strip HTML/newlines from free-text fields for clean cells
+				$line[] = trim(preg_replace('/\s+/', ' ', strip_tags((string) $val)));
+			}
+			// Appended resolved name columns
+			$line[] = isset($row['status']) && isset($statusMap[$row['status']]) ? $statusMap[$row['status']] : '';
+			$line[] = isset($row['source']) && isset($sourceMap[$row['source']]) ? $sourceMap[$row['source']] : '';
+			$line[] = isset($row['assigned']) && isset($staffMap[$row['assigned']]) ? $staffMap[$row['assigned']] : '';
+			$line[] = isset($row['branch_id']) && isset($branchMap[$row['branch_id']]) ? $branchMap[$row['branch_id']] : '';
+			$line[] = isset($row['country']) && isset($countryMap[$row['country']]) ? $countryMap[$row['country']] : '';
+
+			fputcsv($output, $line);
+		}
+
+		fclose($output);
+		exit;
+	}
+
 }
