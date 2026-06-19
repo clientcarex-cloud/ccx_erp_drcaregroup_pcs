@@ -586,13 +586,18 @@ class Pcs_patients extends AdminController
         $sheets['Prescriptions'] = array('headers' => $prHeaders, 'rows' => $prRows);
 
         // ── Sheet: Packages ──
-        $pkHeaders = array('Patient ID', 'Patient Name', 'Package ID', 'Treatment', 'Start Date', 'Expiry Date', 'Total Amount', 'Invoice ID', 'Status', 'Created Date');
+        // Ensure the invoices helper (format_invoice_number) is available
+        if (!function_exists('format_invoice_number')) {
+            $this->load->helper('invoices');
+        }
+        $pkHeaders = array('Patient ID', 'Patient Name', 'Package ID', 'Treatment', 'Start Date', 'Expiry Date', 'Total Amount', 'Invoice ID', 'Package Invoice ID', 'Status', 'Created Date');
         $pkRows = array();
         foreach ($chunks as $chunk) {
-            $this->db->select("e.clientid as userid, e.id as estimate_id, it.description as treatment_name, e.date, e.expirydate, e.total, e.invoiceid, e.status, e.datecreated", false);
+            $this->db->select("e.clientid as userid, e.id as estimate_id, it.description as treatment_name, e.date, e.expirydate, e.total, e.invoiceid, e.status, e.datecreated, inv.id as inv_id, inv.number as inv_number, inv.prefix as inv_prefix, inv.number_format as inv_number_format, inv.date as inv_date, inv.status as inv_status", false);
             $this->db->from(db_prefix() . 'estimates e');
             $this->db->join(db_prefix() . 'itemable ita', "ita.rel_id = e.id AND ita.rel_type = 'estimate'", 'left');
             $this->db->join(db_prefix() . 'items it', 'it.id = ita.description', 'left');
+            $this->db->join(db_prefix() . 'invoices inv', 'inv.id = e.invoiceid', 'left');
             $this->db->where_in('e.clientid', $chunk);
             $this->db->order_by('e.clientid', 'ASC');
             $this->db->order_by('e.date', 'DESC');
@@ -609,6 +614,21 @@ class Pcs_patients extends AdminController
                         case 5: $statusText = 'Expired'; break;
                         default: $statusText = $r['status'];
                     }
+
+                    // Formatted invoice number for the package's linked invoice (e.g. INV-0001)
+                    $packageInvoiceNo = '';
+                    if (!empty($r['inv_id'])) {
+                        $invObj = (object) array(
+                            'id'            => $r['inv_id'],
+                            'number'        => $r['inv_number'],
+                            'prefix'        => $r['inv_prefix'],
+                            'number_format' => $r['inv_number_format'],
+                            'date'          => $r['inv_date'],
+                            'status'        => $r['inv_status'],
+                        );
+                        $packageInvoiceNo = format_invoice_number($invObj);
+                    }
+
                     $pkRows[] = array(
                         $r['userid'],
                         isset($nameMap[$r['userid']]) ? $nameMap[$r['userid']] : '',
@@ -618,6 +638,7 @@ class Pcs_patients extends AdminController
                         $r['expirydate'],
                         $r['total'],
                         $r['invoiceid'],
+                        $packageInvoiceNo,
                         $statusText,
                         $r['datecreated'],
                     );
