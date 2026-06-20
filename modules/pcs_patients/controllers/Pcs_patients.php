@@ -780,17 +780,42 @@ class Pcs_patients extends AdminController
             throw new \Exception('Unable to create temporary export directory.');
         }
 
-        $tmpFiles    = array();
+        $zipName = 'pcs_patients_branchwise_' . $this->_build_date_suffix($from_date, $to_date) . '.zip';
+
+        // Streaming ZIP state — we write each branch's file to the client as
+        // soon as it is built, so bytes keep flowing and Cloudflare never hits
+        // its ~100s gateway timeout (Error 524) waiting for the whole bundle.
         $usedNames   = array();
-        $exportedAny = false;
+        $centralDir  = '';   // accumulated central-directory records
+        $offset      = 0;    // running byte offset within the stream
+        $entryCount  = 0;
+        $headersSent = false;
+        $errors      = array();
+
+        // DOS-format timestamp shared by every entry.
+        $now      = getdate();
+        $dosTime  = ($now['hours'] << 11) | ($now['minutes'] << 5) | ($now['seconds'] >> 1);
+        $dosDate  = (($now['year'] - 1980) << 9) | ($now['mon'] << 5) | $now['mday'];
+
+        // Output helper that tracks the byte offset.
+        $emit = function ($bytes) use (&$offset) {
+            echo $bytes;
+            $offset += strlen($bytes);
+        };
 
         try {
             foreach ($branches as $branch) {
                 $branchId   = (int)$branch['id'];
                 $branchName = isset($branch['name']) ? $branch['name'] : ('Branch ' . $branchId);
 
-                // Fetch this branch's data only.
-                $export = $this->_build_export_data($from_date, $to_date, array($branchId));
+                // Build this branch's file. A failure on one branch must not
+                // corrupt the stream, so capture it and keep going.
+                try {
+                    $export = $this->_build_export_data($from_date, $to_date, array($branchId));
+                } catch (\Throwable $bt) {
+                    $errors[] = $branchName . ' (ID ' . $branchId . '): ' . $bt->getMessage();
+                    continue;
+                }
 
                 // false = no patients, string = error message — skip either way.
                 if ($export === false || is_string($export)) {
@@ -800,62 +825,154 @@ class Pcs_patients extends AdminController
                 $allUserIds   = array_map('intval', array_column($export['rows'], 1)); // col 1 = Patient ID
                 $detailSheets = $this->_build_detail_sheets($allUserIds);
 
-                $writer = $this->_make_xlsx_writer($export['headers'], $export['rows'], $detailSheets);
-
-                // Safe, unique file name per branch.
-                $safeName = $this->_safe_filename($branchName);
-                $baseName = $safeName . '_' . $branchId;
-                $entry    = $baseName . '.xlsx';
-                $suffix   = 1;
-                while (isset($usedNames[$entry])) {
-                    $entry = $baseName . '_' . (++$suffix) . '.xlsx';
-                }
-                $usedNames[$entry] = true;
-
-                $filePath = $tmpDir . '/' . $entry;
+                $writer   = $this->_make_xlsx_writer($export['headers'], $export['rows'], $detailSheets);
+                $filePath = $tmpDir . '/branch_' . $branchId . '.xlsx';
                 $writer->writeToFile($filePath);
-                $tmpFiles[$entry] = $filePath;
-                $exportedAny = true;
+                $data = file_get_contents($filePath);
+                @unlink($filePath); // free the temp file immediately
+                if ($data === false) {
+                    $errors[] = $branchName . ' (ID ' . $branchId . '): unable to read generated file.';
+                    continue;
+                }
+
+                // Safe, unique entry name per branch.
+                $entry = $this->_unique_entry_name($this->_safe_filename($branchName) . '_' . $branchId . '.xlsx', $usedNames);
+
+                // Send response headers the moment we have our first file.
+                if (!$headersSent) {
+                    $this->_send_zip_headers($zipName);
+                    $headersSent = true;
+                }
+
+                $this->_emit_zip_entry($emit, $centralDir, $entryCount, $entry, $data, $dosTime, $dosDate, $offset);
+                flush(); // push this branch out to the browser now
             }
 
-            if (!$exportedAny) {
-                set_alert('warning', 'No patients found for the selected date range in the chosen branches.');
+            // If any branch failed, add a small report so it is not silent.
+            if ($headersSent && !empty($errors)) {
+                $report = "Some branches could not be exported:\n\n" . implode("\n", $errors) . "\n";
+                $entry  = $this->_unique_entry_name('_EXPORT_ERRORS.txt', $usedNames);
+                $this->_emit_zip_entry($emit, $centralDir, $entryCount, $entry, $report, $dosTime, $dosDate, $offset);
+            }
+
+            if (!$headersSent) {
+                // Nothing was streamed yet — safe to redirect with a message.
+                $this->_rrmdir($tmpDir);
+                if (!empty($errors)) {
+                    set_alert('danger', 'Export failed: ' . implode(' | ', $errors));
+                } else {
+                    set_alert('warning', 'No patients found for the selected date range in the chosen branches.');
+                }
                 redirect(admin_url('pcs_patients/export_patients'));
                 return;
             }
 
-            // Bundle everything into a single ZIP.
-            $zipName = 'pcs_patients_branchwise_' . $this->_build_date_suffix($from_date, $to_date) . '.zip';
-            $zipPath = $tmpDir . '/' . $zipName;
+            // Finalize: central directory + end-of-central-directory record.
+            $cdStart = $offset;
+            $emit($centralDir);
+            $eocd = pack('V', 0x06054b50)
+                . pack('v', 0)            // disk number
+                . pack('v', 0)            // disk with central dir
+                . pack('v', $entryCount)  // entries on this disk
+                . pack('v', $entryCount)  // total entries
+                . pack('V', strlen($centralDir))
+                . pack('V', $cdStart)
+                . pack('v', 0);           // comment length
+            $emit($eocd);
+            flush();
 
-            $zip = new \ZipArchive();
-            if ($zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
-                throw new \Exception('Unable to create ZIP archive.');
-            }
-            foreach ($tmpFiles as $entry => $path) {
-                $zip->addFile($path, $entry);
-            }
-            $zip->close();
-
-            while (ob_get_level() > 0) {
-                ob_end_clean();
-            }
-
-            header('Content-Type: application/zip');
-            header('Content-Disposition: attachment; filename="' . $zipName . '"');
-            header('Content-Length: ' . filesize($zipPath));
-            header('Cache-Control: max-age=0');
-            header('Pragma: public');
-
-            readfile($zipPath);
-
-            // Clean up before exiting.
             $this->_rrmdir($tmpDir);
             exit;
         } catch (\Throwable $th) {
             $this->_rrmdir($tmpDir);
+            // If we already started streaming we cannot show an error page —
+            // the partial download will simply be reported as corrupt.
             throw $th;
         }
+    }
+
+    /**
+     * Send the HTTP headers for a streamed ZIP download (no Content-Length —
+     * the size is unknown until the whole stream has been produced).
+     */
+    private function _send_zip_headers($zipName)
+    {
+        @ini_set('zlib.output_compression', '0');
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+        header('Content-Type: application/zip');
+        header('Content-Disposition: attachment; filename="' . $zipName . '"');
+        header('Cache-Control: no-cache, no-store, must-revalidate');
+        header('Pragma: public');
+    }
+
+    /**
+     * Write one STORE-method ZIP entry to the output stream and append its
+     * central-directory record. $offset/$centralDir/$entryCount are updated.
+     */
+    private function _emit_zip_entry($emit, &$centralDir, &$entryCount, $name, $data, $dosTime, $dosDate, &$offset)
+    {
+        $crc      = crc32($data);
+        $size     = strlen($data);
+        $nameLen  = strlen($name);
+        $localPos = $offset;
+
+        $local = pack('V', 0x04034b50)
+            . pack('v', 20)        // version needed
+            . pack('v', 0)         // general purpose flag
+            . pack('v', 0)         // method: 0 = store
+            . pack('v', $dosTime)
+            . pack('v', $dosDate)
+            . pack('V', $crc)
+            . pack('V', $size)     // compressed size
+            . pack('V', $size)     // uncompressed size
+            . pack('v', $nameLen)
+            . pack('v', 0)         // extra field length
+            . $name;
+        $emit($local);
+        $emit($data);
+
+        $centralDir .= pack('V', 0x02014b50)
+            . pack('v', 20)        // version made by
+            . pack('v', 20)        // version needed
+            . pack('v', 0)         // flag
+            . pack('v', 0)         // method
+            . pack('v', $dosTime)
+            . pack('v', $dosDate)
+            . pack('V', $crc)
+            . pack('V', $size)
+            . pack('V', $size)
+            . pack('v', $nameLen)
+            . pack('v', 0)         // extra length
+            . pack('v', 0)         // comment length
+            . pack('v', 0)         // disk number start
+            . pack('v', 0)         // internal attributes
+            . pack('V', 0)         // external attributes
+            . pack('V', $localPos) // offset of local header
+            . $name;
+
+        $entryCount++;
+    }
+
+    /**
+     * Ensure a ZIP entry name is unique within the archive.
+     */
+    private function _unique_entry_name($name, &$usedNames)
+    {
+        if (!isset($usedNames[$name])) {
+            $usedNames[$name] = true;
+            return $name;
+        }
+        $dot  = strrpos($name, '.');
+        $base = $dot === false ? $name : substr($name, 0, $dot);
+        $ext  = $dot === false ? '' : substr($name, $dot);
+        $i    = 1;
+        do {
+            $candidate = $base . '_' . (++$i) . $ext;
+        } while (isset($usedNames[$candidate]));
+        $usedNames[$candidate] = true;
+        return $candidate;
     }
 
     /**
