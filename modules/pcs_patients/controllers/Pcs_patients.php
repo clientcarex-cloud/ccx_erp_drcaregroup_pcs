@@ -77,6 +77,12 @@ class Pcs_patients extends AdminController
                 $export_format = 'excel';
             }
 
+            // -- Branch-wise ZIP: one file per branch, bundled into a single .zip --
+            if ($export_format === 'zip') {
+                $this->_stream_branchwise_zip($from_date, $to_date, $branch_ids);
+                return;
+            }
+
             // -- Fetch all data --
             $export = $this->_build_export_data($from_date, $to_date, $branch_ids);
 
@@ -740,27 +746,182 @@ class Pcs_patients extends AdminController
     // Multi-Sheet XLSX Export using XLSXWriter
     // ════════════════════════════════════════════════════════════════
 
-    private function _stream_xlsx($headers, $rows, $detailSheets = array(), $from_date = '', $to_date = '')
+    // ════════════════════════════════════════════════════════════════
+    // Branch-wise ZIP export — one XLSX per branch, all bundled together
+    // ════════════════════════════════════════════════════════════════
+
+    /**
+     * Build one XLSX file per branch and stream them all back as a single ZIP.
+     * If $branch_ids is empty, every branch is exported; otherwise only the
+     * selected branches. Branches with no patients in the range are skipped.
+     */
+    private function _stream_branchwise_zip($from_date, $to_date, $branch_ids)
     {
-        // Load XLSXWriter — prefer local copy, fallback to other modules
-        if (!class_exists('XLSXWriter')) {
-            $candidatePaths = array(
-                APPPATH . '../modules/pcs_patients/assets/plugins/XLSXWriter/xlsxwriter.class.php',
-                APPPATH . '../modules/accounting/assets/plugins/XLSXWriter/xlsxwriter.class.php',
-                APPPATH . '../modules/hr_profile/assets/plugins/XLSXWriter/xlsxwriter.class.php',
-            );
-            $loaded = false;
-            foreach ($candidatePaths as $path) {
-                if (file_exists($path)) {
-                    require_once($path);
-                    $loaded = true;
-                    break;
+        // Resolve the branches to export.
+        $allBranches = $this->client_model->get_branch();
+        if (!empty($branch_ids)) {
+            $selected = array_map('intval', $branch_ids);
+            $branches = array_filter($allBranches, function ($b) use ($selected) {
+                return in_array((int)$b['id'], $selected, true);
+            });
+        } else {
+            $branches = $allBranches;
+        }
+
+        if (empty($branches)) {
+            set_alert('warning', 'No branches available to export.');
+            redirect(admin_url('pcs_patients/export_patients'));
+            return;
+        }
+
+        // Temp working directory for the per-branch files.
+        $tmpDir = rtrim(sys_get_temp_dir(), '/\\') . '/pcs_export_' . uniqid('', true);
+        if (!@mkdir($tmpDir, 0700, true) && !is_dir($tmpDir)) {
+            throw new \Exception('Unable to create temporary export directory.');
+        }
+
+        $tmpFiles    = array();
+        $usedNames   = array();
+        $exportedAny = false;
+
+        try {
+            foreach ($branches as $branch) {
+                $branchId   = (int)$branch['id'];
+                $branchName = isset($branch['name']) ? $branch['name'] : ('Branch ' . $branchId);
+
+                // Fetch this branch's data only.
+                $export = $this->_build_export_data($from_date, $to_date, array($branchId));
+
+                // false = no patients, string = error message — skip either way.
+                if ($export === false || is_string($export)) {
+                    continue;
                 }
+
+                $allUserIds   = array_map('intval', array_column($export['rows'], 1)); // col 1 = Patient ID
+                $detailSheets = $this->_build_detail_sheets($allUserIds);
+
+                $writer = $this->_make_xlsx_writer($export['headers'], $export['rows'], $detailSheets);
+
+                // Safe, unique file name per branch.
+                $safeName = $this->_safe_filename($branchName);
+                $baseName = $safeName . '_' . $branchId;
+                $entry    = $baseName . '.xlsx';
+                $suffix   = 1;
+                while (isset($usedNames[$entry])) {
+                    $entry = $baseName . '_' . (++$suffix) . '.xlsx';
+                }
+                $usedNames[$entry] = true;
+
+                $filePath = $tmpDir . '/' . $entry;
+                $writer->writeToFile($filePath);
+                $tmpFiles[$entry] = $filePath;
+                $exportedAny = true;
             }
-            if (!$loaded) {
-                throw new \Exception('XLSXWriter library not found. Please ensure the plugin exists in modules/pcs_patients/assets/plugins/XLSXWriter/');
+
+            if (!$exportedAny) {
+                set_alert('warning', 'No patients found for the selected date range in the chosen branches.');
+                redirect(admin_url('pcs_patients/export_patients'));
+                return;
+            }
+
+            // Bundle everything into a single ZIP.
+            $zipName = 'pcs_patients_branchwise_' . $this->_build_date_suffix($from_date, $to_date) . '.zip';
+            $zipPath = $tmpDir . '/' . $zipName;
+
+            $zip = new \ZipArchive();
+            if ($zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
+                throw new \Exception('Unable to create ZIP archive.');
+            }
+            foreach ($tmpFiles as $entry => $path) {
+                $zip->addFile($path, $entry);
+            }
+            $zip->close();
+
+            while (ob_get_level() > 0) {
+                ob_end_clean();
+            }
+
+            header('Content-Type: application/zip');
+            header('Content-Disposition: attachment; filename="' . $zipName . '"');
+            header('Content-Length: ' . filesize($zipPath));
+            header('Cache-Control: max-age=0');
+            header('Pragma: public');
+
+            readfile($zipPath);
+
+            // Clean up before exiting.
+            $this->_rrmdir($tmpDir);
+            exit;
+        } catch (\Throwable $th) {
+            $this->_rrmdir($tmpDir);
+            throw $th;
+        }
+    }
+
+    /**
+     * Turn an arbitrary branch name into a filesystem-safe file name fragment.
+     */
+    private function _safe_filename($name)
+    {
+        $name = trim((string)$name);
+        $name = preg_replace('/[^A-Za-z0-9 _\-]/', '', $name); // drop unsafe chars
+        $name = preg_replace('/\s+/', '_', $name);             // spaces → underscores
+        $name = trim($name, '_-');
+        return $name !== '' ? $name : 'branch';
+    }
+
+    /**
+     * Recursively delete a temporary directory and its contents.
+     */
+    private function _rrmdir($dir)
+    {
+        if (!is_dir($dir)) {
+            return;
+        }
+        $items = scandir($dir);
+        foreach ($items as $item) {
+            if ($item === '.' || $item === '..') {
+                continue;
+            }
+            $path = $dir . '/' . $item;
+            if (is_dir($path)) {
+                $this->_rrmdir($path);
+            } else {
+                @unlink($path);
             }
         }
+        @rmdir($dir);
+    }
+
+    /**
+     * Ensure the XLSXWriter library is loaded (local copy preferred, fallbacks otherwise).
+     */
+    private function _load_xlsx_writer()
+    {
+        if (class_exists('XLSXWriter')) {
+            return;
+        }
+        $candidatePaths = array(
+            APPPATH . '../modules/pcs_patients/assets/plugins/XLSXWriter/xlsxwriter.class.php',
+            APPPATH . '../modules/accounting/assets/plugins/XLSXWriter/xlsxwriter.class.php',
+            APPPATH . '../modules/hr_profile/assets/plugins/XLSXWriter/xlsxwriter.class.php',
+        );
+        foreach ($candidatePaths as $path) {
+            if (file_exists($path)) {
+                require_once($path);
+                return;
+            }
+        }
+        throw new \Exception('XLSXWriter library not found. Please ensure the plugin exists in modules/pcs_patients/assets/plugins/XLSXWriter/');
+    }
+
+    /**
+     * Build a fully-populated XLSXWriter (Patient Details + detail tabs).
+     * Returned writer can be sent to stdout or written to a file.
+     */
+    private function _make_xlsx_writer($headers, $rows, $detailSheets = array())
+    {
+        $this->_load_xlsx_writer();
 
         $writer = new \XLSXWriter();
         $writer->setTitle('PCS Patients Export');
@@ -795,6 +956,13 @@ class Pcs_patients extends AdminController
                 $writer->writeSheetRow($sheetName, $cleanRow);
             }
         }
+
+        return $writer;
+    }
+
+    private function _stream_xlsx($headers, $rows, $detailSheets = array(), $from_date = '', $to_date = '')
+    {
+        $writer = $this->_make_xlsx_writer($headers, $rows, $detailSheets);
 
         $filename = 'pcs_patients_export_' . $this->_build_date_suffix($from_date, $to_date) . '.xlsx';
 

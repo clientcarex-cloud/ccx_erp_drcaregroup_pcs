@@ -97,6 +97,13 @@
         background: linear-gradient(135deg, #1f6fa0 0%, #2a80b9 100%);
         box-shadow: 0 4px 12px rgba(41, 128, 185, 0.3);
     }
+    .btn-export-zip {
+        background: linear-gradient(135deg, #d35400 0%, #e67e22 100%);
+    }
+    .btn-export-zip:hover {
+        background: linear-gradient(135deg, #b8470b 0%, #cf6f17 100%);
+        box-shadow: 0 4px 12px rgba(211, 84, 0, 0.3);
+    }
     .btn-back {
         color: #666;
         font-size: 14px;
@@ -171,6 +178,7 @@
                         <i class="fa fa-info-circle"></i>
                         Select a date range to export all patient records registered within that period.
                         The export includes <strong>45 columns</strong> covering demographics, contact info, clinical data, call logs, invoices, payments, and profile links.
+                        <br><strong>Export All Branches (ZIP)</strong> generates a separate file for every branch automatically and bundles them into a single ZIP — leave the branch filter empty for all branches, or pick specific ones.
                     </div>
 
                     <?php echo form_open(admin_url('pcs_patients/export_patients'), ['id' => 'export-form']); ?>
@@ -243,6 +251,9 @@
                             <button type="button" class="btn-export btn-export-excel" id="exportExcelBtn">
                                 <i class="fa fa-file-excel-o"></i> Export Excel (CSV)
                             </button>
+                            <button type="button" class="btn-export btn-export-zip" id="exportZipBtn">
+                                <i class="fa fa-file-archive-o"></i> Export All Branches (ZIP)
+                            </button>
                             <button type="button" class="btn-export btn-export-json" id="exportJsonBtn">
                                 <i class="fa fa-code"></i> Export JSON
                             </button>
@@ -300,21 +311,29 @@ $(function () {
 
         // Show loading state on the clicked button
         var originalHtml = $btn.html();
-        $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Generating...');
-        $('#exportExcelBtn, #exportJsonBtn').not($btn).prop('disabled', true);
+        var loadingText = (format === 'zip')
+            ? '<i class="fa fa-spinner fa-spin"></i> Building branch files...'
+            : '<i class="fa fa-spinner fa-spin"></i> Generating...';
+        $btn.prop('disabled', true).html(loadingText);
+        $('#exportExcelBtn, #exportZipBtn, #exportJsonBtn').not($btn).prop('disabled', true);
 
         // Submit the form
         $('#export-form')[0].submit();
 
-        // Re-enable buttons after a delay (file download is streamed, page doesn't navigate)
+        // Re-enable buttons after a delay (file download is streamed, page doesn't navigate).
+        // ZIP builds one file per branch, so give it more time before resetting.
         setTimeout(function () {
             $btn.prop('disabled', false).html(originalHtml);
-            $('#exportExcelBtn, #exportJsonBtn').prop('disabled', false);
-        }, 8000);
+            $('#exportExcelBtn, #exportZipBtn, #exportJsonBtn').prop('disabled', false);
+        }, format === 'zip' ? 20000 : 8000);
     }
 
     $('#exportExcelBtn').on('click', function () {
         handleExport('excel', $(this));
+    });
+
+    $('#exportZipBtn').on('click', function () {
+        handleExport('zip', $(this));
     });
 
     $('#exportJsonBtn').on('click', function () {
